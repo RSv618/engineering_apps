@@ -1,7 +1,6 @@
 import sys
 import os
 import subprocess
-from typing import Any
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QStackedWidget, QLabel, QLineEdit, QComboBox,
@@ -14,8 +13,8 @@ from PyQt6.QtCore import Qt, QPointF, QTimer, QEvent
 from utils import (
     load_stylesheet, get_img, update_image,
     toggle_obj_visibility, parse_spacing_string, get_bar_dia,
-    safe_parse_to_num, get_dia_code, global_exception_hook, InfoPopup, HoverLabel,
-    BlankSpinBox, resource_path, HoverButton, MemoryGroupBox
+    parse_nested_dict, get_dia_code, global_exception_hook, InfoPopup, HoverLabel,
+    BlankSpinBox, resource_path, HoverButton, MemoryGroupBox, style_invalid_input
 )
 from rebar_calculations import (
     top_bottom_bar_calculation, perimeter_bar_calculation,
@@ -998,8 +997,8 @@ class MultiPageApp(QMainWindow):
     def populate_summary_page(self) -> None:
         """Gathers data from all input pages and populates the summary page."""
         # -- Clean the data ---
-        self.footing_details_values = self.parse_nested_dict(self.footing_details)
-        self.rsb_details_values = self.parse_nested_dict(self.rsb_details)
+        self.footing_details_values = parse_nested_dict(self.footing_details)
+        self.rsb_details_values = parse_nested_dict(self.rsb_details)
         self.rsb_details_values['Stirrups']['Spacing'] = parse_spacing_string(self.rsb_details_values['Stirrups']['Spacing'])
 
         # --- Footing Details ---
@@ -1161,43 +1160,6 @@ class MultiPageApp(QMainWindow):
                 except TypeError:
                     pass  # Connection might have already been broken
                 details['connection'] = None
-
-    @staticmethod
-    def parse_nested_dict(data: dict[str, Any]) -> dict[str, Any]:
-        """
-        Recursively traverses a dictionary, parsing widget text values into numbers.
-
-        Args:
-            data: The dictionary containing Qt widgets or other data.
-
-        Returns:
-            A new dictionary with widget values replaced by parsed data.
-        """
-        def recurse(obj):
-            if isinstance(obj, dict):
-                return {k: recurse(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
-                return [recurse(v) for v in obj]
-            elif isinstance(obj, QLineEdit):
-                text = obj.text()
-                try:
-                    return safe_parse_to_num(text)
-                except ValueError:
-                    return text
-            elif isinstance(obj, QComboBox):
-                text = obj.currentText()
-                try:
-                    return safe_parse_to_num(text)
-                except ValueError:
-                    return text
-            elif isinstance(obj, QTextEdit):
-                return obj.toPlainText()
-            elif isinstance(obj, (QSpinBox, QDoubleSpinBox)):
-                return obj.value()
-            else:
-                return obj
-
-        return recurse(data)
 
     def generate_cutting_list(self) -> None:
         """
@@ -1480,33 +1442,6 @@ class MultiPageApp(QMainWindow):
         # --- Go back to the first page ---
         self.stacked_widget.setCurrentIndex(0)
 
-    @staticmethod
-    def style_invalid_input(widget: QWidget, is_valid: bool) -> None:
-        """
-        Applies or removes a CSS class to indicate invalid input for QLineEdit, QSpinBox, etc.
-
-        Args:
-            widget: The widget to style (e.g., QSpinBox).
-            is_valid: True to remove invalid style, False to apply it.
-        """
-        if not hasattr(widget, 'property') or not hasattr(widget, 'setProperty'):
-            return  # Not a widget we can style this way
-
-        current_property = widget.property('class') or ''
-        if is_valid:
-            # Remove any invalid styling
-            new_class = current_property.replace('invalid-input', '').strip()
-        else:
-            # Apply invalid styling if it's not already there
-            if 'invalid-input' not in current_property:
-                new_class = (current_property + ' invalid-input').strip()
-            else:
-                new_class = current_property
-
-        if new_class != current_property:
-            widget.setProperty('class', new_class)
-            widget.style().polish(widget)
-
     def validate_and_style_stirrup_spacing(self) -> bool:
         """
         Validates the stirrup spacing QTextEdit, applies styling, and returns the validity.
@@ -1525,7 +1460,7 @@ class MultiPageApp(QMainWindow):
             except (ValueError, TypeError):
                 is_valid = False
 
-        self.style_invalid_input(widget, is_valid)
+        style_invalid_input(widget, is_valid)
         return is_valid
 
     def show_error_message(self, title: str, message: str) -> None:
@@ -1607,7 +1542,7 @@ class MultiPageApp(QMainWindow):
 
         # --- Apply styles based on final validity ---
         for widget, is_valid in validity_map.items():
-            self.style_invalid_input(widget, is_valid)
+            style_invalid_input(widget, is_valid)
 
         return sorted(list(set(errors)))
 
@@ -1729,7 +1664,7 @@ class MultiPageApp(QMainWindow):
         # --- Apply styles based on final validity ---
         for widget, is_valid in validity_map.items():
             if widget:  # Ensure widget is not None
-                self.style_invalid_input(widget, is_valid)
+                style_invalid_input(widget, is_valid)
 
         return sorted(list(set(errors)))
 

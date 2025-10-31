@@ -4,8 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="First Commit">
+    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Improved validation for optimal purchase by styling invalid inputs">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_cutting_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_cutting_list.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_optimal_purchase.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_optimal_purchase.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -43,6 +46,7 @@
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;full.screen.before.presentation.mode&quot;: &quot;false&quot;,
     &quot;git-widget-placeholder&quot;: &quot;master&quot;
   }
 }</component>
@@ -69,11 +73,20 @@
       <option name="project" value="LOCAL" />
       <updated>1761917294446</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Improved validation for optimal purchase by styling invalid inputs">
+      <option name="closed" value="true" />
+      <created>1761918062788</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1761918062788</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="First Commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="First Commit" />
+    <MESSAGE value="Improved validation for optimal purchase by styling invalid inputs" />
+    <option name="LAST_COMMIT_MESSAGE" value="Improved validation for optimal purchase by styling invalid inputs" />
   </component>
 </project>

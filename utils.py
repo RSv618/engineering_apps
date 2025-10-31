@@ -1,3 +1,4 @@
+from typing import Any
 from PyQt6.QtWidgets import (
     QLabel, QApplication, QMessageBox, QWidget, QVBoxLayout, QSpinBox, QDoubleSpinBox, QPushButton, QGroupBox,
     QLineEdit, QComboBox, QTextEdit, QCheckBox
@@ -345,6 +346,69 @@ def parse_spacing_string(text: str) -> list[tuple[float]]:
         results.append((value, spacing))
 
     return results
+
+def style_invalid_input(widget: QWidget, is_valid: bool) -> None:
+    """
+    Applies or removes a CSS class to indicate invalid input for QLineEdit, QSpinBox, etc.
+
+    Args:
+        widget: The widget to style (e.g., QSpinBox).
+        is_valid: True to remove invalid style, False to apply it.
+    """
+    if not hasattr(widget, 'property') or not hasattr(widget, 'setProperty'):
+        return  # Not a widget we can style this way
+
+    current_property = widget.property('class') or ''
+    if is_valid:
+        # Remove any invalid styling
+        new_class = current_property.replace('invalid-input', '').strip()
+    else:
+        # Apply invalid styling if it's not already there
+        if 'invalid-input' not in current_property:
+            new_class = (current_property + ' invalid-input').strip()
+        else:
+            new_class = current_property
+
+    if new_class != current_property:
+        widget.setProperty('class', new_class)
+        widget.style().polish(widget)
+
+def parse_nested_dict(data: dict[str, Any]) -> dict[str, Any]:
+    """
+    Recursively traverses a dictionary, parsing widget text values into numbers.
+
+    Args:
+        data: The dictionary containing Qt widgets or other data.
+
+    Returns:
+        A new dictionary with widget values replaced by parsed data.
+    """
+
+    def recurse(obj):
+        if isinstance(obj, dict):
+            return {k: recurse(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [recurse(v) for v in obj]
+        elif isinstance(obj, QLineEdit):
+            text = obj.text()
+            try:
+                return safe_parse_to_num(text)
+            except ValueError:
+                return text
+        elif isinstance(obj, QComboBox):
+            text = obj.currentText()
+            try:
+                return safe_parse_to_num(text)
+            except ValueError:
+                return text
+        elif isinstance(obj, QTextEdit):
+            return obj.toPlainText()
+        elif isinstance(obj, (QSpinBox, QDoubleSpinBox)):
+            return obj.value()
+        else:
+            return obj
+
+    return recurse(data)
 
 def get_bar_dia(code: int | str, system: Literal['ph', 'soft_metric', 'imperial'] = 'ph') -> float:
     if isinstance(code, str) and code.startswith('#'):

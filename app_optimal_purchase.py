@@ -3,16 +3,16 @@ import os
 import subprocess
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QStackedWidget, QLabel, QLineEdit, QComboBox,
-    QGroupBox, QGridLayout, QTextEdit, QFrame, QSizePolicy,
+    QStackedWidget, QLabel, QComboBox,
+    QGroupBox, QGridLayout, QFrame, QSizePolicy,
     QCheckBox, QScrollArea, QMessageBox, QFileDialog, QSpinBox, QDoubleSpinBox
 )
 from PyQt6.QtGui import QCursor, QIcon
 from PyQt6.QtCore import Qt, QEvent, QPoint
-from typing import Any
 from openpyxl import Workbook
-from utils import (load_stylesheet, safe_parse_to_num, global_exception_hook,
-                   InfoPopup, HoverLabel, BlankSpinBox, HoverButton, resource_path)
+from utils import (load_stylesheet, parse_nested_dict, global_exception_hook,
+                   InfoPopup, HoverLabel, BlankSpinBox, HoverButton, resource_path,
+                   style_invalid_input)
 from rebar_optimizer import find_optimized_cutting_plan
 from constants import BAR_DIAMETERS, MARKET_LENGTHS, DEBUG_MODE
 from excel_writer import create_purchase_sheet, create_cutting_plan_sheet
@@ -400,44 +400,6 @@ class MultiPageApp(QMainWindow):
         if self.remove_cutting_button:
             self.remove_cutting_button.setEnabled(is_enabled)
 
-    @staticmethod
-    def parse_nested_dict(data: dict[str, Any]) -> dict[str, Any]:
-        """
-        Recursively traverses a dictionary, parsing widget text values into numbers.
-
-        Args:
-            data: The dictionary containing Qt widgets or other data.
-
-        Returns:
-            A new dictionary with widget values replaced by parsed data.
-        """
-
-        def recurse(obj):
-            if isinstance(obj, dict):
-                return {k: recurse(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
-                return [recurse(v) for v in obj]
-            elif isinstance(obj, QLineEdit):
-                text = obj.text()
-                try:
-                    return safe_parse_to_num(text)
-                except ValueError:
-                    return text
-            elif isinstance(obj, QComboBox):
-                text = obj.currentText()
-                try:
-                    return safe_parse_to_num(text)
-                except ValueError:
-                    return text
-            elif isinstance(obj, QTextEdit):
-                return obj.toPlainText()
-            elif isinstance(obj, (QSpinBox, QDoubleSpinBox)):
-                return obj.value()
-            else:
-                return obj
-
-        return recurse(data)
-
     def populate_summary_page(self):
         """Reads all input data and populates the labels on the summary page."""
         # --- Clear previous summary cutting list widgets ---
@@ -449,7 +411,7 @@ class MultiPageApp(QMainWindow):
                 widget.deleteLater()
 
         # --- Populate Cutting List ---
-        parsed_cutting_lengths = self.parse_nested_dict(self.cutting_lengths)
+        parsed_cutting_lengths = parse_nested_dict(self.cutting_lengths)
         self.parsed_cutting_lengths = parsed_cutting_lengths
         num_rows = len(parsed_cutting_lengths['Rows'])
         for i in range(num_rows):
@@ -697,7 +659,7 @@ class MultiPageApp(QMainWindow):
 
         # --- Apply styles based on final validity ---
         for widget, is_valid in validity_map.items():
-            self.style_invalid_input(widget, is_valid)
+            style_invalid_input(widget, is_valid)
 
         return sorted(list(set(errors)))
 
@@ -737,33 +699,6 @@ class MultiPageApp(QMainWindow):
 
         for dia in BAR_DIAMETERS:
             self.market_lengths_checkboxes[dia][length].setChecked(new_state)
-
-    @staticmethod
-    def style_invalid_input(widget: QWidget, is_valid: bool) -> None:
-        """
-        Applies or removes a CSS class to indicate invalid input for QLineEdit, QSpinBox, etc.
-
-        Args:
-            widget: The widget to style (e.g., QSpinBox).
-            is_valid: True to remove invalid style, False to apply it.
-        """
-        if not hasattr(widget, 'property') or not hasattr(widget, 'setProperty'):
-            return  # Not a widget we can style this way
-
-        current_property = widget.property('class') or ''
-        if is_valid:
-            # Remove any invalid styling
-            new_class = current_property.replace('invalid-input', '').strip()
-        else:
-            # Apply invalid styling if it's not already there
-            if 'invalid-input' not in current_property:
-                new_class = (current_property + ' invalid-input').strip()
-            else:
-                new_class = current_property
-
-        if new_class != current_property:
-            widget.setProperty('class', new_class)
-            widget.style().polish(widget)
 
 def create_excel_cutting_plan(cuts_by_diameter: dict[str, list[tuple]],
                               market_lengths: dict[str, list],
