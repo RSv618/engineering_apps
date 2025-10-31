@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QLineEdit, QComboBox, QTextEdit, QCheckBox
 )
 import traceback
-from PyQt6.QtGui import QPixmap, QCursor
+from PyQt6.QtGui import QPixmap, QCursor, QEnterEvent
 from PyQt6.QtCore import Qt, QEvent, pyqtSignal
 import re
 from typing import Literal
@@ -130,7 +130,7 @@ class InfoPopup(QWidget):
         self.label.setWordWrap(True)  # Ensure text wraps if it's long
         self.layout.addWidget(self.label)
 
-    def setText(self, text: str) -> None:
+    def set_text(self, text: str) -> None:
         """
         Sets the text content of the popup's label.
 
@@ -144,26 +144,30 @@ class HoverLabel(QLabel):
     """
     A QLabel subclass that emits signals on mouse enter and leave events.
     """
+    # noinspection PyUnresolvedReferences
     mouseEntered = pyqtSignal()
+    # noinspection PyUnresolvedReferences
     mouseLeft = pyqtSignal()
 
-    def enterEvent(self, event: QEvent) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:  # <-- Corrected type hint
         """
         Emits the mouseEntered signal when the cursor enters the label's area.
 
         Args:
-            event: The enter event.
+            event: The enter event, specifically a QEnterEvent.
         """
+        # noinspection PyUnresolvedReferences
         self.mouseEntered.emit()
         super().enterEvent(event)
 
-    def leaveEvent(self, event: QEvent) -> None:
+    def leaveEvent(self, event: QEvent) -> None:  # <-- This hint is already correct
         """
         Emits the mouseLeft signal when the cursor leaves the label's area.
 
         Args:
             event: The leave event.
         """
+        # noinspection PyUnresolvedReferences
         self.mouseLeft.emit()
         super().leaveEvent(event)
 
@@ -193,12 +197,13 @@ def load_stylesheet(filename):
     image_dir_path = resource_path('images').replace('\\', '/')
 
     # Replace the relative path prefix with the absolute one
-    # This finds "url(images/" and replaces it with "url(C:/.../_MEIxxxx/images/"
+    # This finds 'url(images/' and replaces it with 'url(C:/.../_MEIxxxx/images/'
     processed_stylesheet = stylesheet.replace('url(images/', f'url({image_dir_path}/')
 
     return processed_stylesheet
 
-def get_img(path: str, width: int, height: int, class_name: str = 'image_container', alignment: Qt.AlignmentFlag = None, return_pixmap: bool = False) -> QLabel | QPixmap:
+def get_img(path: str, width: int, height: int, class_name: str = 'image_container',
+            alignment: Qt.AlignmentFlag = None, return_pixmap: bool = False) -> QLabel | QPixmap:
     """
     Creates a QLabel with a scaled pixmap from an image file.
 
@@ -221,7 +226,7 @@ def get_img(path: str, width: int, height: int, class_name: str = 'image_contain
     if pixmap.isNull():
         if return_pixmap:
             return pixmap
-        container.setText(f"Image '{path}' not found or could not be loaded.")
+        container.setText(f'Image {path} not found or could not be loaded.')
     else:
         # Scaling can also theoretically fail, e.g., with a MemoryError on huge images
         try:
@@ -231,7 +236,7 @@ def get_img(path: str, width: int, height: int, class_name: str = 'image_contain
                 return scaled_pixmap
             container.setPixmap(scaled_pixmap)
         except MemoryError:
-            container.setText(f"Not enough memory to scale the image '{path}'.")
+            container.setText(f'Not enough memory to scale the image {path}.')
     return container
 
 def update_image(selected_text: str, image_map: dict[str, str], update_this_object: QLabel, width: int | None = None,
@@ -317,7 +322,7 @@ def parse_spacing_string(text: str) -> list[tuple[float]]:
         parts = re.split(r'\s*(?:@|at)\s*', entry, flags=re.IGNORECASE)
         if len(parts) != 2 or not parts[0] or not parts[1]:
             raise ValueError(
-                f"Invalid format in '{entry}'. Each part must use '@' or 'at' to separate a value and a number.")
+                f'Invalid format in {entry}. Each part must use @ or at to separate a value and a number.')
 
         value_str, spacing_str = parts
         spacing_str = spacing_str.strip()
@@ -330,7 +335,7 @@ def parse_spacing_string(text: str) -> list[tuple[float]]:
             spacing = safe_parse_to_num(spacing_str)
         except ValueError:
             raise ValueError(
-                f"Invalid spacing '{parts[1]}'. Spacing must be a whole number, optionally followed by 'mm'.") from None
+                f'Invalid spacing {parts[1]}. Spacing must be a whole number, optionally followed by mm.') from None
 
         if value_str.lower() == 'rest':
             value = 'rest'
@@ -339,9 +344,9 @@ def parse_spacing_string(text: str) -> list[tuple[float]]:
                 value = safe_parse_to_num(value_str)
             except ValueError:
                 raise ValueError(
-                    f"Invalid value '{value_str}' in '{entry}'. Value must be a whole number or 'rest'.") from None
+                    f'Invalid value {value_str} in {entry}. Value must be a whole number or rest.') from None
             if isinstance(value, float):
-                raise ValueError(f"Invalid value '{value_str}' in '{entry}'. Value must be a whole number or 'rest'.")
+                raise ValueError(f'Invalid value {value_str} in {entry}. Value must be a whole number or rest.')
 
         results.append((value, spacing))
 
@@ -460,7 +465,7 @@ def get_bar_dia(code: int | str, system: Literal['ph', 'soft_metric', 'imperial'
             f"Invalid bar sizing scheme {system}. Valid choices are 'ph', 'soft_metric', and 'imperial'.")
     return bar_sizes[code]
 
-def get_dia_code(mm: int | float, system: Literal['ph', 'soft_metric', 'imperial'] = 'ph') -> float:
+def get_dia_code(mm: int | float, system: Literal['ph', 'soft_metric', 'imperial'] = 'ph') -> str:
     if system == 'imperial':
         rebar_code = {9.525: '#3', 12.7: '#4', 15.875: '#5', 19.05: '#6', 22.225: '#7',
                      25.4: '#8', 28.65: '#9', 32.26: '#10', 35.81: '#11', 43: '#14', 57.33: '#18'}
@@ -479,7 +484,7 @@ def get_dia_code(mm: int | float, system: Literal['ph', 'soft_metric', 'imperial
         if abs(mm - dia) < 0.2:  # tolerance 0.2 mm
             return code
 
-    raise KeyError(f"No bar code found for {mm} mm in {system}")
+    raise KeyError(f'No bar code found for {mm} mm in {system}')
 
 def safe_parse_to_num(text: str) -> float:
     """
@@ -500,12 +505,12 @@ def safe_parse_to_num(text: str) -> float:
             return num_float
         except ValueError:
             # Re-raise with a more specific message if needed, or let the caller handle it.
-            raise ValueError(f"Could not convert '{text}' to float.")
+            raise ValueError(f'Could not convert {text} to float.')
     try:
         return int(cleaned_text)
     except ValueError:
         # Re-raise with a more specific message if needed, or let the caller handle it.
-        raise ValueError(f"Could not convert '{text}' to integer.")
+        raise ValueError(f'Could not convert {text} to integer.')
 
 def global_exception_hook(exc_type, exc_value, exc_traceback):
     """
@@ -528,8 +533,8 @@ def global_exception_hook(exc_type, exc_value, exc_traceback):
     # Create a user-friendly and informative error message
     error_message = (
         f'An unexpected error occurred, and the application may need to close.\n\n'
-        f"<b>File:</b> '{file_name}'<br>"
-        f"<b>Function:</b> '{function_name}'<br>"
+        f'<b>File:</b> {file_name}<br>'
+        f'<b>Function:</b> {function_name}<br>'
         f'<b>Line:</b> {line_number}<br><br>'
         f'<b>Error Type:</b> {exc_type.__name__}<br>'
         f'<b>Error Message:</b> {exc_value}'
@@ -552,12 +557,16 @@ def global_exception_hook(exc_type, exc_value, exc_traceback):
     if not QApplication.instance():
         error_app.quit()
 
-def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
+def resource_path(relative_path: str) -> str:
+    """
+    Get the absolute path to a resource, working for both development and PyInstaller.
+    """
+    # Check if the PyInstaller attribute exists
+    if hasattr(sys, '_MEIPASS'):
+        # Running in a bundled PyInstaller app
+        base_path = getattr(sys, '_MEIPASS')
+    else:
+        # Running in a normal development environment
+        base_path = os.path.abspath('.')
 
     return os.path.join(base_path, relative_path)

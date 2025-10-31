@@ -342,7 +342,7 @@ class MultiPageApp(QMainWindow):
             "<b>Ex: Square stirrup (200mm sides, 150mm hooks)</b><br>"
             "4×200 + 2×150 − (3×2<i>d</i><sub>b</sub> + 2×3<i>d</i><sub>b</sub>) = 1100 − 12<i>d</i><sub>b</sub>"
         )
-        self.info_popup.setText(info_text)
+        self.info_popup.set_text(info_text)
 
         # Position the popup near the cursor, offset slightly
         cursor_pos = QCursor.pos()
@@ -426,16 +426,16 @@ class MultiPageApp(QMainWindow):
 
             dia_lbl = QLabel(dia)
             dia_lbl.setProperty('class', 'summary-value')
-            clen_lbl = QLabel(f'{c_len:,.1f} mm')
-            clen_lbl.setProperty('class', 'summary-value')
+            c_len_lbl = QLabel(f'{c_len:,.1f} mm')
+            c_len_lbl.setProperty('class', 'summary-value')
             qty_lbl = QLabel(f'{qty:,} pc{"s" if qty>1 else ""}')
             qty_lbl.setProperty('class', 'summary-value')
             dia_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            clen_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            c_len_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             qty_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
             row_layout.addWidget(dia_lbl)
-            row_layout.addWidget(clen_lbl)
+            row_layout.addWidget(c_len_lbl)
             row_layout.addWidget(qty_lbl)
 
             # Insert the new row before the stretch
@@ -450,9 +450,9 @@ class MultiPageApp(QMainWindow):
                 market_text_lines.append(f'<b>{dia}:</b> {', '.join(available)}')
 
         if market_text_lines:
-            self.summary_labels['market_lengths'].setText('<br>'.join(market_text_lines))
+            self.summary_labels['market_lengths'].set_text('<br>'.join(market_text_lines))
         else:
-            self.summary_labels['market_lengths'].setText('No market lengths selected.')
+            self.summary_labels['market_lengths'].set_text('No market lengths selected.')
 
     def generate_purchase_list(self) -> None:
         """
@@ -498,7 +498,7 @@ class MultiPageApp(QMainWindow):
 
         # --- Try to save the file and handle potential errors ---
         try:
-            # Pass optimization_results to the excel function
+            # Pass optimization_results to the Excel function
             create_excel_cutting_plan(cuts_by_diameter, market_lengths, output_filename=save_path)
         except PermissionError:
             QMessageBox.warning(

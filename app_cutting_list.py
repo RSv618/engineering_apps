@@ -1,6 +1,7 @@
 import sys
 import os
 import subprocess
+from typing import Any
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QStackedWidget, QLabel, QLineEdit, QComboBox,
@@ -388,6 +389,7 @@ class MultiPageApp(QMainWindow):
                 #    b) If checked, immediately copy the 'X' value to the 'Y' spinbox.
                 #    NOTE: We use default arguments (sb_y=spinbox_y) to "capture" the
                 #    correct spinbox for this loop iteration.
+                # noinspection PyUnresolvedReferences
                 lock_ratio_checkbox.toggled.connect(
                     lambda checked, sb_y=spinbox_y, sb_x=spinbox_x: (
                         sb_y.setEnabled(not checked),
@@ -523,10 +525,12 @@ class MultiPageApp(QMainWindow):
 
             # --- Connections for dynamic UI changes ---
             # 1. Change spinbox suffix based on input type selection
+            # noinspection PyUnresolvedReferences
             input_type.currentTextChanged.connect(
                 partial(self.update_spinbox_suffixes, title)
             )
             # 2. Handle the "Same for both" checkbox state
+            # noinspection PyUnresolvedReferences
             same_for_both.stateChanged.connect(
                 partial(self.toggle_same_for_both, title)
             )
@@ -584,6 +588,7 @@ class MultiPageApp(QMainWindow):
             # Connect the combo box's signal to our new function
             hook_length_label.setVisible(False)
             hook_length.setVisible(False)
+            # noinspection PyUnresolvedReferences
             calculation.currentTextChanged.connect(
                 lambda selected_text: toggle_obj_visibility(selected_text, 'Manual', [hook_length_label, hook_length])
             )
@@ -640,6 +645,7 @@ class MultiPageApp(QMainWindow):
 
             # diameter_label.setVisible(False)
             # bar_size.setVisible(False)
+            # noinspection PyUnresolvedReferences
             layers.currentTextChanged.connect(
                 lambda selected_text: update_image(selected_text, image_map, perim_bar_img, image_width,
                                                    fallback=resource_path('images/perim_bar_0.png')))
@@ -1017,7 +1023,7 @@ class MultiPageApp(QMainWindow):
                         text += f' ({n_ped} Pedestal)'
                     else:
                         text += f' ({n_ped} Pedestals)'
-                self.summary_labels[name].setText(text)
+                self.summary_labels[name].set_text(text)
 
         # --- Reinforcement Details ---
         top_bar_enabled = self.group_box['Top Bar'].isChecked()
@@ -1038,7 +1044,7 @@ class MultiPageApp(QMainWindow):
                         f' | {qty_or_spacing} along Y: {y_value} {unit}')
             else:
                 text = 'None'
-            self.summary_labels[bar_type].setText(text)
+            self.summary_labels[bar_type].set_text(text)
 
         # Vertical Bars
         details: dict
@@ -1051,18 +1057,18 @@ class MultiPageApp(QMainWindow):
             text = f'{dia} | Qty: {qty} pcs/pedestal | Hook: {hook_len} mm'
         else:
             text = f'{dia} | Qty: {qty} pcs/pedestal | Hook: {hook_calc}'
-        self.summary_labels['Vertical Bar'].setText(text)
+        self.summary_labels['Vertical Bar'].set_text(text)
 
         # Perimeter Bars
         details = self.rsb_details_values['Perimeter Bar']
         dia = details['Diameter']
         layers = details['Layers']
         if not perimeter_bar_enabled:
-            self.summary_labels['Perimeter Bar'].setText('None')
+            self.summary_labels['Perimeter Bar'].set_text('None')
         elif layers == '1':
-            self.summary_labels['Perimeter Bar'].setText(f'{dia} | {layers} layer')
+            self.summary_labels['Perimeter Bar'].set_text(f'{dia} | {layers} layer')
         else:
-            self.summary_labels['Perimeter Bar'].setText(f'{dia} | {layers} layers')
+            self.summary_labels['Perimeter Bar'].set_text(f'{dia} | {layers} layers')
 
         # Stirrup Detail
         details = self.rsb_details_values['Stirrups']
@@ -1070,14 +1076,14 @@ class MultiPageApp(QMainWindow):
             extent_text = details['Extent']
         else:
             extent_text = 'N/A'
-        self.summary_labels['Stirrups']['Extent'].setText(extent_text)
+        self.summary_labels['Stirrups']['Extent'].set_text(extent_text)
         if stirrups_enabled:
             rebuilt_listed_spacing = []
             for qty, spacing in details['Spacing']:
                 rebuilt_listed_spacing.append(f'{qty}@{spacing}')
-            self.summary_labels['Stirrups']['Spacing'].setText(', '.join(rebuilt_listed_spacing))
+            self.summary_labels['Stirrups']['Spacing'].set_text(', '.join(rebuilt_listed_spacing))
         else:
-            self.summary_labels['Stirrups']['Spacing'].setText('N/A')
+            self.summary_labels['Stirrups']['Spacing'].set_text('N/A')
 
         if stirrups_enabled:
             stirrup_types_text = []
@@ -1089,9 +1095,9 @@ class MultiPageApp(QMainWindow):
                 if s_type in ['Tall', 'Wide', 'Octagon']:
                     type_str += f' | a = {s_a} mm'
                 stirrup_types_text.append(type_str)
-            self.summary_labels['Stirrups']['Types'].setText('\n'.join(stirrup_types_text))
+            self.summary_labels['Stirrups']['Types'].set_text('\n'.join(stirrup_types_text))
         else:
-            self.summary_labels['Stirrups']['Types'].setText('None')
+            self.summary_labels['Stirrups']['Types'].set_text('None')
 
         # --- Market Lengths ---
         market_text_lines = []
@@ -1099,7 +1105,7 @@ class MultiPageApp(QMainWindow):
             available = [l for l, cb in lengths.items() if cb.isChecked()]
             if available:
                 market_text_lines.append(f'<b>{dia}:</b> {', '.join(available)}')
-        self.summary_labels['market_lengths'].setText('<br>'.join(market_text_lines))
+        self.summary_labels['market_lengths'].set_text('<br>'.join(market_text_lines))
 
     def setup_connections(self) -> None:
         """Connects signals from input widgets to their corresponding slots."""
@@ -1114,9 +1120,11 @@ class MultiPageApp(QMainWindow):
         self.rsb_details['Vertical Bar']['Diameter'].currentTextChanged.connect(self.update_stirrup_drawing)
         self.rsb_details['Stirrups']['Extent'].currentTextChanged.connect(self.update_stirrup_drawing)
         self.rsb_details['Stirrups']['Spacing'].textChanged.connect(self.on_stirrup_spacing_changed)
+        # noinspection PyUnresolvedReferences
         self.debounce_timer.timeout.connect(self.update_stirrup_drawing)
 
         self.group_box['Stirrups'].toggled.connect(self.update_stirrup_drawing)
+        # noinspection PyUnresolvedReferences
         self.stacked_widget.currentChanged.connect(self.on_page_changed)
 
     def on_page_changed(self, index: int) -> None:
@@ -1382,7 +1390,7 @@ class MultiPageApp(QMainWindow):
 
         # Stirrups
         self.rsb_details['Stirrups']['Extent'].setCurrentText('From Face of Pad')
-        self.rsb_details['Stirrups']['Spacing'].setText('1 @ 50, 5 @ 100, rest @ 150')
+        self.rsb_details['Stirrups']['Spacing'].set_text('1 @ 50, 5 @ 100, rest @ 150')
         # Add a second stirrup type for more complex testing
         self.add_stirrup_row()
         stirrup_row_1 = self.rsb_details['Stirrups']['Types'][0]
@@ -1513,30 +1521,30 @@ class MultiPageApp(QMainWindow):
                 errors.append(f"- '{name}' must be greater than 0.")
 
         # --- Rule 2: Pedestal must be smaller than the Pad ---
-        if ped_bx_widget.value() > 0 and pad_bx_widget.value() > 0 and ped_bx_widget.value() >= pad_bx_widget.value():
+        if ped_bx_widget.value() >= pad_bx_widget.value():
             validity_map[ped_bx_widget] = validity_map[pad_bx_widget] = False
             errors.append("- 'Pedestal Width (X)' must be smaller than 'Pad Width (X)'.")
 
-        if ped_by_widget.value() > 0 and pad_by_widget.value() > 0 and ped_by_widget.value() >= pad_by_widget.value():
+        if ped_by_widget.value() >= pad_by_widget.value():
             validity_map[ped_by_widget] = validity_map[pad_by_widget] = False
             errors.append("- 'Pedestal Width (Y)' must be smaller than 'Pad Width (Y)'.")
 
         # --- NEW: Rule 3: Dimensions must be greater than twice the concrete cover ---
         if cc > 0:
             min_dim = 2 * cc
-            if pad_t_widget.value() > 0 and pad_t_widget.value() <= min_dim:
+            if pad_t_widget.value() <= min_dim:
                 validity_map[pad_t_widget] = validity_map[cc_widget] = False
                 errors.append(f"- 'Pad Thickness' must be > 2 * Concrete Cover (> {min_dim} mm).")
 
-            if ped_bx_widget.value() > 0 and ped_bx_widget.value() <= min_dim:
+            if ped_bx_widget.value() <= min_dim:
                 validity_map[ped_bx_widget] = validity_map[cc_widget] = False
                 errors.append(f"- 'Pedestal Width (X)' must be > 2 * Concrete Cover (> {min_dim} mm).")
 
-            if ped_by_widget.value() > 0 and ped_by_widget.value() <= min_dim:
+            if ped_by_widget.value() <= min_dim:
                 validity_map[ped_by_widget] = validity_map[cc_widget] = False
                 errors.append(f"- 'Pedestal Width (Y)' must be > 2 * Concrete Cover (> {min_dim} mm).")
 
-            if ped_h_widget.value() > 0 and ped_h_widget.value() <= min_dim:
+            if ped_h_widget.value() <= min_dim:
                 validity_map[ped_h_widget] = validity_map[cc_widget] = False
                 errors.append(f"- 'Pedestal Height' must be > 2 * Concrete Cover (> {min_dim} mm).")
 
@@ -1727,6 +1735,7 @@ class MultiPageApp(QMainWindow):
         self.rsb_details['Stirrups']['Types'].append(row_widgets)
 
         # --- Connections ---
+        # noinspection PyUnresolvedReferences
         type_combo.currentTextChanged.connect(
             lambda text, widgets=row_widgets: self.update_stirrup_row_visibility(text, widgets, image_map)
         )
@@ -1747,7 +1756,7 @@ class MultiPageApp(QMainWindow):
         self.update_remove_button_state()
 
     @staticmethod
-    def update_stirrup_row_visibility(selected_text: str, widgets: dict[str, QWidget],
+    def update_stirrup_row_visibility(selected_text: str, widgets: dict[str, Any],
                                       image_map: dict[str, str]) -> None:
         """
         Updates a stirrup row's image and the visibility of its 'a' input field.
@@ -1790,7 +1799,7 @@ class MultiPageApp(QMainWindow):
             "<li><b>Manual:</b> Allows you to enter a custom, pre-calculated "
             "length for the hook.</li></ul>"
         )
-        self.info_popup.setText(info_text)
+        self.info_popup.set_text(info_text)
 
         # Position and show the popup
         cursor_pos = self.cursor().pos()
@@ -1810,7 +1819,7 @@ It's a two-step process:
 </ol>
 Use the diagram on the left to visually confirm that the stirrup placement matches your input."""
         )
-        self.info_popup.setText(info_text)
+        self.info_popup.set_text(info_text)
 
         # Position and show the popup
         cursor_pos = self.cursor().pos()
@@ -1829,7 +1838,7 @@ This sets the <b>'zero' reference point</b> for the first measurement in the 'Sp
     <li><b>From Top (to Face of Pad):</b> 'Zero' is the top of the pedestal, measuring downwards. Spacing will only be applied within the concrete pedestal.</li>
 </ul>"""
         )
-        self.info_popup.setText(info_text)
+        self.info_popup.set_text(info_text)
 
         # Position and show the popup
         cursor_pos = self.cursor().pos()
@@ -1848,7 +1857,7 @@ This section defines the combination of stirrups that will be installed together
 </ul>
 Think of it as designing a "kit" of stirrups that gets repeated along the height of the pedestal."""
         )
-        self.info_popup.setText(info_text)
+        self.info_popup.set_text(info_text)
 
         # Position and show the popup
         cursor_pos = self.cursor().pos()
@@ -1871,7 +1880,7 @@ Defines stirrup locations relative to your chosen 'Start From' point.
     <li>The <b>first</b> of the 5 stirrups is placed <b>100mm</b> from the start point.</li>
     <li>The next 4 are also 100mm apart. The remaining are 150mm apart.</li>"""
         )
-        self.info_popup.setText(info_text)
+        self.info_popup.set_text(info_text)
 
         # Position and show the popup
         cursor_pos = self.cursor().pos()

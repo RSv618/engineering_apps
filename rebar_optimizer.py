@@ -1,4 +1,5 @@
 import pulp
+from typing import Any
 
 def mm(x_m: float) -> int:
     """
@@ -80,7 +81,7 @@ def build_patterns_all_stocks(piece_lengths: list[float], piece_qty: list[int],
     return patterns_by_stock
 
 def solve_with_pulp(piece_lengths: list[float], piece_qty: list[int],
-                    stock_lengths: list[float], kerf: float = 0.0, verbose: bool = False):
+                    stock_lengths: list[float], kerf: float = 0.0, verbose: bool = False) -> dict[str, Any]:
     """
     Build and solve the cutting stock ILP via PuLP using a single-stage optimization.
     Returns a structured solution dict.
@@ -124,9 +125,9 @@ def solve_with_pulp(piece_lengths: list[float], piece_qty: list[int],
 
     # M must be larger than the maximum possible total waste to prioritize cost saving.
     # A safe value is 1 + the maximum possible stock length in mm.
-    M = max(stock_mm) + 1
+    # M = max(stock_mm) + 1
 
-    prob.setObjective(M * total_purchased_mm + total_waste_mm)
+    prob.setObjective((max(stock_mm) + 1) * total_purchased_mm + total_waste_mm)
 
     # Solve the problem
     solver = pulp.PULP_CBC_CMD(msg=verbose)
@@ -217,13 +218,13 @@ if __name__ == '__main__':
     }
 
     # Run the main function
-    purchase_list, cutting_plan = find_optimized_cutting_plan(sample_demands, sample_stocks, verbose=True)
+    purchase_list_result, cutting_plan_result = find_optimized_cutting_plan(sample_demands, sample_stocks, verbose=True)
 
     # Print the results
     print("\n--- PURCHASE LIST ---")
-    for item in purchase_list:
-        print(item)
+    for this in purchase_list_result:
+        print(this)
 
     print("\n--- CUTTING PLAN ---")
-    for item in cutting_plan:
-        print(item)
+    for this in cutting_plan_result:
+        print(this)
