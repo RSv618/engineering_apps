@@ -1,0 +1,352 @@
+/* =================================================================== */
+/* --- THEME & COLOR PALETTE (V3 - Final) --- */
+/* =================================================================== */
+/* --primary-color: #3498db;  (Blue for focus and accents) */
+/* --success-color: #04AA6D;  (Green for positive actions) */
+/* --danger-color:  #e74c3c;  (Red for negative actions) */
+/* --text-primary:  #2c3e50;  (Dark gray for main text) */
+/* --text-secondary:#7f8c8d;  (Lighter gray for labels/units) */
+/* --bg-color:      #f8f9fa;  (Off-white for page backgrounds) */
+/* --border-color:  #ced4da;  (A clear, visible border color) */
+/* --hover-color:   #e9ecef;  (Light gray for hover/alternating rows) */
+/* =================================================================== */
+
+/* 1. Global & Page Styles */
+QWidget {
+    font-family: "Segoe UI", "Calibri", sans-serif;
+    color: #2c3e50;
+}
+QWidget.page {
+    background-color: #f8f9fa;
+}
+.header-0 {
+    font-size: 18pt;
+    font-weight: bold;
+    qproperty-alignment: AlignCenter;
+    padding-bottom: 10px;
+}
+.image_container {
+    padding: 10px;
+}
+
+.mm {
+    font-size: 8pt;
+    color: #7f8c8d;
+}
+
+.along {
+    qproperty-alignment: AlignLeft;
+    font-size: 8pt;
+    color: #7f8c8d;
+}
+.scroll-area {
+    background-color: qlineargradient(x1: 0, y1: 0.0, x2: 0, y2: 0.75,
+                                     stop: 0 #f8f9fa, stop: 1 #f3f3f3);
+}
+.scroll-bar-area {
+    border: 1px solid #d7d7d7;
+}
+
+/* 2. GroupBox Container Styling (Key to matching the original image) */
+QGroupBox {
+    font-weight: bold;
+    border: 1px solid #ced4da; /* The main container border */
+    border-radius: 8px;
+    margin-top: 10px; /* Provides space for the title */
+    padding: 10px;
+    background-color: #F8F9FA;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 5px;
+}
+
+/* 3. Input Fields - Flat by Default (CORRECTED) */
+QLineEdit, QTextEdit, QComboBox, QSpinBox, QDoubleSpinBox {
+    font-size: 10pt;
+    padding: 4px 8px;
+    background-color: white;
+    border: 1px solid #ced4da; /* A subtle border to define the field */
+    border-radius: 5px;
+}
+
+QLineEdit:focus, QTextEdit:focus, QComboBox:focus,
+QSpinBox:focus, QDoubleSpinBox:focus  {
+    border: 1px solid #3498db; /* A clear, blue focus ring */
+}
+
+QLineEdit:disabled, QTextEdit:disabled, QComboBox:disabled,
+QSpinBox:disabled, QDoubleSpinBox:disabled  {
+    background-color: #e9ecef; /* A clear, blue focus ring */
+    color: #7f8c8d;
+}
+
+/* Remove Arrows */
+QSpinBox::up-button, QSpinBox::down-button,
+QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
+    image: none;
+}
+
+QSpinBox, QDoubleSpinBox  {
+    padding-left: 4px; /* A clear, blue focus ring */
+}
+
+/* --- GUARANTEED ARROW for QComboBox --- */
+QComboBox {
+    /* Padding is still needed, but it can be adjusted. */
+    padding-right: 0px;
+}
+
+/* Style the button that contains the arrow */
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 30px; /* The width of the arrow area */
+    border: none; /* Crucial: removes the "boxy" border */
+    background: transparent; /* Ensures no background color is drawn */
+}
+
+QComboBox QAbstractItemView {
+    background-color: white;
+    border: 1px solid #ced4da;
+    outline: 0px;
+    selection-background-color: #007bff;
+    selection-color: white;
+}
+QComboBox QAbstractItemView::item {
+    padding: 3px; /* Applies 10px padding to all sides */
+}
+
+/* Style the actual arrow image */
+QComboBox::down-arrow {
+    image: url(images/down_arrow.svg);
+    width: 20px;  /* Adjust size as needed */
+    height: 20px; /* Adjust size as needed */
+}
+
+QComboBox::down-arrow:on {
+    /* You can slightly move the arrow to give a "pressed" feel */
+    top: 1px;
+}
+
+/* 4. Unified Button Styles */
+QPushButton {
+    border: none;
+    padding: 8px 16px;
+    font-size: 10pt;
+    font-weight: bold;
+    border-radius: 5px;
+    min-height: 18px;
+    qproperty-autoDefault: true;
+}
+QPushButton:disabled { background-color: #E5E5E5; color: #7f8c8d; }
+
+/* --- Special styling for small +/- buttons --- */
+/* Use an object name to target them specifically in the .py code */
+.green-button { background-color: #04AA6D; color: white; }
+.green-button:hover { background-color: #059862; }
+.green-button:pressed { background-color: #048258; }
+
+.red-button { background-color: #e74c3c; color: white; }
+.red-button:hover { background-color: #d63031; }
+.red-button:pressed { background-color: #c92829; }
+
+.add-row-button, .remove-row-button {
+    font-family: "Courier New", "Verdana", sans-serif;
+    font-size: 10pt;
+    font-weight: bold;
+    padding: 0;
+    margin: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 10px; /* Make it circular */
+    qproperty-alignment: AlignCenter;
+}
+
+/* 5. Check Boxes */
+QCheckBox::indicator {
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    width: 20px;
+    height: 20px;
+    background-color: white; /* Explicitly set a background for the unchecked state */
+    qproperty-alignment: AlignCenter;
+}
+
+/* --- Hover Effects --- */
+
+/* Style for hovering over an UNCHECKED checkbox */
+QCheckBox::indicator:unchecked:hover {
+    border: 1px solid #a8b0b7; /* A slightly darker border color */
+}
+
+/* Style for hovering over a CHECKED checkbox */
+QCheckBox::indicator:checked:hover {
+    background-color: #059862; /* A slightly darker green */
+    border: 1px solid #059862;
+}
+
+/* Underline the text label on hover for better feedback */
+QCheckBox:hover {
+    cursor: pointing-hand;
+}
+
+
+/* --- Checked State --- */
+
+QCheckBox::indicator:checked {
+    background-color: #04AA6D;
+    border: 1px solid #04AA6D;
+    /*
+       Assumes you have a white SVG checkmark icon in a Qt resource file (.qrc)
+       under the alias 'checkmark'.
+       Replace ':/icons/checkmark.svg' with the actual path to your icon.
+    */
+    image: url(images/checkmark.svg);
+}
+
+QCheckBox.lock-ratio::indicator:checked {
+    image: url(images/chain_link.svg);
+}
+
+QCheckBox.lock-ratio::indicator:unchecked {
+    image: url(images/broken_chain_link.svg);
+}
+
+/* --- Disabled State (Optional but Recommended) --- */
+
+QCheckBox::indicator:disabled {
+    background-color: #e9ecef; /* Light gray background */
+    border: 1px solid #ced4da;
+}
+
+QCheckBox::indicator:checked:disabled {
+    background-color: #a3e9d1; /* A muted green */
+    border: 1px solid #a3e9d1;
+    /* You may want a grayed-out version of the checkmark here */
+}
+
+/* 5. Page-Specific Styles */
+.footing-variable {
+    color: #e74c3c; /* Keep red as per original design */
+    font-weight: bold;
+    qproperty-alignment: AlignCenter;
+}
+.rsb-qty-each-way {
+    max-width: 120px;
+    padding-right: 0;
+}
+.rsb-forms-label {
+    qproperty-alignment: 'AlignVCenter | AlignLeft';
+    padding-left: 5px;
+}
+.rsb-layers-label {
+    min-width: 70px;
+}
+.rsb-spacing-text-edit {
+    max-height: 80px
+}
+.stirrup-header {
+    font-style: italic;
+    color: #7f8c8d;
+}
+.stirrup-row {
+    background-color: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 3px;
+    margin: 0;
+    min-height: 110px;
+}
+.stirrup-canvas {
+    min-height: 200px;
+}
+.separator {
+    color: #ced4da;
+    padding: 10px;
+}
+QGroupBox[checkedState="unchecked"] QLabel {
+    color: #b0bec5; /* A muted, light gray color for disabled labels */
+}
+/* General style for the checkbox part of a GroupBox title */
+QGroupBox::indicator {
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    width: 13px;
+    height: 13px;
+    background-color: white;
+
+}
+
+/* When the GroupBox is checked */
+QGroupBox::indicator:checked {
+    background-color: #04AA6D;
+    border: 1px solid #04AA6D;
+    image: url(images/checkmark.svg); /* Use your existing checkmark */
+}
+
+/* Hover effect on the indicator */
+QGroupBox::indicator:hover {
+    border-color: #3498db; /* Blue accent on hover */
+}
+
+/* Optional: Different look for when it's unchecked */
+QGroupBox::indicator:unchecked {
+    background-color: #f8f9fa; /* Light background */
+}
+
+/* --- Market Lengths Page --- */
+.grid-cell {
+    border-right: 1px solid #dfe4ea;
+    border-bottom: 1px solid #dfe4ea;
+    background-color: #ffffff;
+}
+.alternate-row-cell {
+    background-color: #f8f9fa; /* --bg-color */
+}
+.header-cell {
+    background-color: #e9ecef;
+}
+.clickable-row-header {
+    width: 60px;
+}
+.clickable-column-header {
+    width: 40px;
+}
+.clickable-header:hover {
+    background-color: #dfe4ea;
+}
+.clickable-header:pressed {
+    background-color: #ced4da;
+}
+.market-header-label {
+    font-weight: bold;
+}
+
+/* --- POP UP Info --- */
+#infoPopup {
+    background-color: #fff;
+}
+
+/* --- Summary Page --- */
+.summary-label {
+    font-weight: bold;
+    color: #2c3e50; /* --text-primary */
+}
+.summary-label-2 {
+    qproperty-alignment: AlignTop;
+    padding-left: 15px; /* Indent sub-labels */
+    margin: 0;
+    font-style: italic;
+    color: #7f8c8d; /* --text-secondary */
+}
+.summary-value {
+    color: #2c3e50; /* --primary-color */
+    font-style: normal;
+}
+
+.invalid-input {
+    border: 1px solid red;
+    background-color: #ffe6e6; /* Light red background */
+}
