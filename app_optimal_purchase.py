@@ -324,7 +324,8 @@ class MultiPageApp(QMainWindow):
             errors = self.validate_cutting_length_page()
             if errors:
                 self.show_error_message('Cutting Length Page Errors', '\n'.join(errors))
-                return  # Stop navigation
+                return  # Stop navigation if errors are found
+
         self.stacked_widget.setCurrentIndex(1)
 
     def go_to_summary_page(self):
@@ -667,40 +668,38 @@ class MultiPageApp(QMainWindow):
 
     def validate_cutting_length_page(self) -> list[str]:
         """
-        Validates all inputs on the cutting length page.
-
-        Returns:
-            A list of error messages. An empty list indicates success.
+        Validates all inputs on the cutting length page, styles invalid widgets,
+        and returns a list of errors.
         """
         errors = []
-        details = {}
+        # Use a validity map to track the state of each widget.
+        validity_map = {}
 
-        # Safely parse all inputs to numbers first
-        for name in ['Diameter', 'Quantity', 'Cutting Length']:
-            for widget in self.cutting_lengths[name]:
-                try:
-                    if isinstance(widget, QLineEdit):
-                        value = safe_parse_to_num(widget.text())
-                    elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
-                        value = widget.value()
-                    else:
-                        continue
+        # Iterate through all input rows.
+        all_widgets = self.cutting_lengths['Cutting Length'] + self.cutting_lengths['Quantity']
+        for widget in all_widgets:
+            validity_map[widget] = True  # Assume all are valid initially
 
-                    if (name == 'Quantity') and isinstance(value, float):
-                        errors.append(f"- '{name}' must be a positive whole number.")
+        for i, (len_widget, qty_widget) in enumerate(zip(
+                self.cutting_lengths['Cutting Length'],
+                self.cutting_lengths['Quantity']
+        )):
+            row_num = i + 1
+            # Rule 1: Cutting Length must be greater than 0
+            if len_widget.value() <= 0:
+                errors.append(f"- Row {row_num}: 'Cutting Length' must be greater than 0.")
+                validity_map[len_widget] = False
 
-                    if value <= 0:
-                        errors.append(f"- '{name}' must be greater than 0.")
-                    details[name] = value
-                except ValueError as e:
-                    # The error from our helper is more specific
-                    errors.append(f"- '{name}': {e}")
-                    details[name] = None
+            # Rule 2: Quantity must be greater than 0
+            if qty_widget.value() <= 0:
+                errors.append(f"- Row {row_num}: 'Quantity' must be greater than 0.")
+                validity_map[qty_widget] = False
 
-        if any(v is None for v in details.values()):
-            return errors
+        # --- Apply styles based on final validity ---
+        for widget, is_valid in validity_map.items():
+            self.style_invalid_input(widget, is_valid)
 
-        return errors
+        return sorted(list(set(errors)))
 
     def eventFilter(self, obj, event):
         """
@@ -738,6 +737,33 @@ class MultiPageApp(QMainWindow):
 
         for dia in BAR_DIAMETERS:
             self.market_lengths_checkboxes[dia][length].setChecked(new_state)
+
+    @staticmethod
+    def style_invalid_input(widget: QWidget, is_valid: bool) -> None:
+        """
+        Applies or removes a CSS class to indicate invalid input for QLineEdit, QSpinBox, etc.
+
+        Args:
+            widget: The widget to style (e.g., QSpinBox).
+            is_valid: True to remove invalid style, False to apply it.
+        """
+        if not hasattr(widget, 'property') or not hasattr(widget, 'setProperty'):
+            return  # Not a widget we can style this way
+
+        current_property = widget.property('class') or ''
+        if is_valid:
+            # Remove any invalid styling
+            new_class = current_property.replace('invalid-input', '').strip()
+        else:
+            # Apply invalid styling if it's not already there
+            if 'invalid-input' not in current_property:
+                new_class = (current_property + ' invalid-input').strip()
+            else:
+                new_class = current_property
+
+        if new_class != current_property:
+            widget.setProperty('class', new_class)
+            widget.style().polish(widget)
 
 def create_excel_cutting_plan(cuts_by_diameter: dict[str, list[tuple]],
                               market_lengths: dict[str, list],
