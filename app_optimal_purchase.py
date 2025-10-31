@@ -342,7 +342,7 @@ class MultiPageApp(QMainWindow):
             "<b>Ex: Square stirrup (200mm sides, 150mm hooks)</b><br>"
             "4×200 + 2×150 − (3×2<i>d</i><sub>b</sub> + 2×3<i>d</i><sub>b</sub>) = 1100 − 12<i>d</i><sub>b</sub>"
         )
-        self.info_popup.set_text(info_text)
+        self.info_popup.set_info_text(info_text)
 
         # Position the popup near the cursor, offset slightly
         cursor_pos = QCursor.pos()
@@ -450,9 +450,9 @@ class MultiPageApp(QMainWindow):
                 market_text_lines.append(f'<b>{dia}:</b> {', '.join(available)}')
 
         if market_text_lines:
-            self.summary_labels['market_lengths'].set_text('<br>'.join(market_text_lines))
+            self.summary_labels['market_lengths'].setText('<br>'.join(market_text_lines))
         else:
-            self.summary_labels['market_lengths'].set_text('No market lengths selected.')
+            self.summary_labels['market_lengths'].setText('No market lengths selected.')
 
     def generate_purchase_list(self) -> None:
         """

@@ -130,7 +130,7 @@ class InfoPopup(QWidget):
         self.label.setWordWrap(True)  # Ensure text wraps if it's long
         self.layout.addWidget(self.label)
 
-    def set_text(self, text: str) -> None:
+    def set_info_text(self, text: str) -> None:
         """
         Sets the text content of the popup's label.
 

@@ -1023,7 +1023,7 @@ class MultiPageApp(QMainWindow):
                         text += f' ({n_ped} Pedestal)'
                     else:
                         text += f' ({n_ped} Pedestals)'
-                self.summary_labels[name].set_text(text)
+                self.summary_labels[name].setText(text)
 
         # --- Reinforcement Details ---
         top_bar_enabled = self.group_box['Top Bar'].isChecked()
@@ -1044,7 +1044,7 @@ class MultiPageApp(QMainWindow):
                         f' | {qty_or_spacing} along Y: {y_value} {unit}')
             else:
                 text = 'None'
-            self.summary_labels[bar_type].set_text(text)
+            self.summary_labels[bar_type].setText(text)
 
         # Vertical Bars
         details: dict
@@ -1057,18 +1057,18 @@ class MultiPageApp(QMainWindow):
             text = f'{dia} | Qty: {qty} pcs/pedestal | Hook: {hook_len} mm'
         else:
             text = f'{dia} | Qty: {qty} pcs/pedestal | Hook: {hook_calc}'
-        self.summary_labels['Vertical Bar'].set_text(text)
+        self.summary_labels['Vertical Bar'].setText(text)
 
         # Perimeter Bars
         details = self.rsb_details_values['Perimeter Bar']
         dia = details['Diameter']
         layers = details['Layers']
         if not perimeter_bar_enabled:
-            self.summary_labels['Perimeter Bar'].set_text('None')
+            self.summary_labels['Perimeter Bar'].setText('None')
         elif layers == '1':
-            self.summary_labels['Perimeter Bar'].set_text(f'{dia} | {layers} layer')
+            self.summary_labels['Perimeter Bar'].setText(f'{dia} | {layers} layer')
         else:
-            self.summary_labels['Perimeter Bar'].set_text(f'{dia} | {layers} layers')
+            self.summary_labels['Perimeter Bar'].setText(f'{dia} | {layers} layers')
 
         # Stirrup Detail
         details = self.rsb_details_values['Stirrups']
@@ -1076,14 +1076,14 @@ class MultiPageApp(QMainWindow):
             extent_text = details['Extent']
         else:
             extent_text = 'N/A'
-        self.summary_labels['Stirrups']['Extent'].set_text(extent_text)
+        self.summary_labels['Stirrups']['Extent'].setText(extent_text)
         if stirrups_enabled:
             rebuilt_listed_spacing = []
             for qty, spacing in details['Spacing']:
                 rebuilt_listed_spacing.append(f'{qty}@{spacing}')
-            self.summary_labels['Stirrups']['Spacing'].set_text(', '.join(rebuilt_listed_spacing))
+            self.summary_labels['Stirrups']['Spacing'].setText(', '.join(rebuilt_listed_spacing))
         else:
-            self.summary_labels['Stirrups']['Spacing'].set_text('N/A')
+            self.summary_labels['Stirrups']['Spacing'].setText('N/A')
 
         if stirrups_enabled:
             stirrup_types_text = []
@@ -1095,9 +1095,9 @@ class MultiPageApp(QMainWindow):
                 if s_type in ['Tall', 'Wide', 'Octagon']:
                     type_str += f' | a = {s_a} mm'
                 stirrup_types_text.append(type_str)
-            self.summary_labels['Stirrups']['Types'].set_text('\n'.join(stirrup_types_text))
+            self.summary_labels['Stirrups']['Types'].setText('\n'.join(stirrup_types_text))
         else:
-            self.summary_labels['Stirrups']['Types'].set_text('None')
+            self.summary_labels['Stirrups']['Types'].setText('None')
 
         # --- Market Lengths ---
         market_text_lines = []
@@ -1105,7 +1105,7 @@ class MultiPageApp(QMainWindow):
             available = [l for l, cb in lengths.items() if cb.isChecked()]
             if available:
                 market_text_lines.append(f'<b>{dia}:</b> {', '.join(available)}')
-        self.summary_labels['market_lengths'].set_text('<br>'.join(market_text_lines))
+        self.summary_labels['market_lengths'].setText('<br>'.join(market_text_lines))
 
     def setup_connections(self) -> None:
         """Connects signals from input widgets to their corresponding slots."""
@@ -1390,7 +1390,7 @@ class MultiPageApp(QMainWindow):
 
         # Stirrups
         self.rsb_details['Stirrups']['Extent'].setCurrentText('From Face of Pad')
-        self.rsb_details['Stirrups']['Spacing'].set_text('1 @ 50, 5 @ 100, rest @ 150')
+        self.rsb_details['Stirrups']['Spacing'].setText('1 @ 50, 5 @ 100, rest @ 150')
         # Add a second stirrup type for more complex testing
         self.add_stirrup_row()
         stirrup_row_1 = self.rsb_details['Stirrups']['Types'][0]
@@ -1799,7 +1799,7 @@ class MultiPageApp(QMainWindow):
             "<li><b>Manual:</b> Allows you to enter a custom, pre-calculated "
             "length for the hook.</li></ul>"
         )
-        self.info_popup.set_text(info_text)
+        self.info_popup.set_info_text(info_text)
 
         # Position and show the popup
         cursor_pos = self.cursor().pos()
@@ -1819,7 +1819,7 @@ It's a two-step process:
 </ol>
 Use the diagram on the left to visually confirm that the stirrup placement matches your input."""
         )
-        self.info_popup.set_text(info_text)
+        self.info_popup.set_info_text(info_text)
 
         # Position and show the popup
         cursor_pos = self.cursor().pos()
@@ -1838,7 +1838,7 @@ This sets the <b>'zero' reference point</b> for the first measurement in the 'Sp
     <li><b>From Top (to Face of Pad):</b> 'Zero' is the top of the pedestal, measuring downwards. Spacing will only be applied within the concrete pedestal.</li>
 </ul>"""
         )
-        self.info_popup.set_text(info_text)
+        self.info_popup.set_info_text(info_text)
 
         # Position and show the popup
         cursor_pos = self.cursor().pos()
@@ -1857,7 +1857,7 @@ This section defines the combination of stirrups that will be installed together
 </ul>
 Think of it as designing a "kit" of stirrups that gets repeated along the height of the pedestal."""
         )
-        self.info_popup.set_text(info_text)
+        self.info_popup.set_info_text(info_text)
 
         # Position and show the popup
         cursor_pos = self.cursor().pos()
@@ -1880,7 +1880,7 @@ Defines stirrup locations relative to your chosen 'Start From' point.
     <li>The <b>first</b> of the 5 stirrups is placed <b>100mm</b> from the start point.</li>
     <li>The next 4 are also 100mm apart. The remaining are 150mm apart.</li>"""
         )
-        self.info_popup.set_text(info_text)
+        self.info_popup.set_info_text(info_text)
 
         # Position and show the popup
         cursor_pos = self.cursor().pos()
