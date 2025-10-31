@@ -463,7 +463,8 @@ class MultiPageApp(QMainWindow):
                 group_box = QGroupBox(title)
             section_layout = QHBoxLayout(group_box)
 
-            section_layout.addWidget(get_img(image_path, image_width, image_width))
+            image_label = get_img(image_path, image_width, image_width)
+            section_layout.addWidget(image_label)
 
             grid_top_bottom = QGridLayout()
             grid_top_bottom.setColumnStretch(0, 1)
@@ -520,7 +521,8 @@ class MultiPageApp(QMainWindow):
                 'Input Type': input_type,
                 'Value Along X': value_along_x,
                 'Value Along Y': value_along_y,
-                'connection': None
+                'Image Label': image_label,
+                'connection': None,
             }
 
             # --- Connections for dynamic UI changes ---
@@ -616,7 +618,10 @@ class MultiPageApp(QMainWindow):
             image_map = {#'None': resource_path('images/perim_bar_0.png'),
                          '1': resource_path('images/perim_bar_1.png'),
                          '2': resource_path('images/perim_bar_2.png'),
-                         '3': resource_path('images/perim_bar_3.png')}
+                         '3': resource_path('images/perim_bar_3.png'),
+                         '4': resource_path('images/perim_bar_4.png'),
+                         '5': resource_path('images/perim_bar_5.png'),
+            }
             perim_bar_img = get_img(image_map['1'], image_width, image_width)
             section_layout.addWidget(perim_bar_img)
 
@@ -625,7 +630,7 @@ class MultiPageApp(QMainWindow):
 
             # Row 0: Layers
             layers = QComboBox()
-            layers.addItems(['1', '2', '3'])  # Add None if needed
+            layers.addItems(['1', '2', '3', '4', '5'])  # Add None if needed
             size_policy = layers.sizePolicy()
             size_policy.setHorizontalPolicy(QSizePolicy.Policy.Expanding)
             layers.setSizePolicy(size_policy)
@@ -643,8 +648,6 @@ class MultiPageApp(QMainWindow):
             self.rsb_details[title] = {'Diameter': bar_size,
                                        'Layers': layers}
 
-            # diameter_label.setVisible(False)
-            # bar_size.setVisible(False)
             # noinspection PyUnresolvedReferences
             layers.currentTextChanged.connect(
                 lambda selected_text: update_image(selected_text, image_map, perim_bar_img, image_width,
@@ -1110,6 +1113,7 @@ class MultiPageApp(QMainWindow):
     def setup_connections(self) -> None:
         """Connects signals from input widgets to their corresponding slots."""
         # Widgets from the footing page that affect the stirrup drawing
+        self.group_box['Top Bar'].toggled.connect(self.on_top_bar_toggled)
         self.footing_details['Pedestal Height'].textChanged.connect(self.update_stirrup_drawing)
         self.footing_details['Pedestal Width (Along X)'].textChanged.connect(self.update_stirrup_drawing)
         self.footing_details['Pad Thickness'].textChanged.connect(self.update_stirrup_drawing)
@@ -1767,7 +1771,7 @@ class MultiPageApp(QMainWindow):
             image_map: A dictionary mapping stirrup types to image paths.
         """
         update_image(selected_text, image_map, widgets['Image'], STIRRUP_ROW_IMAGE_WIDTH,
-                     fallback=resource_path('images/stirrup_outer.png'))
+                     fallback=resource_path('images/stirrup_none.png'))
 
         # Update visibility of 'a' input
         is_visible = selected_text in ['Tall', 'Wide', 'Octagon']
@@ -1902,6 +1906,31 @@ Defines stirrup locations relative to your chosen 'Start From' point.
                 self.rsb_details['Bottom Bar']['Diameter'],
                 self.rsb_details['Vertical Bar']['Diameter']
             )
+
+    def on_top_bar_toggled(self, checked: bool) -> None:
+        """
+        Updates the image for the 'Top Bar' section based on its checked state.
+        """
+        # Ensure the widgets have been created before trying to access them
+        if 'Top Bar' not in self.rsb_details:
+            return
+
+        image_label = self.rsb_details['Top Bar']['Image Label']
+        image_width = RSB_IMAGE_WIDTH
+
+        if checked:
+            # If the box is checked, show the normal 'top_bar.png'
+            image_path = resource_path('images/top_bar.png')
+        else:
+            # If it's unchecked, show the new 'no_top_bar.png'
+            image_path = resource_path('images/no_top_bar.png')
+
+        # Use the existing get_img utility to create a new, correctly scaled pixmap
+        new_pixmap = get_img(image_path, image_width, image_width, return_pixmap=True)
+
+        # Update the label with the new pixmap
+        if not new_pixmap.isNull():
+            image_label.setPixmap(new_pixmap)
 
     def toggle_market_row(self, dia: str) -> None:
         """
