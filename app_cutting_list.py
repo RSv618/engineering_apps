@@ -31,6 +31,11 @@ from utils import (HoverButton, HoverLabel, resource_path,
                    style_invalid_input, get_dia_code)
 from openpyxl import Workbook
 
+"""
+TO BUILD:
+pyinstaller --name "CuttingList" --onefile --windowed --icon="images/logo.png" --add-data "images:images" --add-data "style.qss:." app_cutting_list.py
+"""
+
 class DrawStirrup(QWidget):
     def __init__(self, width: int, parent: QWidget | None = None) -> None:
         """

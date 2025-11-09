@@ -1,5 +1,7 @@
 import pulp
 from typing import Any
+from utils import resource_path
+
 
 def mm(x_m: float) -> int:
     """
@@ -24,6 +26,15 @@ def m(x_mm: int) -> float:
         Length in meters.
     """
     return x_mm / 1000.0
+
+def get_solver_path():
+    """Gets the correct path to the CBC solver executable."""
+    # The default solver is included with pulp
+    # We can get its path relative to the pulp library
+    import pulp.apis
+    solver_path = pulp.apis.PULP_CBC_CMD().path
+    # resource_path will handle the temporary folder for PyInstaller
+    return resource_path(solver_path)
 
 def enumerate_patterns(stock_len_mm: int, piece_lengths_mm: list[int], max_counts: list[int]) -> list:
     """
@@ -130,7 +141,8 @@ def solve_with_pulp(piece_lengths: list[float], piece_qty: list[int],
     prob.setObjective((max(stock_mm) + 1) * total_purchased_mm + total_waste_mm)
 
     # Solve the problem
-    solver = pulp.PULP_CBC_CMD(msg=verbose)
+    # solver = pulp.PULP_CBC_CMD(path=get_solver_path(), msg=verbose)
+    solver = pulp.COIN_CMD(path=get_solver_path(), msg=verbose)  # Resolves pulp error on a different windows
     prob.solve(solver)
 
     if pulp.LpStatus[prob.status] != 'Optimal':
