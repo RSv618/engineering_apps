@@ -10,7 +10,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.comments import Comment
 from typing import Any
 import collections
-from utils import get_dia_code
+from utils import get_dia_code, resource_path
 from rebar_optimizer import find_optimized_cutting_plan
 
 def excel_col_width_to_px(width: float | None) -> int:
@@ -114,26 +114,45 @@ def get_canonical_representation(bar: dict[str, Any]) -> tuple[str, tuple]:
     elif shape == 'L':
         key = (dims.get('A', 0), dims.get('B', 0))
         return shape, key
+    elif shape == 'flat':
+        key = (dims.get('A', 0), dims.get('B', 0))
+        return shape, key
     else:
         key = tuple(dims.get(k, 0) for k in sorted(dims.keys()))
         return shape, key
 
-def process_rebar_input(rebar_config: dict[str, Any]) -> list[dict[str, Any]]:
+def process_rebar_input(rebar_config: dict[str, Any] | list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     Flattens the input dictionary and groups identical bars by shape, dimensions, AND diameter.
     """
     flat_list = []
-    for bar_type, data in rebar_config.items():
-        if bar_type in ['Top Bar', 'Bottom Bar', 'Perimeter Bar']:
-            if 'bar_in_x_direction' in data:
-                flat_list.append({'bar_type': bar_type, **data['bar_in_x_direction']})
-            if 'bar_in_y_direction' in data:
-                flat_list.append({'bar_type': bar_type, **data['bar_in_y_direction']})
-        elif bar_type == 'Vertical Bar':
-            flat_list.append({'bar_type': bar_type, **data})
-        elif bar_type == 'Stirrups':
-            for stirrup in data:
-                flat_list.append({'bar_type': bar_type, **stirrup})
+    if isinstance(rebar_config, dict):
+        for bar_type, data in rebar_config.items():
+            if bar_type in ['Top Bar', 'Bottom Bar', 'Perimeter Bar']:
+                if 'bar_in_x_direction' in data:
+                    flat_list.append({'bar_type': bar_type, **data['bar_in_x_direction']})
+                if 'bar_in_y_direction' in data:
+                    flat_list.append({'bar_type': bar_type, **data['bar_in_y_direction']})
+            elif bar_type == 'Vertical Bar':
+                flat_list.append({'bar_type': bar_type, **data})
+            elif bar_type == 'Stirrups':
+                for stirrup in data:
+                    flat_list.append({'bar_type': bar_type, **stirrup})
+    elif isinstance(rebar_config, list):
+        for rebar_config_instance in rebar_config:
+            for bar_type, data in rebar_config_instance.items():
+                if bar_type in ['Top Bar', 'Bottom Bar', 'Perimeter Bar']:
+                    if 'bar_in_x_direction' in data:
+                        flat_list.append({'bar_type': bar_type, **data['bar_in_x_direction']})
+                    if 'bar_in_y_direction' in data:
+                        flat_list.append({'bar_type': bar_type, **data['bar_in_y_direction']})
+                elif bar_type == 'Vertical Bar':
+                    flat_list.append({'bar_type': bar_type, **data})
+                elif bar_type == 'Stirrups':
+                    for stirrup in data:
+                        flat_list.append({'bar_type': bar_type, **stirrup})
+    else:
+        raise TypeError(f'Invalid rebar_config type. Expected dict or list, got {type(rebar_config)}')
 
     grouped_bars = collections.OrderedDict()
     for bar in flat_list:
@@ -165,7 +184,6 @@ def process_rebar_input(rebar_config: dict[str, Any]) -> list[dict[str, Any]]:
         })
 
     return processed_list
-
 
 def create_excel_cutting_list(rebar_config: dict[str, Any],
                               cuts_by_diameter: dict,
@@ -342,12 +360,12 @@ def create_excel_cutting_list(rebar_config: dict[str, Any],
         current_row += 1
 
     if proceed_cutting_plan:
-        create_purchase_sheet(wb, purchase_list)
-        create_cutting_plan_sheet(wb, cutting_plan)
+        add_shet_purchase_plan(wb, purchase_list)
+        add_sheet_cutting_plan(wb, cutting_plan)
     wb.save(output_filename)
     print(f"Excel sheet '{output_filename}' has been created successfully.")
 
-def create_purchase_sheet(wb, purchase_list):
+def add_shet_purchase_plan(wb, purchase_list) -> Workbook:
     ws = wb.create_sheet('Purchase Qty')
 
     # --- Styles ---
@@ -413,9 +431,9 @@ def create_purchase_sheet(wb, purchase_list):
             # Number Format
             if col_num >= 2:
                 cell.number_format = '#,##0'
-    return
+    return wb
 
-def create_cutting_plan_sheet(wb, cutting_plan):
+def add_sheet_cutting_plan(wb, cutting_plan) -> Workbook:
     ws = wb.create_sheet('Cutting Plan')
 
     # --- Styles ---
@@ -503,3 +521,187 @@ def create_cutting_plan_sheet(wb, cutting_plan):
 
             # Borders
             cell.border = border
+    return wb
+
+def add_sheet_cutting_list(title: str, rebar_config: list[dict[str, Any]],
+                              market_lengths: dict[str, list], wb: Workbook) -> tuple[Workbook, bool]:
+    """
+    Generates a formatted Excel rebar cutting list from a rebar configuration dictionary.
+    """
+    ws = wb.create_sheet(f'{title} Cutting List')
+    proceed_purchase_plan = True
+
+    max_legs = 0
+    if rebar_config:
+        max_legs = max(len(bar['shape_dimensions']) for bar in rebar_config)
+
+    # This list comprehension is creating the dictionary keys 'A', 'B', etc., which is fine.
+    dimension_headers = [chr(ord('A') + i) for i in range(max_legs)]
+
+    # --- Styles ---
+    white_side = Side(style='thin', color='FFFFFF')
+    black_side = Side(style='thin', color='404040')
+    thick_black_side = Side(style='thick', color='404040')
+    title_font = Font(name='Calibri', size=16, bold=True)
+    header_font = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
+    header_fill = PatternFill(start_color='404040', end_color='404040', fill_type='solid')
+    alter_row_fill = PatternFill(start_color='F3F3F3', end_color='404040', fill_type='solid')
+    cell_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    border = Border(left=black_side, right=black_side, top=black_side, bottom=black_side)
+    header_border = Border(left=white_side, right=white_side, top=black_side, bottom=black_side)
+
+    # --- Static and Dynamic Headers ---
+    static_headers = ['Illustration', 'Bar Type', 'Diameter', 'Quantity', 'Cut Length']
+    all_headers = static_headers + dimension_headers
+
+    # --- Title ---
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(static_headers) + max_legs)
+    title_cell = ws['A1']
+    title_cell.value = f'{title} Rebar Cutting and Bending Schedule'
+    title_cell.font = title_font
+    title_cell.alignment = Alignment(horizontal='center', vertical='center')
+    ws.row_dimensions[1].height = 30
+
+    # --- Headers ---
+    for col_num, header_text in enumerate(all_headers, 1):
+        cell = ws.cell(row=2, column=col_num, value=header_text)
+        cell.font = header_font
+        cell.alignment = cell_alignment
+        cell.fill = header_fill
+        cell.border = header_border
+
+    # Apply black border to left and right outer edges
+    cell = ws.cell(row=2, column=1)
+    cell.border = Border(left=black_side, top=black_side, right=white_side, bottom=black_side)
+    cell = ws.cell(row=2, column=len(all_headers))
+    cell.border = Border(left=white_side, top=black_side, right=black_side, bottom=black_side)
+
+    # --- Column Widths ---
+    ws.column_dimensions['A'].width = 15
+    ws.column_dimensions['B'].width = 25
+    ws.column_dimensions['C'].width = 15
+    ws.column_dimensions['D'].width = 10
+    ws.column_dimensions['E'].width = 18
+    ws.row_dimensions[2].height = 25
+
+    num_static_cols = len(static_headers)
+    for i in range(max_legs):
+        # Calculate column index: static columns + 1 (for 1-based index) + loop index
+        col_idx = num_static_cols + 1 + i
+        col_letter = get_column_letter(col_idx)
+        ws.column_dimensions[col_letter].width = 12
+
+    shape_to_image_map = {
+        'straight': 'straight.png',
+        'U': 'u.png',
+        'L': 'l.png',
+        'rectangular': 'rectangular_outer.png',
+        'rectangular (tall)': 'rectangular_tall.png',
+        'rectangular (wide)': 'rectangular_wide.png',
+        'rectangular (diamond)': 'rectangular_diamond.png',
+        'octagonal': 'octagon.png',
+        'flat (tall)': 'flat_tall.png',
+        'flat (wide)': 'flat_wide.png',
+    }
+
+    # --- Data Rows ---
+    current_row = 3
+    for bar in rebar_config:
+        ws.row_dimensions[current_row].height = 75
+
+        # Use the map to get the correct image filename
+        image_filename = shape_to_image_map.get(bar['shape'])
+        if image_filename:
+            try:
+                img_path = resource_path(f'images/{image_filename}')
+
+                with PILImage.open(img_path) as pil_img:
+                    original_width, original_height = pil_img.size
+
+                aspect_ratio = original_height / original_width
+                target_width = 90
+                target_height = int(target_width * aspect_ratio + 0.5)
+                if target_height > 90:
+                    target_height = 90
+                    target_width = int(90 / aspect_ratio + 0.5)
+
+                img = Image(img_path)
+                img.width = target_width
+                img.height = target_height
+
+                ws.add_image(center_img(img, f'A{current_row}', ws))
+
+            except FileNotFoundError:
+                ws.cell(row=current_row, column=1, value='No Image')
+        else:
+            ws.cell(row=current_row, column=1, value='No Image')
+
+        try:
+            val = bar['diameter']
+            diameter_str = f'{val:.1f} mm\n({get_dia_code(val)})'
+        except KeyError:
+            # Fallback if the diameter code is not found
+            diameter_str = f'{bar['diameter']:.1f} mm'
+
+        data_to_write = [
+            None,
+            bar['bar_type'],
+            diameter_str,  # Use the newly formatted string
+            bar['quantity'],
+            round(bar['cut_length'], 1),
+        ]
+
+        for letter in dimension_headers:
+            data_to_write.append(bar['shape_dimensions'].get(letter, '-'))
+
+        for col_num, value in enumerate(data_to_write, 1):
+            if value is None:
+                cell = ws.cell(row=current_row, column=col_num)
+            else:
+                cell = ws.cell(row=current_row, column=col_num, value=value)
+
+            if col_num == 5:  # Cutlength
+                max_length = max(market_lengths[get_dia_code(bar['diameter'])])
+                if value > max_length * 1000:
+                    proceed_purchase_plan = False
+                    cell.font = Font(color='FF0000')
+                    cell.comment = Comment(f'Splicing required.\nCutting length exceeds available market length of {max_length:}m.',
+                                           '✨rs_uy', height=150, width=200)
+
+            # Alternating BG Color Fill
+            if current_row % 2 == 0:
+                cell.fill = alter_row_fill
+            cell.alignment = cell_alignment
+
+            # Borders
+            cell.border = border
+            if col_num == 6:  #Shape Dimensions
+                cell.border = Border(left=thick_black_side, bottom=black_side, top=black_side, right=black_side)
+
+            # Number Format
+            if col_num >= 5:
+                cell.number_format = '#,##0" mm"'
+
+        current_row += 1
+
+    return wb, proceed_purchase_plan
+
+def delete_blank_worksheets(wb: Workbook) -> Workbook:
+    """
+    Deletes all blank worksheets from an Excel workbook.
+
+    Args:
+        wb: the Excel workbook.
+    """
+    sheets_to_delete = []
+
+    for sheet in wb.worksheets:
+        # Check if the sheet contains any data
+        # max_row and max_column will be 1 if the sheet is empty
+        if sheet.max_row == 1 and sheet.max_column == 1 and sheet.cell(row=1, column=1).value is None:
+            sheets_to_delete.append(sheet)
+
+    for sheet in sheets_to_delete:
+        wb.remove(sheet)
+
+    return wb

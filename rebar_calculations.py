@@ -181,7 +181,7 @@ def stirrups_calculation(bar_diameter: float,
                          ped_width_x: float,
                          ped_width_y: float,
                          concrete_cover: float,
-                         config: Literal['outer', 'tall', 'wide', 'diamond', 'octagon'] = 'outer',
+                         config: Literal['outer', 'tall', 'wide', 'diamond', 'octagon', 'vertical', 'horizontal'] = 'outer',
                          a: float | None = None) -> dict:
     if config in ['tall', 'wide', 'octagon'] and a is None:
         raise ValueError(f"Parameter 'a' must be provided for '{config}' stirrups.")
@@ -243,6 +243,24 @@ def stirrups_calculation(bar_diameter: float,
         total_deduction = 7 * get_bend_deduction(45, bar_diameter) + 2 * get_bend_deduction(135, bar_diameter)
         cut_length = sum(shape_dim.values()) - total_deduction
 
+    elif config == 'vertical':
+        shape = 'flat (tall)'
+
+        tall = ped_width_y - concrete_cover * 2
+        shape_dim = {'A': hook_length, 'B': tall, 'C': hook_length}
+
+        total_deduction = 2 * get_bend_deduction(180, bar_diameter)
+        cut_length = sum(shape_dim.values()) - total_deduction
+
+    elif config == 'horizontal':
+        shape = 'flat (wide)'
+
+        wide = ped_width_x - concrete_cover * 2
+        shape_dim = {'A': hook_length, 'B': wide, 'C': hook_length}
+
+        total_deduction = 2 * get_bend_deduction(180, bar_diameter)
+        cut_length = sum(shape_dim.values()) - total_deduction
+
     else:
         raise ValueError(f"Stirrup Type '{config}' not supported.")
 
@@ -253,3 +271,85 @@ def stirrups_calculation(bar_diameter: float,
         'total_cut_length_mm': round(cut_length, 1),
         'quantity': qty
     }
+
+
+def compile_rebar(data: dict) -> dict:
+    n_ped = data['n_ped']
+    n_footing = data['n_footing']
+    cc = data['cc']
+    bx = data['bx']
+    by = data['by']
+    h = data['h']
+    Bx = data['Bx']
+    By = data['By']
+    t = data['t']
+
+    result = {}
+
+    # Top and Bottom Bar
+    def top_bottom_bar_helper(title):
+        bar_detail = data[title]
+        qty_or_spacing = bar_detail['Input Type']
+        value_along_x = bar_detail['Value Along X']
+        value_along_y = bar_detail['Value Along Y']
+        if 'Spacing' in qty_or_spacing:
+            bar_spacing_value_x = value_along_x
+            bar_spacing_value_y = value_along_y
+            bar_qty_x = bar_qty_y = None
+        else:
+            bar_spacing_value_x = bar_spacing_value_y = None
+            bar_qty_x = value_along_x
+            bar_qty_y = value_along_y
+        return top_bottom_bar_calculation(get_bar_dia(bar_detail['Diameter']), Bx, By, t, cc,
+                                          bar_spacing_value_x,
+                                          bar_spacing_value_y, bar_qty_x, bar_qty_y)
+
+    if data['Top Bar']['Enabled']:
+        result['Top Bar'] = top_bottom_bar_helper('Top Bar')
+        result['Top Bar']['bar_in_x_direction']['quantity'] *= n_footing
+        result['Top Bar']['bar_in_y_direction']['quantity'] *= n_footing
+    result['Bottom Bar'] = top_bottom_bar_helper('Bottom Bar')
+    result['Bottom Bar']['bar_in_x_direction']['quantity'] *= n_footing
+    result['Bottom Bar']['bar_in_y_direction']['quantity'] *= n_footing
+
+    # Perimeter Bar
+    perim_bar = data['Perimeter Bar']
+    if perim_bar['Enabled']:
+        layers = perim_bar['Layers']
+        if layers > 0:
+            dia = get_bar_dia(perim_bar['Diameter'])
+            result['Perimeter Bar'] = perimeter_bar_calculation(dia, layers, Bx, By, cc)
+            result['Perimeter Bar']['bar_in_x_direction']['quantity'] *= n_footing
+            result['Perimeter Bar']['bar_in_y_direction']['quantity'] *= n_footing
+
+    # Vertical Bar
+    vert_bar = data['Vertical Bar']
+    if vert_bar['Enabled']:
+        dia = get_bar_dia(vert_bar['Diameter'])
+        hook_calc = vert_bar['Hook Calculation']
+        bot_bar_dia = get_bar_dia(data['Bottom Bar']['Diameter'])
+        qty = vert_bar['Quantity']
+        if 'Manual' in hook_calc:
+            hook_len = vert_bar['Hook Length']
+        else:
+            hook_len = None
+        result['Vertical Bar'] = vertical_bar_calculation(dia, qty, h, t, cc, bot_bar_dia, hook_len)
+        result['Vertical Bar']['quantity'] *= n_ped * n_footing
+
+    # Stirrups
+    stirrup = data['Stirrups']
+    if stirrup['Enabled']:
+        qty = stirrup['Quantity']
+        if qty > 0:
+            stirrups_cutting_list = []
+            for row in stirrup['Types']:
+                dia = get_bar_dia(row['Diameter'])
+                a = row['a_input']
+                if a == '':
+                    a = None
+                stirrup_result = stirrups_calculation(dia, qty, bx, by, cc, row['Type'].lower(), a)
+                stirrup_result['quantity'] *= n_footing
+                stirrups_cutting_list.append(stirrup_result)
+            result['Stirrups'] = stirrups_cutting_list
+
+    return result

@@ -1,15 +1,33 @@
 from typing import Any
 from PyQt6.QtWidgets import (
     QLabel, QApplication, QMessageBox, QWidget, QVBoxLayout, QSpinBox, QDoubleSpinBox, QPushButton, QGroupBox,
-    QLineEdit, QComboBox, QTextEdit, QCheckBox
+    QLineEdit, QComboBox, QTextEdit, QCheckBox, QScrollArea
 )
 import traceback
 from PyQt6.QtGui import QPixmap, QCursor, QEnterEvent
-from PyQt6.QtCore import Qt, QEvent, pyqtSignal
+from PyQt6.QtCore import Qt, QEvent, pyqtSignal, QObject
 import re
 from typing import Literal
 import os
 import sys
+
+
+class GlobalWheelEventFilter(QObject):
+    """
+    An event filter that intercepts and ignores wheel events for specific widgets
+    to prevent accidental value changes when scrolling.
+    """
+
+    def eventFilter(self, obj, event):
+        # Check if the event is a wheel event
+        if event.type() == QEvent.Type.Wheel:
+            # Check if the widget is one of the types we want to ignore scrolling on
+            if isinstance(obj, (QComboBox, QSpinBox, QDoubleSpinBox)):
+                # Return True to indicate the event has been handled and should be ignored.
+                return True
+
+        # For all other objects and events, pass them to the default implementation.
+        return super().eventFilter(obj, event)
 
 class MemoryGroupBox(QGroupBox):
     def __init__(self, title='', parent=None):
@@ -61,6 +79,7 @@ class MemoryGroupBox(QGroupBox):
                 w.setCurrentIndex(-1)
             elif isinstance(w, (QSpinBox, QDoubleSpinBox)):
                 w.setValue(w.minimum())
+                w.setSuffix('')
             elif isinstance(w, QCheckBox):
                 w.setChecked(True)
 
@@ -76,6 +95,70 @@ class MemoryGroupBox(QGroupBox):
         for child in self.findChildren(QWidget):
             assert isinstance(child, QWidget)
             child.style().polish(child)
+
+
+class LinkSpinboxes(QCheckBox):
+    """
+    A QCheckBox that locks the value of one QSpinBox or QDoubleSpinBox to another.
+
+    When checked, this checkbox disables the `copy_to_spinbox` and ensures its
+    value always matches the `copy_from_spinbox`. When unchecked, it re-enables
+    the `copy_to_spinbox`, allowing its value to be changed independently.
+    """
+
+    def __init__(
+            self,
+            copy_from_spinbox: QSpinBox | QDoubleSpinBox,
+            copy_to_spinbox: QSpinBox | QDoubleSpinBox,
+            tooltip: str | None = None,
+            parent=None
+    ):
+        """
+        Initializes the LockRatioCheckBox.
+
+        Args:
+            copy_from_spinbox: The spinbox to copy the value from.
+            copy_to_spinbox: The spinbox to copy the value to.
+            tooltip: An optional tooltip string for the checkbox.
+            parent: An optional parent widget.
+        """
+        super().__init__(parent)
+
+        self.copy_from_spinbox = copy_from_spinbox
+        self.copy_to_spinbox = copy_to_spinbox
+
+        self.setProperty('class', 'lock-ratio')
+        self.setChecked(True)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        if tooltip:
+            self.setToolTip(tooltip)
+
+        # Connect signals
+        self.toggled.connect(self._on_toggled)
+        self.copy_from_spinbox.valueChanged.connect(self._on_source_value_changed)
+
+        self.copy_to_spinbox.setEnabled(False)
+        self.copy_to_spinbox.setValue(self.copy_from_spinbox.value())
+
+    def _on_toggled(self, checked: bool):
+        """
+        Handles the toggled signal of the checkbox.
+
+        Enables or disables the target spinbox based on the checked state
+        and syncs the value if checked.
+        """
+        self.copy_to_spinbox.setEnabled(not checked)
+        if checked:
+            self.copy_to_spinbox.setValue(self.copy_from_spinbox.value())
+
+    def _on_source_value_changed(self, value: int | float):
+        """
+        Handles the valueChanged signal of the source spinbox.
+
+        Updates the target spinbox's value if the checkbox is checked.
+        """
+        if self.isChecked():
+            self.copy_to_spinbox.setValue(value)
 
 class BlankSpinBox(QSpinBox):
     """Integer spinbox with blank special value."""
@@ -289,6 +372,27 @@ def toggle_obj_visibility(selected_text: str, target_text: str, objs: QWidget | 
             toggle(obj)
     else:
         toggle(objs)
+
+def is_widget_empty(widget: QWidget) -> bool:
+    """
+    Checks if a given input widget is effectively empty.
+
+    Args:
+        widget: The widget to check.
+
+    Returns:
+        True if the widget is considered empty, False otherwise.
+    """
+    if isinstance(widget, (QSpinBox, QDoubleSpinBox)) and hasattr(widget, 'specialValueText'):
+        # This is our custom BlankSpinBox or BlankDoubleSpinBox
+        return widget.text() == widget.specialValueText()
+    elif isinstance(widget, QLineEdit):
+        return not widget.text().strip()
+    elif isinstance(widget, QTextEdit):
+        return not widget.toPlainText().strip()
+    # For other widgets like QComboBox, we assume a selection is always valid if visible.
+    return False
+
 
 def parse_spacing_string(text: str) -> list[tuple[float]]:
     """
@@ -570,3 +674,24 @@ def resource_path(relative_path: str) -> str:
         base_path = os.path.abspath('.')
 
     return os.path.join(base_path, relative_path)
+
+def make_scrollable(widget: QWidget, always_on: bool = False) -> QScrollArea:
+    """
+    Wraps a widget in a QScrollArea.
+
+    Args:
+        widget: The widget to make scrollable.
+        always_on: If True, the vertical scrollbar is always visible.
+
+    Returns:
+        The configured QScrollArea containing the widget.
+    """
+    scroll = QScrollArea()
+    scroll.setWidget(widget)
+    scroll.setWidgetResizable(True)
+    scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    if always_on:
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+    else:
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    return scroll

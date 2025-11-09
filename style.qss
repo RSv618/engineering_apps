@@ -148,6 +148,10 @@ QPushButton:disabled { background-color: #E5E5E5; color: #7f8c8d; }
 .green-button:hover { background-color: #059862; }
 .green-button:pressed { background-color: #048258; }
 
+.yellow-button { background-color: #FF9900; color: white; }
+.yellow-button:hover { background-color: #FFCC33; }
+.yellow-button:pressed { background-color: #FFCC00; }
+
 .red-button { background-color: #e74c3c; color: white; }
 .red-button:hover { background-color: #d63031; }
 .red-button:pressed { background-color: #c92829; }
@@ -260,7 +264,7 @@ QCheckBox::indicator:checked:disabled {
     min-height: 110px;
 }
 .stirrup-canvas {
-    min-height: 200px;
+    min-height: 150px;
 }
 .separator {
     color: #ced4da;
@@ -349,4 +353,81 @@ QGroupBox::indicator:unchecked {
 .invalid-input {
     border: 1px solid red;
     background-color: #ffe6e6; /* Light red background */
+}
+
+/* 1. This styles the outer QFrame, giving it the nice border */
+.detail-panel {
+    background-color: #FFFFFF; /* The solid white background */
+    border-radius: 8px;
+    border: 1px solid #ced4da; /* The soft grey border from your theme */
+}
+
+/* 2. This styles the QScrollArea to be invisible */
+.detail-scroll-area {
+    background-color: transparent; /* Makes the scroll area itself see-through */
+    border: none;                  /* Removes any default border */
+}
+
+/* 3. This styles the actual content widget INSIDE the scroll area */
+.detail-content {
+    background-color: transparent; /* Also see-through, showing the panel's white */
+}
+
+/* 4. This styles the placeholder text */
+.detail-placeholder {
+    color: #7f8c8d;
+    font-size: 14px;
+}
+
+/* Style for the new section headers in the detail panel */
+.detail-header {
+    font-size: 11pt;
+    font-weight: bold;
+    color: #3498db; /* Your theme's primary blue color */
+    padding-bottom: 4px;
+    padding-left: 0;
+    margin-top: 10px; /* Space above the header */
+}
+
+/*
+ * ===============================================
+ * List Item Styling (THEME-CORRECTED)
+ * ===============================================
+ */
+
+/* Base style for each foundation item in the list */
+.list-item {
+    background-color: #FFFFFF; /* Give it a solid white background */
+    border: 1px solid #ced4da; /* A clean border to create a "cell" */
+    border-radius: 5px;
+    min-height: 28px;
+}
+
+/* Style for the item when the mouse is hovering over it */
+.list-item:hover {
+    background-color: #e9ecef; /* Use your theme's hover color */
+    border-color: #a8b0b7;     /* Slightly darken border on hover */
+}
+
+/* Style for the currently selected item */
+.list-item.selected {
+    background-color: #e9f2fa; /* A very light blue for the background */
+    border: 1px solid #3498db;  /* Use your theme's primary blue for the border */
+}
+
+
+/*
+ * ===============================================
+ * Icon Button Styling (REFINED)
+ * ===============================================
+ */
+
+/* This class styles icon-only buttons */
+.icon-button {
+    min-width: 20px;
+    max-width: 20px;
+    min-height: 20px;
+    max-height: 20px;
+    padding: 0px;
+    border-radius: 10px; /* Make it circular */
 }

@@ -15,7 +15,7 @@ from utils import (load_stylesheet, parse_nested_dict, global_exception_hook,
                    style_invalid_input)
 from rebar_optimizer import find_optimized_cutting_plan
 from constants import BAR_DIAMETERS, MARKET_LENGTHS, DEBUG_MODE
-from excel_writer import create_purchase_sheet, create_cutting_plan_sheet
+from excel_writer import add_shet_purchase_plan, add_sheet_cutting_plan
 
 class MultiPageApp(QMainWindow):
     def __init__(self):
@@ -564,10 +564,10 @@ class MultiPageApp(QMainWindow):
         # --- Page 1: Cutting Lengths ---
         # Define some sample data
         sample_cuts = [
-            {'dia': '#10', 'len': 2095, 'qty': 16},
-            {'dia': '#10', 'len': 1695, 'qty': 12},
-            {'dia': '#16', 'len': 5500, 'qty': 8},
-            {'dia': '#25', 'len': 8950, 'qty': 20}
+            {'dia': '#20', 'len': 1824, 'qty': 96},
+            {'dia': '#20', 'len': 1729, 'qty': 32},
+            {'dia': '#12', 'len': 2476, 'qty': 20},
+            {'dia': '#12', 'len': 727, 'qty': 40}
         ]
 
         # Clear any existing rows beyond the first one
@@ -719,8 +719,8 @@ def create_excel_cutting_plan(cuts_by_diameter: dict[str, list[tuple]],
             raise ValueError('Cannot proceed. Double check if a length exceed the available market length.')
     wb = Workbook()
     if proceed_cutting_plan:
-        create_purchase_sheet(wb, purchase_list)
-        create_cutting_plan_sheet(wb, cutting_plan)
+        add_shet_purchase_plan(wb, purchase_list)
+        add_sheet_cutting_plan(wb, cutting_plan)
     wb.remove(wb.active)
     wb.save(output_filename)
     print(f"Excel sheet '{output_filename}' has been created successfully.")

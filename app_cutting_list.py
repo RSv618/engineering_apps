@@ -1,36 +1,36 @@
-import sys
 import os
 import subprocess
+import sys
 from typing import Any
-from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QStackedWidget, QLabel, QLineEdit, QComboBox,
-    QGroupBox, QGridLayout, QTextEdit, QFrame, QSizePolicy,
-    QFormLayout, QCheckBox, QScrollArea, QMessageBox, QFileDialog,
-    QSpinBox, QDoubleSpinBox, QPushButton
-)
-from PyQt6.QtGui import QPainter, QPen, QColor, QPaintEvent, QIcon
-from PyQt6.QtCore import Qt, QPointF, QTimer, QEvent
-from utils import (
-    load_stylesheet, get_img, update_image,
-    toggle_obj_visibility, parse_spacing_string, get_bar_dia,
-    parse_nested_dict, get_dia_code, global_exception_hook, InfoPopup, HoverLabel,
-    BlankSpinBox, resource_path, HoverButton, MemoryGroupBox, style_invalid_input
-)
-from rebar_calculations import (
-    top_bottom_bar_calculation, perimeter_bar_calculation,
-    vertical_bar_calculation, stirrups_calculation
-)
-from excel_writer import process_rebar_input, create_excel_cutting_list
-from constants import (BAR_DIAMETERS, BAR_DIAMETERS_FOR_STIRRUPS,
-                       MARKET_LENGTHS, FOOTING_IMAGE_WIDTH, STIRRUP_ROW_IMAGE_WIDTH,
-                       RSB_IMAGE_WIDTH, DEBUG_MODE)
-from functools import partial
 
-"""
-TO BUILD:
-pyinstaller --name "CuttingList" --onefile --windowed --icon="images/logo.png" --add-data "images:images" --add-data "style.qss:." app_cutting_list.py
-"""
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QStackedWidget, QWidget, QVBoxLayout,
+    QHBoxLayout, QScrollArea, QLabel, QPushButton, QLineEdit, QDialog,
+    QFormLayout, QSpinBox, QComboBox, QGridLayout, QCheckBox, QTextEdit, QFrame,
+    QSizePolicy, QGroupBox, QStyle, QStyleOption, QMessageBox, QFileDialog
+)
+from PyQt6.QtGui import QIcon, QColor, QPen, QPainter, QPaintEvent
+from PyQt6.QtCore import (Qt, pyqtSignal as Signal, QEvent, QPointF,
+                          QTimer)
+
+from constants import (FOOTING_IMAGE_WIDTH, RSB_IMAGE_WIDTH,
+                       BAR_DIAMETERS, STIRRUP_ROW_IMAGE_WIDTH,
+                       BAR_DIAMETERS_FOR_STIRRUPS, MARKET_LENGTHS,
+                       DEBUG_MODE)
+from excel_writer import (process_rebar_input, add_sheet_cutting_list,
+                          add_shet_purchase_plan, add_sheet_cutting_plan,
+                          delete_blank_worksheets)
+from rebar_calculations import compile_rebar
+from rebar_optimizer import find_optimized_cutting_plan
+from utils import (HoverButton, HoverLabel, resource_path,
+                   global_exception_hook, load_stylesheet, get_img,
+                   BlankSpinBox, update_image, MemoryGroupBox, InfoPopup,
+                   parse_spacing_string, get_bar_dia, make_scrollable,
+                   LinkSpinboxes, toggle_obj_visibility,
+                   GlobalWheelEventFilter,  is_widget_empty,
+                   style_invalid_input, get_dia_code)
+from openpyxl import Workbook
+
 class DrawStirrup(QWidget):
     def __init__(self, width: int, parent: QWidget | None = None) -> None:
         """
@@ -257,52 +257,60 @@ class DrawStirrup(QWidget):
         """
         return self.stirrup_qty
 
-
-class MultiPageApp(QMainWindow):
-    def __init__(self) -> None:
-        """Initializes the main application window and its components."""
-        super().__init__()
-
-        self.setWindowTitle('Cutting List')
+class FoundationDetailsDialog(QDialog):
+    """
+    A modal dialog with multiple pages to enter or edit details for a foundation type.
+    """
+    def __init__(self, existing_details: dict = None, parent=None):
+        """Initializes the multi-page dialog."""
+        super().__init__(parent)
+        self.setWindowTitle('Foundation Details')
+        self.setModal(True)
         self.setWindowIcon(QIcon(resource_path('images/logo.png')))
-        self.setGeometry(50, 50, 980, 720)
-        self.setMinimumWidth(980)
+        self.setGeometry(100, 100, 1000, 720)
+        self.setMinimumWidth(1000)
         self.setMinimumHeight(600)
 
-        self.debounce_timer = QTimer(self)
-        self.debounce_timer.setSingleShot(True)
-        self.debounce_timer.setInterval(500)  # 500 ms delay
+        # Main layout
+        main_layout = QVBoxLayout(self)
 
+        # Stacked widget for pages
         self.stacked_widget = QStackedWidget()
-        self.setCentralWidget(self.stacked_widget)
+        main_layout.addWidget(self.stacked_widget)
 
-        self.footing_details = {}
-        self.rsb_details = {}
-        self.market_lengths_checkboxes = {}
-        self.summary_labels = {}
-        self.remove_stirrup_button = None
-        self.stirrup_rows_layout = None
-        self.stirrup_canvas = None
+        # Data
+        self.widgets = {}
         self.group_box = {}
-        self.footing_details_values = {}
-        self.rsb_details_values = {}
+        self.stirrup_canvas = None
+        self.stirrup_rows_layout = None
+        self.remove_stirrup_button = None
         self.info_popup = InfoPopup(self)
 
-        # Mousewheel protection
-        QApplication.instance().installEventFilter(self)
+        # Redraw debounce
+        self.debounce_timer = QTimer(self)
+        self.debounce_timer.setInterval(300)  # 300ms delay
+        self.debounce_timer.setSingleShot(True)
+        self.debounce_timer.timeout.connect(self.update_stirrup_drawing)
 
+        # Create pages and add them to the stacked widget
         self.create_footing_page()
         self.create_rsb_page()
-        self.create_market_lengths_page()
-        self.create_summary_page()
-        self.setup_connections()
 
-        if DEBUG_MODE:
-            self.prefill_for_debug()
+        # Connect signals after all widgets have been created
+        self.connect_stirrup_redraw_signals()
+
+        # Set initial state
         self.stacked_widget.setCurrentIndex(0)
 
-    def create_footing_page(self) -> None:
-        """Builds the UI for the first page (Footing Dimensions)."""
+        # Pre-fill fields if editing existing data
+        if existing_details:
+            self.populate_data(existing_details)
+            self.update_stirrup_drawing()
+        else:
+            self.add_stirrup_row()
+
+    def create_footing_page(self):
+        """Creates the first page of the form."""
         page = QWidget()
         page.setProperty('class', 'page')
         page_layout = QVBoxLayout(page)
@@ -312,111 +320,116 @@ class MultiPageApp(QMainWindow):
         footing_img = get_img(resource_path('images/label_1ped.png'), FOOTING_IMAGE_WIDTH, FOOTING_IMAGE_WIDTH)
         content_layout.addWidget(footing_img)
 
-        # Right side: Form
-        rows = {
-            # Description  Variable  Widget
-            'Footing Type': (None, QComboBox()),
-            'Total Number of Footing': (None, BlankSpinBox(1, 9_999, 1)),
-            'Concrete Cover': (None, BlankSpinBox(1, 999, 75,suffix=' mm')),
-            'Pedestal Width (Along X)': ('bx', BlankSpinBox(0, 99_999, suffix=' mm')),
-            'Pedestal Width (Along Y)': ('by', BlankSpinBox(0, 99_999, suffix=' mm')),
-            'Pedestal Height': ('h', BlankSpinBox(0, 999_999, suffix=' mm')),
-            'Pad Width (Along X)': ('Bx', BlankSpinBox(0, 999_999, suffix=' mm')),
-            'Pad Width (Along Y)': ('By', BlankSpinBox(0, 999_999, suffix=' mm')),
-            'Pad Thickness': ('t', BlankSpinBox(0, 99_999, suffix=' mm')),
-        }
-
         # --- Create the form widget and the QGridLayout ---
         form_widget = QWidget()
         form_layout = QGridLayout(form_widget)
         form_layout.setColumnMinimumWidth(1, 50)
+        form_layout.setColumnStretch(2, 1)  # Allow the column (2) to stretch, keeping other columns fixed
 
-        # Rebuild the inputs_page1 dict from the new rows structure
-        self.footing_details = {label: widget for label, (_, widget) in rows.items()}
+        # Name
+        name = QLineEdit()
+        name.setPlaceholderText('(e.g. Fdn Type F1)')
+        label = QLabel('Name:')
+        form_layout.addWidget(label, 0, 0, 1, 2)
+        form_layout.addWidget(name, 0, 2, 1, 2)
+        self.widgets['name'] = name
 
-        # Set defaults and connect signals
-        n_ped = {'Isolated': 1, 'Mat (2 Ped)': 2, 'Mat (3 Ped)': 3, 'Mat (4 Ped)': 4}
+        # Pedestal Per Footing
+        ped_per_footing = QSpinBox()
+        ped_per_footing.setRange(1, 4)
         image_map = {
-            'Isolated': resource_path('images/label_1ped.png'),
-            'Mat (2 Ped)': resource_path('images/label_2ped.png'),
-            'Mat (3 Ped)': resource_path('images/label_3ped.png'),
-            'Mat (4 Ped)': resource_path('images/label_4ped.png')
+            '1': resource_path('images/label_1ped.png'),
+            '2': resource_path('images/label_2ped.png'),
+            '3': resource_path('images/label_3ped.png'),
+            '4': resource_path('images/label_4ped.png')
         }
-        self.footing_details['Footing Type'].addItems(n_ped.keys())
-        self.footing_details['n_ped'] = n_ped['Isolated']
-        self.footing_details['Footing Type'].currentTextChanged.connect(
-            lambda selected_text: update_image(selected_text, image_map, footing_img,
+        label = QLabel('Pedestal Per Footing:')
+        form_layout.addWidget(label, 1, 0, 1, 2)
+        form_layout.addWidget(ped_per_footing, 1, 2, 1, 2)
+        ped_per_footing.valueChanged.connect(
+            lambda value: update_image(str(value), image_map, footing_img,
                                                fallback=resource_path('images/label_0ped.png')))
-        self.footing_details['Footing Type'].currentTextChanged.connect(
-            lambda selected_text: self.footing_details.update({'n_ped': n_ped[selected_text]}))
+        self.widgets['n_ped'] = ped_per_footing
 
-        # --- Build the form row by row using the grid layout ---
-        for row_index, (label_text, (variable, widget)) in enumerate(rows.items()):
+        # Total Number of Footing
+        n_footing = BlankSpinBox(1, 9_999, 1)
+        label = QLabel('Total Number of Footing:')
+        form_layout.addWidget(label, 2, 0, 1, 2)
+        form_layout.addWidget(n_footing, 2, 2, 1, 2)
+        self.widgets['n_footing'] = n_footing
 
-            # Column 0: Description Label
-            description_label = QLabel(label_text)
+        # Concrete Cover
+        cc = BlankSpinBox(1, 999, 75, suffix=' mm')
+        label = QLabel('Concrete Cover:')
+        form_layout.addWidget(label, 3, 0, 1, 2)
+        form_layout.addWidget(cc, 3, 2, 1, 2)
+        self.widgets['cc'] = cc
 
-            # Column 1: Red Variable Label (if it exists)
-            if variable is not None:
-                form_layout.addWidget(description_label, row_index, 0)
-                label = QLabel(variable)
-                label.setProperty('class', 'footing-variable')
-                form_layout.addWidget(label, row_index, 1)
-            else:
-                form_layout.addWidget(description_label, row_index, 0, 1, 2)
+        # Pedestal Width
+        ped_width_x = BlankSpinBox(0, 99_999, suffix=' mm')
+        ped_width_y = BlankSpinBox(0, 99_999, suffix=' mm')
+        ped_link_checkbox = LinkSpinboxes(ped_width_x, ped_width_y, 'Keep square')
+        label = QLabel('Pedestal Width (Along X)')
+        form_layout.addWidget(label, 4, 0)
+        variable = QLabel('bx')
+        variable.setProperty('class', 'footing-variable')
+        form_layout.addWidget(label, 4, 0)
+        form_layout.addWidget(variable, 4, 1)
+        form_layout.addWidget(ped_width_x, 4, 2, 1, 2)
+        label = QLabel('Pedestal Width (Along Y)')
+        form_layout.addWidget(label, 5, 0)
+        variable = QLabel('by')
+        variable.setProperty('class', 'footing-variable')
+        form_layout.addWidget(label, 5, 0)
+        form_layout.addWidget(variable, 5, 1)
+        form_layout.addWidget(ped_width_y, 5, 2)
+        form_layout.addWidget(ped_link_checkbox, 5, 3)
+        self.widgets['bx'] = ped_width_x
+        self.widgets['by'] = ped_width_y
 
-            if 'Along Y' in label_text:
-                # Add the 'Along Y' spinbox first
-                form_layout.addWidget(widget, row_index, 2)
+        # Pedestal Height
+        ped_height = BlankSpinBox(0, 999_999, suffix=' mm')
+        label = QLabel('Pedestal Height')
+        form_layout.addWidget(label, 6, 0)
+        variable = QLabel('h')
+        variable.setProperty('class', 'footing-variable')
+        form_layout.addWidget(label, 6, 0)
+        form_layout.addWidget(variable, 6, 1)
+        form_layout.addWidget(ped_height, 6, 2, 1, 2)
+        self.widgets['h'] = ped_height
 
-                # Create and configure the checkbox
-                lock_ratio_checkbox = QCheckBox()
-                lock_ratio_checkbox.setProperty('class', 'lock-ratio')
-                lock_ratio_checkbox.setChecked(True)
-                lock_ratio_checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
-                lock_ratio_checkbox.setToolTip('Square [Lock Ratio]')
-                form_layout.addWidget(lock_ratio_checkbox, row_index, 3)
+        # Pad Width
+        pad_width_x = BlankSpinBox(0, 999_999, suffix=' mm')
+        pad_width_y = BlankSpinBox(0, 999_999, suffix=' mm')
+        pad_link_checkbox = LinkSpinboxes(pad_width_x, pad_width_y, 'Keep square')
+        label = QLabel('Pad Width (Along X)')
+        form_layout.addWidget(label, 7, 0)
+        variable = QLabel('Bx')
+        variable.setProperty('class', 'footing-variable')
+        form_layout.addWidget(label, 7, 0)
+        form_layout.addWidget(variable, 7, 1)
+        form_layout.addWidget(pad_width_x, 7, 2, 1, 2)
+        label = QLabel('Pad Width (Along Y)')
+        form_layout.addWidget(label, 8, 0)
+        variable = QLabel('By')
+        variable.setProperty('class', 'footing-variable')
+        form_layout.addWidget(label, 8, 0)
+        form_layout.addWidget(variable, 8, 1)
+        form_layout.addWidget(pad_width_y, 8, 2)
+        form_layout.addWidget(pad_link_checkbox, 8, 3)
+        self.widgets['Bx'] = pad_width_x
+        self.widgets['By'] = pad_width_y
 
-                # 1. Identify the 'Along Y' spinbox (the current 'widget') and its
-                #    corresponding 'Along X' spinbox from our dictionary.
-                spinbox_y = widget
-                x_label_text = label_text.replace('Along Y', 'Along X')
-                spinbox_x = self.footing_details[x_label_text]
-
-                # 2. Connect the checkbox's 'toggled' signal to a lambda function.
-                #    This function will:
-                #    a) Disable the 'Y' spinbox when the box is checked.
-                #    b) If checked, immediately copy the 'X' value to the 'Y' spinbox.
-                #    NOTE: We use default arguments (sb_y=spinbox_y) to "capture" the
-                #    correct spinbox for this loop iteration.
-                # noinspection PyUnresolvedReferences
-                lock_ratio_checkbox.toggled.connect(
-                    lambda checked, sb_y=spinbox_y, sb_x=spinbox_x: (
-                        sb_y.setEnabled(not checked),
-                        sb_y.setValue(sb_x.value()) if checked else None
-                    )
-                )
-
-                # 3. Connect the 'X' spinbox's 'valueChanged' signal to another lambda.
-                #    This function will update the 'Y' spinbox's value in real-time,
-                #    but only if the lock checkbox is currently checked.
-                spinbox_x.valueChanged.connect(
-                    lambda value, sb_y=spinbox_y, chk=lock_ratio_checkbox: (
-                        sb_y.setValue(value) if chk.isChecked() else None
-                    )
-                )
-
-                # 4. Set the initial state when the UI is first created.
-                #    Since setChecked(True) is the default, we disable the 'Y' spinbox
-                #    and sync its value with the 'X' spinbox's starting value.
-                spinbox_y.setEnabled(False)
-                spinbox_y.setValue(spinbox_x.value())
-
-            else:
-                form_layout.addWidget(widget, row_index, 2, 1, 2)
-
-        # Allow the input column (2) to stretch, keeping other columns fixed
-        form_layout.setColumnStretch(2, 1)
+        # Pad thickness
+        pad_thickness = BlankSpinBox(0, 99_999, suffix=' mm')
+        label = QLabel('Pad Thickness')
+        form_layout.addWidget(label, 9, 0)
+        variable = QLabel('t')
+        variable.setProperty('class', 'footing-variable')
+        form_layout.addWidget(label, 9, 0)
+        form_layout.addWidget(variable, 9, 1)
+        form_layout.addWidget(pad_thickness, 9, 2, 1, 2)
+        self.widgets['t'] = pad_thickness
 
         # Container to vertically center the form
         right_side_widget = QWidget()
@@ -439,14 +452,13 @@ class MultiPageApp(QMainWindow):
         next_button.clicked.connect(self.go_to_rsb_page)
         button_layout.addWidget(next_button)
         page_layout.addLayout(button_layout)
-        self.stacked_widget.addWidget(self.make_scrollable(page))
+        self.stacked_widget.addWidget(page)
 
     def create_rsb_page(self) -> None:
         """Builds the UI for the second page (Reinforcement Details)."""
         page = QWidget()
         page.setProperty('class', 'page')
-
-        page_layout = QVBoxLayout(page)  # Change this from QGridLayout to QVBoxLayout
+        page_layout = QVBoxLayout(page)
 
         # Create a container widget for the scrollable content
         scroll_content = QWidget()
@@ -463,7 +475,9 @@ class MultiPageApp(QMainWindow):
                 group_box = QGroupBox(title)
             section_layout = QHBoxLayout(group_box)
 
-            image_label = get_img(image_path, image_width, image_width)
+            # Left Image
+            image_map = {'True': image_path, 'False': resource_path('images/no_top_bar.png')}
+            image_label = get_img(image_map['True'], image_width, image_width)
             section_layout.addWidget(image_label)
 
             grid_top_bottom = QGridLayout()
@@ -486,10 +500,10 @@ class MultiPageApp(QMainWindow):
             grid_top_bottom.addWidget(input_type, 1, 0, 1, 4)
 
             # Row 2: Inputs
-            value_along_x = BlankSpinBox(0, 99_999)
+            value_along_x = BlankSpinBox(0, 99_999, suffix=' pcs')
             value_along_x.setMinimumWidth(100)
             grid_top_bottom.addWidget(value_along_x, 2, 0, 1, 2)
-            value_along_y = BlankSpinBox(0, 99_999)
+            value_along_y = BlankSpinBox(0, 99_999, suffix=' pcs')
             value_along_y.setMinimumWidth(100)
             grid_top_bottom.addWidget(value_along_y, 2, 2, 1, 2)
 
@@ -501,14 +515,10 @@ class MultiPageApp(QMainWindow):
             along_y_label.setProperty('class', 'rsb-forms-label along')
             grid_top_bottom.addWidget(along_y_label, 3, 2, 1, 1)
             h_layout = QHBoxLayout()
-            same_for_both = QCheckBox()
-            same_for_both.setToolTip('Same for both directions')
-            same_for_both.setProperty('class', 'lock-ratio')
-            same_for_both.setCursor(Qt.CursorShape.PointingHandCursor)
+            link_spinbox = LinkSpinboxes(value_along_x, value_along_y, 'Same for both directions')
             h_layout.addStretch()
-            h_layout.addWidget(same_for_both)
+            h_layout.addWidget(link_spinbox)
             grid_top_bottom.addLayout(h_layout, 3, 3)
-
 
             v_layout = QVBoxLayout()
             v_layout.addLayout(grid_top_bottom)
@@ -516,32 +526,24 @@ class MultiPageApp(QMainWindow):
             section_layout.addLayout(v_layout)
 
             # --- Store controls for later data retrieval and manipulation ---
-            self.rsb_details[title] = {
+            self.widgets[title] = {
                 'Diameter': bar_size,
                 'Input Type': input_type,
                 'Value Along X': value_along_x,
                 'Value Along Y': value_along_y,
-                'Image Label': image_label,
-                'connection': None,
             }
 
             # --- Connections for dynamic UI changes ---
-            # 1. Change spinbox suffix based on input type selection
-            # noinspection PyUnresolvedReferences
-            input_type.currentTextChanged.connect(
-                partial(self.update_spinbox_suffixes, title)
-            )
-            # 2. Handle the "Same for both" checkbox state
-            # noinspection PyUnresolvedReferences
-            same_for_both.stateChanged.connect(
-                partial(self.toggle_same_for_both, title)
-            )
-
-            # --- Set initial UI state correctly ---
-            self.update_spinbox_suffixes(title, input_type.currentText())
-            self.toggle_same_for_both(title, same_for_both.checkState())
-            same_for_both.setChecked(True)
-
+            def update_spinbox_suffix():
+                if 'Quantity' in input_type.currentText():
+                    value_along_x.setSuffix(' pcs')
+                    value_along_y.setSuffix(' pcs')
+                else:
+                    value_along_x.setSuffix(' mm')
+                    value_along_y.setSuffix(' mm')
+            input_type.currentTextChanged.connect(update_spinbox_suffix)
+            group_box.toggled.connect(lambda checked: update_image(str(checked), image_map, image_label, image_width,
+                                                                   fallback=resource_path('images/no_top_bar.png')))
             self.group_box[title] = group_box
             return group_box
 
@@ -599,7 +601,7 @@ class MultiPageApp(QMainWindow):
             section_layout.addLayout(form_layout)
 
             # Store the controls for later data retrieval
-            self.rsb_details[title] = {
+            self.widgets[title] = {
                 'Diameter': bar_size,
                 'Quantity': qty,
                 'Hook Calculation': calculation,
@@ -615,12 +617,12 @@ class MultiPageApp(QMainWindow):
             section_layout = QHBoxLayout(group_box)
 
             # --- Image (Left side) ---
-            image_map = {#'None': resource_path('images/perim_bar_0.png'),
-                         '1': resource_path('images/perim_bar_1.png'),
-                         '2': resource_path('images/perim_bar_2.png'),
-                         '3': resource_path('images/perim_bar_3.png'),
-                         '4': resource_path('images/perim_bar_4.png'),
-                         '5': resource_path('images/perim_bar_5.png'),
+            image_map = {  # 'None': resource_path('images/perim_bar_0.png'),
+                '1': resource_path('images/perim_bar_1.png'),
+                '2': resource_path('images/perim_bar_2.png'),
+                '3': resource_path('images/perim_bar_3.png'),
+                '4': resource_path('images/perim_bar_4.png'),
+                '5': resource_path('images/perim_bar_5.png'),
             }
             perim_bar_img = get_img(image_map['1'], image_width, image_width)
             section_layout.addWidget(perim_bar_img)
@@ -628,7 +630,14 @@ class MultiPageApp(QMainWindow):
             # --- Container for the right side controls ---
             form_layout = QFormLayout()
 
-            # Row 0: Layers
+            # Row 0: Diameter
+            bar_size = QComboBox()
+            bar_size.addItems(BAR_DIAMETERS)
+            diameter_label = QLabel('Diameter:')
+            diameter_label.setProperty('class', 'rsb-forms-label')
+            form_layout.addRow(diameter_label, bar_size)
+
+            # Row 1: Layers
             layers = QComboBox()
             layers.addItems(['1', '2', '3', '4', '5'])  # Add None if needed
             size_policy = layers.sizePolicy()
@@ -637,34 +646,23 @@ class MultiPageApp(QMainWindow):
             layers_label = QLabel('Layers:')
             layers_label.setProperty('class', 'rsb-forms-label rsb-layers-label')
             form_layout.addRow(layers_label, layers)
-            bar_size = QComboBox()
-            bar_size.addItems(BAR_DIAMETERS)
-            diameter_label = QLabel('Diameter:')
-            diameter_label.setProperty('class', 'rsb-forms-label')
-            form_layout.addRow(diameter_label, bar_size)
 
             # --- Add the right side to the main layout ---
             section_layout.addLayout(form_layout)
-            self.rsb_details[title] = {'Diameter': bar_size,
-                                       'Layers': layers}
+            self.widgets[title] = {'Diameter': bar_size,
+                                   'Layers': layers, }
 
             # noinspection PyUnresolvedReferences
             layers.currentTextChanged.connect(
                 lambda selected_text: update_image(selected_text, image_map, perim_bar_img, image_width,
                                                    fallback=resource_path('images/perim_bar_0.png')))
-
-            # if none is in combobox
-            # layers.currentTextChanged.connect(
-            #     lambda selected_text: toggle_obj_visibility(selected_text, 'None',
-            #                                                 [diameter_label, bar_size], True)
-            # )
-
             group_box.setChecked(False)
             self.group_box[title] = group_box
             return group_box
 
         def create_stirrup_group_box(image_width):
-            group_box = MemoryGroupBox('Stirrups')
+            title = 'Stirrups'
+            group_box = MemoryGroupBox(title)
             main_layout = QHBoxLayout(group_box)
             left_section = QVBoxLayout()
             left_section.setContentsMargins(0, 0, 10, 0)
@@ -679,10 +677,8 @@ class MultiPageApp(QMainWindow):
             add_button.setProperty('class', 'green-button add-row-button')
             self.remove_stirrup_button = HoverButton('-')
             self.remove_stirrup_button.setProperty('class', 'red-button remove-row-button')
-
             add_button.clicked.connect(self.add_stirrup_row)
             self.remove_stirrup_button.clicked.connect(self.remove_stirrup_row)
-
             add_remove_layout.addWidget(label)
             add_remove_layout.addStretch()
             add_remove_layout.addWidget(add_button)
@@ -700,16 +696,15 @@ class MultiPageApp(QMainWindow):
             left_section.addStretch(1)  # Pushes rows to the top
 
             # --- Add the first, initial row ---
-            self.rsb_details['Stirrups'] = {'Types': []}
-            self.add_stirrup_row()
+            self.widgets[title] = {'Types': []}
+            # self.add_stirrup_row()
 
-
-            # -----------------------------------------RIGHT SECTION
+            # --- RIGHT SECTION ---
             right_section = QHBoxLayout()
 
             # --- Image (Left side) ---
             canvas_container = QVBoxLayout()
-            canvas_container.setContentsMargins(10,0,0,0)
+            canvas_container.setContentsMargins(10, 0, 0, 0)
             label = HoverLabel('Spacing Per Bundle')
             label.setProperty('class', 'stirrup-header')
             label.mouseEntered.connect(self.show_spacing_header_info)
@@ -728,7 +723,7 @@ class MultiPageApp(QMainWindow):
             extent = QComboBox()
             extent.addItems(['From Face of Pad', 'From Bottom Bar', 'From Top'])
             extent_label = HoverLabel('Start From:')
-            extent_label.setProperty('class','rsb-forms-label')
+            extent_label.setProperty('class', 'rsb-forms-label')
             extent_label.mouseEntered.connect(self.show_spacing_extent_info)
             extent_label.mouseLeft.connect(self.info_popup.hide)
             form_layout.addRow(extent_label, extent)
@@ -737,8 +732,9 @@ class MultiPageApp(QMainWindow):
             spacing = QTextEdit()
             spacing.setProperty('class', 'rsb-spacing-text-edit')
             spacing.setPlaceholderText('Example: 1@50, 5@80, rest@100')
-            spacing_label = HoverLabel('Spacing:') # Use HoverLabel
-            spacing_label.setProperty('class','rsb-forms-label')
+            spacing.textChanged.connect(self.debounce_timer.start)
+            spacing_label = HoverLabel('Spacing:')  # Use HoverLabel
+            spacing_label.setProperty('class', 'rsb-forms-label')
 
             # Connect its hover signals
             spacing_label.mouseEntered.connect(self.show_spacing_info)
@@ -752,11 +748,10 @@ class MultiPageApp(QMainWindow):
             right_section.addLayout(vert_layout)
 
             # Store
-            self.rsb_details['Stirrups']['Extent'] = extent
-            self.rsb_details['Stirrups']['Spacing'] = spacing
+            self.widgets[title]['Extent'] = extent
+            self.widgets[title]['Spacing'] = spacing
 
-
-            # -----------------------------------------COMBINE SECTION
+            # --- COMBINE SECTION ---
             main_layout.addLayout(left_section, 1)
             separator = QFrame()
             separator.setFrameShape(QFrame.Shape.VLine)
@@ -765,17 +760,15 @@ class MultiPageApp(QMainWindow):
             main_layout.addWidget(separator)
             main_layout.addLayout(right_section, 1)
 
-            self.group_box['Stirrups'] = group_box
+            self.group_box[title] = group_box
             return group_box
 
         # --- Create and add the group boxes ---
-        width = RSB_IMAGE_WIDTH
-        top_bar_box = create_top_bot_bar_section('Top Bar', resource_path('images/top_bar.png'), width)
-        bot_bar_box = create_top_bot_bar_section('Bottom Bar', resource_path('images/bot_bar.png'), width)
-        vert_bar_box = create_vert_bar_section(width)
-        perim_bar_box = create_perim_bar_section(width)
-        stirrup_group_box = create_stirrup_group_box(width)
-
+        top_bar_box = create_top_bot_bar_section('Top Bar', resource_path('images/top_bar.png'), RSB_IMAGE_WIDTH)
+        bot_bar_box = create_top_bot_bar_section('Bottom Bar', resource_path('images/bot_bar.png'), RSB_IMAGE_WIDTH)
+        vert_bar_box = create_vert_bar_section(RSB_IMAGE_WIDTH)
+        perim_bar_box = create_perim_bar_section(RSB_IMAGE_WIDTH)
+        stirrup_group_box = create_stirrup_group_box(RSB_IMAGE_WIDTH)
 
         grid_layout.addWidget(top_bar_box, 0, 0)
         grid_layout.addWidget(bot_bar_box, 0, 1)
@@ -784,26 +777,690 @@ class MultiPageApp(QMainWindow):
         grid_layout.addWidget(stirrup_group_box, 2, 0, 1, 2)
         grid_layout.setRowStretch(2, 1)
 
+        # Connection to redraw
+        self.connect_stirrup_redraw_signals()
+
         # --- Navigation Buttons ---
         button_layout = QHBoxLayout()
         back_button = HoverButton('Back')
         back_button.setProperty('class', 'red-button')
         back_button.clicked.connect(self.go_to_footing_page)
-        next_button = HoverButton('Next')
-        next_button.setProperty('class', 'green-button')
-        next_button.clicked.connect(self.go_to_market_lengths_page)
+        save_button = HoverButton('Save')
+        save_button.setProperty('class', 'green-button')
+        save_button.clicked.connect(self.save_and_accept)
 
         button_layout.addWidget(back_button)
         button_layout.addStretch()
-        button_layout.addWidget(next_button)
+        button_layout.addWidget(save_button)
 
-        scroll_area = self.make_scrollable(scroll_content, True)
+        scroll_area = make_scrollable(scroll_content, True)
         scroll_area.setProperty('class', 'scroll-bar-area')
         page_layout.addWidget(scroll_area)  # Add the scrollable part
         page_layout.addLayout(button_layout)  # Add the fixed buttons at the bottom
 
         self.stacked_widget.addWidget(page)
-        # self.stacked_widget.addWidget(self.make_scrollable(page, True))
+
+    def go_to_footing_page(self):
+        """Switches the stacked widget to the previous page."""
+        self.stacked_widget.setCurrentIndex(0)
+
+    def go_to_rsb_page(self):
+        """Switches the stacked widget to the next page."""
+        if self.validate_footing_page():
+            self.stacked_widget.setCurrentIndex(1)
+
+    def validate_footing_page(self) -> bool:
+        """Validates all inputs on the footing page. Returns True if valid."""
+        if DEBUG_MODE:
+            return True
+
+        is_globally_valid = True
+        # List of widgets on the first page to check
+        widgets_to_validate = [
+            self.widgets['name'], self.widgets['n_footing'], self.widgets['cc'],
+            self.widgets['bx'], self.widgets['by'], self.widgets['h'],
+            self.widgets['Bx'], self.widgets['By'], self.widgets['t']
+        ]
+
+        for widget in widgets_to_validate:
+            is_valid = not is_widget_empty(widget)
+            style_invalid_input(widget, is_valid)
+            if not is_valid:
+                is_globally_valid = False
+
+        if not is_globally_valid:
+            QMessageBox.warning(self, 'Invalid Input', 'Please fill in all required fields on this page.')
+
+        return is_globally_valid
+
+    def validate_rsb_page(self) -> bool:
+        """Validates all visible inputs on the RSB page. Returns True if valid."""
+        if DEBUG_MODE:
+            return True
+
+        is_globally_valid = True
+
+        # Iterate through all group boxes to check only enabled sections
+        for section_name, group_box in self.group_box.items():
+            if group_box.isCheckable() and (not group_box.isChecked()):
+                continue  # Skip disabled/invisible sections
+
+            widgets_in_section = self.widgets.get(section_name, {})
+            # This handles both flat dicts (Vertical Bar) and nested dicts (Top Bar)
+            widgets_to_check = widgets_in_section.values() if isinstance(widgets_in_section, dict) else []
+
+            for widget in widgets_to_check:
+                if isinstance(widget, QWidget) and widget.isWidgetType() and widget.isVisible():
+                    is_valid = not is_widget_empty(widget)
+                    style_invalid_input(widget, is_valid)
+                    if not is_valid:
+                        is_globally_valid = False
+
+            # Special validation for Stirrups Spacing
+            if section_name == 'Stirrups':
+                spacing_widget = self.widgets['Stirrups']['Spacing']
+                spacing_text = spacing_widget.toPlainText()
+                is_spacing_valid = False
+                if not spacing_text.strip():  # if it's empty, it's invalid
+                    is_spacing_valid = False
+                else:
+                    try:
+                        parse_spacing_string(spacing_text)
+                        is_spacing_valid = True
+                    except (ValueError, TypeError):
+                        is_spacing_valid = False
+
+                style_invalid_input(spacing_widget, is_spacing_valid)
+                if not is_spacing_valid:
+                    is_globally_valid = False
+
+        if not is_globally_valid:
+            QMessageBox.warning(self, 'Invalid Input',
+                                'Please fill in all visible fields correctly.\nCheck for empty inputs or invalid spacing format.')
+
+        return is_globally_valid
+
+    def save_and_accept(self):
+        """Runs validation before accepting the dialog."""
+        if self.validate_footing_page() and self.validate_rsb_page():
+            self.accept()
+
+    def update_stirrup_drawing(self) -> None:
+        """Triggers a repaint of the stirrup drawing canvas with current input values."""
+        if hasattr(self, 'stirrup_canvas'):  # Check if canvas exists
+            # Create a dictionary with the required footing dimension widgets
+            footing_details = {
+                'Pedestal Height': self.widgets['h'],
+                'Pedestal Width (Along X)': self.widgets['bx'],
+                'Pad Thickness': self.widgets['t'],
+                'Concrete Cover': self.widgets['cc']
+            }
+            self.stirrup_canvas.update_dimensions(
+                footing_details,
+                self.widgets['Stirrups']['Extent'],
+                self.widgets['Stirrups']['Spacing'],
+                self.widgets['Bottom Bar']['Diameter'],
+                self.widgets['Vertical Bar']['Diameter']
+            )
+
+    def connect_stirrup_redraw_signals(self):
+        """Connects all widgets that affect the stirrup drawing to the redraw logic."""
+        # Widgets that affect dimensions
+        dimension_widgets = [
+            self.widgets['h'],
+            self.widgets['bx'],
+            self.widgets['t'],
+            self.widgets['cc'],
+        ]
+        # Widgets that affect rebar sizes
+        rebar_widgets = [
+            self.widgets['Bottom Bar']['Diameter'],
+            self.widgets['Vertical Bar']['Diameter'],
+            self.widgets['Stirrups']['Extent']
+        ]
+
+        for widget in dimension_widgets:
+            widget.valueChanged.connect(self.update_stirrup_drawing)
+
+        for widget in rebar_widgets:
+            widget.currentTextChanged.connect(self.update_stirrup_drawing)
+
+    def disconnect_stirrup_redraw_signals(self):
+        """Disconnects signals that trigger stirrup redraws to prevent signal storms."""
+        dimension_widgets = [
+            self.widgets['h'],
+            self.widgets['bx'],
+            self.widgets['t'],
+            self.widgets['cc'],
+        ]
+        rebar_widgets = [
+            self.widgets['Bottom Bar']['Diameter'],
+            self.widgets['Vertical Bar']['Diameter'],
+            self.widgets['Stirrups']['Extent']
+        ]
+
+        for widget in dimension_widgets:
+            try:
+                widget.valueChanged.disconnect(self.update_stirrup_drawing)
+            except TypeError:
+                pass  # Signal was not connected, so we can ignore the error
+
+        for widget in rebar_widgets:
+            try:
+                widget.currentTextChanged.disconnect(self.update_stirrup_drawing)
+            except TypeError:
+                pass  # Signal was not connected, so we can ignore the error
+
+    def show_hook_info(self) -> None:
+        """Displays an informational popup for the hook calculation method."""
+        # NOTE: You should update the text to reflect the actual standard you are using.
+        # For example, ACI 318 or a local building code.
+        info_text = (
+            '<b>Hook Calculation Method</b>'
+            '<ul><li><b>Automatic:</b> Calculates the required hook length '
+            'based on ACI 318-25 Table 25.3.1 Standard 90° hook geometry for '
+            'development of deformed bars in tension (<i>12d</i><sub>b</sub>) </li>'
+            '<li><b>Manual:</b> Allows you to enter a custom, pre-calculated '
+            'length for the hook.</li></ul>'
+        )
+        self.info_popup.set_info_text(info_text)
+
+        # Position and show the popup
+        cursor_pos = self.cursor().pos()
+        self.info_popup.move(cursor_pos.x() + 15, cursor_pos.y() + 15)
+        self.info_popup.show()
+
+    def show_spacing_header_info(self) -> None:
+        """Displays an informational popup for the stirrup spacing section."""
+        info_text = (
+            """<b>Stirrup Placement Guide</b><br><br>
+This section controls the vertical position and distribution of the stirrup bundles along the pedestal.
+<br><br>
+It's a two-step process:
+<ol>
+    <li><b>Start From:</b> First, select your 'zero' reference point from which all measurements will begin.</li>
+    <li><b>Spacing:</b> Next, enter the series of spacing values. The first value positions the first stirrup relative to your chosen start point.</li>
+</ol>
+Use the diagram on the left to visually confirm that the stirrup placement matches your input."""
+        )
+        self.info_popup.set_info_text(info_text)
+
+        # Position and show the popup
+        cursor_pos = self.cursor().pos()
+        self.info_popup.move(cursor_pos.x() + 15, cursor_pos.y() + 15)
+        self.info_popup.show()
+
+    def show_spacing_extent_info(self) -> None:
+        """Displays an informational popup for the stirrup extent."""
+        info_text = (
+            """<b>Spacing Start Point</b><br><br>
+This sets the <b>'zero' reference point</b> for the first measurement in the 'Spacing' field.
+<hr>
+<ul>
+    <li><b>From Face of Pad:</b> 'Zero' is the top face of the footing (pad).</li>
+    <li><b>From Bottom Bar:</b> 'Zero' is at the elevation of the bottom rebar.</li>
+    <li><b>From Top (to Face of Pad):</b> 'Zero' is the top of the pedestal, measuring downwards. Spacing will only be applied within the concrete pedestal.</li>
+</ul>"""
+        )
+        self.info_popup.set_info_text(info_text)
+
+        # Position and show the popup
+        cursor_pos = self.cursor().pos()
+        self.info_popup.move(cursor_pos.x() + 15, cursor_pos.y() + 15)
+        self.info_popup.show()
+
+    def show_bundle_info(self) -> None:
+        """Displays an informational popup for the stirrup bundle."""
+        info_text = (
+            """<b>Understanding the Stirrup Bundle</b><br><br>
+This section defines the combination of stirrups that will be installed together as a single unit.
+<ul>
+    <li><b>Forms One Set:</b> All stirrup shapes you add (e.g., an Outer, a Tall) are considered one complete set.</li>
+    <li><b>Installed as a Group:</b> At each specified height, all stirrups in the set are installed as a single, tightly packed group.</li>
+    <li><b>Spacing Applies to the Group:</b> The spacing you define (e.g., <code>5@100</code>) dictates the vertical distance from the center of one group to the center of the next.</li>
+</ul>
+Think of it as designing a 'kit' of stirrups that gets repeated along the height of the pedestal."""
+        )
+        self.info_popup.set_info_text(info_text)
+
+        # Position and show the popup
+        cursor_pos = self.cursor().pos()
+        self.info_popup.move(cursor_pos.x() + 15, cursor_pos.y() + 15)
+        self.info_popup.show()
+
+    def show_spacing_info(self) -> None:
+        """Displays an informational popup for the stirrup spacing format."""
+        info_text = (
+            """<b>Stirrup Spacing Guide</b><br><br>
+Defines stirrup locations relative to your chosen 'Start From' point.
+
+<hr>
+
+<b>Key Principle:</b>
+<p>The <u>first spacing value</u> in your list always positions the <u>first stirrup</u>.</p>
+
+<b>Example: </b> <b><code>5@100, rest@150</code></b></p>
+<ul>
+    <li>The <b>first</b> of the 5 stirrups is placed <b>100mm</b> from the start point.</li>
+    <li>The next 4 are also 100mm apart. The remaining are 150mm apart.</li>"""
+        )
+        self.info_popup.set_info_text(info_text)
+
+        # Position and show the popup
+        cursor_pos = self.cursor().pos()
+        self.info_popup.move(cursor_pos.x() + 15, cursor_pos.y() + 15)
+        self.info_popup.show()
+
+    def populate_data(self, details: dict):
+        """Fills the form fields with existing data for editing."""
+        self.disconnect_stirrup_redraw_signals()
+
+        # Page 1 (Footing Dimensions)
+        self.widgets['name'].setText(details.get('name', ''))
+        self.widgets['n_footing'].setValue(details.get('n_footing', 1))
+        self.widgets['n_ped'].setValue(details.get('n_ped', 1))
+        self.widgets['cc'].setValue(details.get('cc', 75))
+        self.widgets['bx'].setValue(details.get('bx', 0))
+        self.widgets['by'].setValue(details.get('by', 0))
+        self.widgets['h'].setValue(details.get('h', 0))
+        self.widgets['Bx'].setValue(details.get('Bx', 0))
+        self.widgets['By'].setValue(details.get('By', 0))
+        self.widgets['t'].setValue(details.get('t', 0))
+
+        # Page 2 (Reinforcement Details)
+        sections = ['Top Bar', 'Bottom Bar', 'Vertical Bar', 'Perimeter Bar', 'Stirrups']
+        for section_name in sections:
+            section_data = details.get(section_name, {})
+            if not section_data:
+                continue
+
+            # Handle GroupBox check state
+            if self.group_box[section_name].isCheckable():
+                is_enabled = section_data.get('Enabled', False)
+                self.group_box[section_name].setChecked(is_enabled)
+                # If the section is not enabled, skip populating its widgets
+                if not is_enabled:
+                    continue
+
+            if section_name in ['Top Bar', 'Bottom Bar']:
+                widget = self.widgets[section_name]
+                widget['Diameter'].setCurrentText(section_data.get('Diameter', ''))
+                widget['Input Type'].setCurrentText(section_data.get('Input Type', 'Quantity'))
+                widget['Value Along X'].setValue(section_data.get('Value Along X', 0))
+                widget['Value Along Y'].setValue(section_data.get('Value Along Y', 0))
+
+            elif section_name == 'Vertical Bar':
+                widget = self.widgets[section_name]
+                widget['Diameter'].setCurrentText(section_data.get('Diameter', ''))
+                widget['Quantity'].setValue(section_data.get('Quantity', 0))
+                widget['Hook Calculation'].setCurrentText(section_data.get('Hook Calculation', 'Automatic'))
+                widget['Hook Length'].setValue(section_data.get('Hook Length', 0))
+
+            elif section_name == 'Perimeter Bar':
+                widget = self.widgets[section_name]
+                widget['Diameter'].setCurrentText(section_data.get('Diameter', ''))
+                widget['Layers'].setCurrentText(str(section_data.get('Layers', '1')))
+
+            elif section_name == 'Stirrups':
+                self.widgets['Stirrups']['Extent'].setCurrentText(section_data.get('Extent', 'From Face of Pad'))
+                self.widgets['Stirrups']['Spacing'].setPlainText(section_data.get('Spacing', ''))
+
+                # Add and populate new rows from saved data
+                saved_stirrup_types = section_data.get('Types', [])
+                for stirrup_type_data in saved_stirrup_types:
+                    self.add_stirrup_row()
+                    row_widgets = self.widgets['Stirrups']['Types'][-1]
+                    row_widgets['Type'].setCurrentText(stirrup_type_data.get('Type', 'Outer'))
+                    row_widgets['Diameter'].setCurrentText(stirrup_type_data.get('Diameter', ''))
+                    row_widgets['a_input'].setValue(stirrup_type_data.get('a_input', 0))
+
+                # After populating, ensure at least one row exists.
+                # This handles cases where a user saved an item with no stirrups.
+                if not self.widgets['Stirrups']['Types']:
+                    self.add_stirrup_row()
+
+        # Reconnect signals
+        self.connect_stirrup_redraw_signals()
+
+    def get_data(self) -> dict:
+        """Returns all entered data from both pages as a dictionary."""
+        data = {
+            # Page 1
+            'name': self.widgets['name'].text(),
+            'n_footing': self.widgets['n_footing'].value(),
+            'n_ped': self.widgets['n_ped'].value(),
+            'cc': self.widgets['cc'].value(),
+            'bx': self.widgets['bx'].value(),
+            'by': self.widgets['by'].value(),
+            'h': self.widgets['h'].value(),
+            'Bx': self.widgets['Bx'].value(),
+            'By': self.widgets['By'].value(),
+            't': self.widgets['t'].value(),
+
+            # Page 2
+            'Top Bar': {
+                'Enabled': self.group_box['Top Bar'].isChecked(),
+                'Diameter': self.widgets['Top Bar']['Diameter'].currentText(),
+                'Input Type': self.widgets['Top Bar']['Input Type'].currentText(),
+                'Value Along X': self.widgets['Top Bar']['Value Along X'].value(),
+                'Value Along Y': self.widgets['Top Bar']['Value Along Y'].value(),
+            },
+            'Bottom Bar': {
+                'Enabled': True,
+                'Diameter': self.widgets['Bottom Bar']['Diameter'].currentText(),
+                'Input Type': self.widgets['Bottom Bar']['Input Type'].currentText(),
+                'Value Along X': self.widgets['Bottom Bar']['Value Along X'].value(),
+                'Value Along Y': self.widgets['Bottom Bar']['Value Along Y'].value(),
+            },
+            'Vertical Bar': {
+                'Enabled': True,
+                'Diameter': self.widgets['Vertical Bar']['Diameter'].currentText(),
+                'Quantity': self.widgets['Vertical Bar']['Quantity'].value(),
+                'Hook Calculation': self.widgets['Vertical Bar']['Hook Calculation'].currentText(),
+                'Hook Length': self.widgets['Vertical Bar']['Hook Length'].value(),
+            },
+            'Perimeter Bar': {
+                'Enabled': self.group_box['Perimeter Bar'].isChecked(),
+                'Diameter': self.widgets['Perimeter Bar']['Diameter'].currentText(),
+                'Layers': self.widgets['Perimeter Bar']['Layers'].currentText(),
+            },
+            'Stirrups': {
+                'Enabled': self.group_box['Stirrups'].isChecked(),
+                'Extent': self.widgets['Stirrups']['Extent'].currentText(),
+                'Spacing': self.widgets['Stirrups']['Spacing'].toPlainText(),
+                'Quantity': self.stirrup_canvas.get_qty(),
+                'Types': [
+                    {
+                        'Type': row['Type'].currentText(),
+                        'Diameter': row['Diameter'].currentText(),
+                        'a_input': row['a_input'].value()
+                    }
+                    for row in self.widgets['Stirrups']['Types']
+                ]
+            }
+        }
+        return data
+
+
+    def add_stirrup_row(self) -> None:
+        """Creates and adds a new UI row for defining a stirrup type."""
+        # --- Main container for the row ---
+        row_widget = QWidget()
+        row_widget.setProperty('class', 'stirrup-row')
+        row_layout = QHBoxLayout(row_widget)
+
+        # --- Image (Left) ---
+        image_label = get_img(resource_path('images/stirrup_outer.png'), STIRRUP_ROW_IMAGE_WIDTH, STIRRUP_ROW_IMAGE_WIDTH)
+        row_layout.addWidget(image_label)
+
+        image_map = {
+            'Outer': resource_path('images/stirrup_outer.png'),
+            'Diamond': resource_path('images/stirrup_diamond.png'),
+            'Tall': resource_path('images/stirrup_tall.png'),
+            'Wide': resource_path('images/stirrup_wide.png'),
+            'Octagon': resource_path('images/stirrup_octagon.png'),
+            'Vertical': resource_path('images/stirrup_flat_tall.png'),
+            'Horizontal': resource_path('images/stirrup_flat_wide.png'),
+        }
+
+        # --- Form (Right) ---
+        form_layout = QFormLayout()
+        type_combo = QComboBox()
+        type_combo.addItems(image_map.keys())
+        size_policy = type_combo.sizePolicy()
+        size_policy.setHorizontalPolicy(QSizePolicy.Policy.Expanding)
+        type_combo.setSizePolicy(size_policy)
+
+        dia_combo = QComboBox()
+        dia_combo.addItems(BAR_DIAMETERS_FOR_STIRRUPS)
+
+        a_label = QLabel('a:')
+        a_label.setProperty('class', 'rsb-forms-label')
+        a_input = BlankSpinBox(0, 99_999, suffix=' mm')
+
+        label = QLabel('Type:')
+        label.setProperty('class', 'rsb-forms-label')
+        form_layout.addRow(label, type_combo)
+        label = QLabel('Diameter:')
+        label.setProperty('class', 'rsb-forms-label')
+        form_layout.addRow(label, dia_combo)
+        form_layout.addRow(a_label, a_input)
+        row_layout.addLayout(form_layout)
+
+        # --- Store widgets for later access ---
+        row_widgets = {
+            'Row': row_widget,
+            'Image': image_label,
+            'Type': type_combo,
+            'Diameter': dia_combo,
+            'a_label': a_label,
+            'a_input': a_input
+        }
+        self.widgets['Stirrups']['Types'].append(row_widgets)
+
+        # --- Connections ---
+        def update_stirrup_row_visibility(selected_text: str, widgets: dict[str, Any],
+                                          stirrup_type_image_map: dict[str, str]) -> None:
+            """
+            Updates a stirrup row's image and the visibility of its 'a' input field.
+
+            Args:
+                selected_text: The selected stirrup type from the combo box.
+                widgets: A dictionary of the widgets in that specific row.
+                stirrup_type_image_map: A dictionary mapping stirrup types to image paths.
+            """
+            update_image(selected_text, stirrup_type_image_map, widgets['Image'], STIRRUP_ROW_IMAGE_WIDTH,
+                         fallback=resource_path('images/stirrup_none.png'))
+
+            # Update visibility of 'a' input
+            is_visible = selected_text in ['Tall', 'Wide', 'Octagon']
+            widgets['a_label'].setVisible(is_visible)
+            widgets['a_input'].setVisible(is_visible)
+
+        # noinspection PyUnresolvedReferences
+        type_combo.currentTextChanged.connect(
+            lambda text: update_stirrup_row_visibility(text, row_widgets, image_map)
+        )
+
+        # --- Set initial state ---
+        update_stirrup_row_visibility(type_combo.currentText(), row_widgets, image_map)
+
+        # --- Add to the main container ---
+        self.stirrup_rows_layout.addWidget(row_widget)
+        self.update_remove_button_state()
+
+    def update_remove_button_state(self) -> None:
+        """Enables or disables the 'remove stirrup row' button based on the row count."""
+        self.remove_stirrup_button.setEnabled(len(self.widgets['Stirrups']['Types']) > 1)
+
+    def remove_stirrup_row(self) -> None:
+        """Removes the last stirrup definition row from the UI."""
+        if len(self.widgets['Stirrups']['Types']) > 1:  # Keep at least one row
+            widgets_to_remove = self.widgets['Stirrups']['Types'].pop()
+            widgets_to_remove['Row'].deleteLater()  # Safely delete the widget
+
+        self.update_remove_button_state()
+
+class FoundationItem(QWidget):
+    """A custom widget representing a single item in the foundation list."""
+    edit_requested = Signal(object)
+    remove_requested = Signal(object)
+    selected = Signal(object)
+
+    def __init__(self, data: dict, parent=None) -> None:
+        """Initializes the foundation item widget."""
+        super().__init__(parent)
+        self.data = data
+        self.setProperty('class', 'list-item')
+        self._is_selected = False
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(10, 5, 10, 5)
+
+        self.label = QLabel(self.data.get('name', 'Unnamed'))
+        layout.addWidget(self.label)
+        layout.addStretch(1)
+
+        # --- Edit Button (Icon) ---
+        self.edit_button = HoverButton('')
+        self.edit_button.setProperty('class', 'yellow-button icon-button') # Use your yellow class
+        edit_icon = QIcon(resource_path('images/edit.svg'))
+        self.edit_button.setIcon(edit_icon)
+        self.edit_button.setToolTip('Edit Foundation')
+        self.edit_button.clicked.connect(lambda: self.edit_requested.emit(self))
+        layout.addWidget(self.edit_button)
+
+        self.remove_button = HoverButton('-')
+        self.remove_button.setProperty('class', 'red-button remove-row-button')
+        self.remove_button.clicked.connect(lambda: self.remove_requested.emit(self))
+        layout.addWidget(self.remove_button)
+
+        # --- Hide buttons initially ---
+        self.edit_button.hide()
+        self.remove_button.hide()
+
+    def paintEvent(self, event: QPaintEvent) -> None:
+        """
+        This is the magic method that allows the widget to be styled
+        using QSS for background-color, border, etc.
+        """
+        opt = QStyleOption()
+        opt.initFrom(self)
+        painter = QPainter(self)
+        self.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, opt, painter, self)
+
+    def enterEvent(self, event: QEvent) -> None:
+        """Show buttons when the mouse enters the widget."""
+        self.edit_button.show()
+        self.remove_button.show()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event: QEvent) -> None:
+        """Hide buttons when the mouse leaves the widget."""
+        self.edit_button.hide()
+        self.remove_button.hide()
+        super().leaveEvent(event)
+
+    def mousePressEvent(self, event) -> None:
+        """Emit a signal when the item is clicked."""
+        if not self._is_selected:
+            self.selected.emit(self)
+        super().mousePressEvent(event)
+
+    def select(self):
+        """Sets the visual state to selected."""
+        self._is_selected = True
+        self.setProperty('class', 'list-item selected')
+        self.style().polish(self)
+
+    def deselect(self):
+        """Sets the visual state to de-selected."""
+        self._is_selected = False
+        self.setProperty('class', 'list-item')
+        self.style().polish(self)
+
+    def update_details(self, new_details: dict):
+        """Updates the item's data and refreshes the label."""
+        self.data = new_details
+        self.label.setText(self.data.get('name', 'Unnamed'))
+
+class MultiPageApp(QMainWindow):
+    def __init__(self) -> None:
+        """Initializes the main application window and its components."""
+        super().__init__()
+
+        self.setWindowTitle('Cutting List')
+        self.setWindowIcon(QIcon(resource_path('images/logo.png')))
+        self.setGeometry(50, 50, 980, 720)
+        self.setMinimumWidth(980)
+        self.setMinimumHeight(600)
+
+        self.stacked_widget = QStackedWidget()
+        self.setCentralWidget(self.stacked_widget)
+
+        # Initialize
+        self.scroll_layout = None
+        self.detail_area_stack = None
+        self.detail_widgets = {}
+        self.current_item = None
+        self.detail_stirrup_types_layout = None
+        self.market_lengths_checkboxes = None
+
+        self.create_foundation_entry_page()
+        self.create_market_lengths_page()
+
+        if DEBUG_MODE:
+            self.prefill_debug_data()
+
+    def create_foundation_entry_page(self) -> None:
+        """Builds the UI with a master-detail layout."""
+        page = QWidget()
+        page.setProperty('class', 'page')
+        page_layout = QVBoxLayout(page)
+
+        # title = HoverLabel('Foundation Types')
+        # title.setProperty('class', 'header-0')
+        # page_layout.addWidget(title)
+
+        # --- Main Horizontal Layout (Master-Detail) ---
+        main_horizontal_layout = QHBoxLayout()
+
+        # --- Left Panel (Master View - The List) ---
+        left_panel = QFrame()
+        left_panel.setProperty('class', 'master-panel')
+        left_panel_layout = QVBoxLayout(left_panel)
+        left_panel_layout.setContentsMargins(0, 0, 0, 0)
+
+        add_button = HoverButton('Add Foundation')
+        add_button.setProperty('class', 'green-button')
+        add_button.clicked.connect(self.add_foundation_item)
+        left_panel_layout.addWidget(add_button, 0, Qt.AlignmentFlag.AlignLeft)
+
+        self.scroll_layout = QVBoxLayout()
+        self.scroll_layout.setContentsMargins(5, 5, 5, 5)
+        self.scroll_layout.setSpacing(10)
+        scroll_content = QWidget()
+        scroll_content.setProperty('class', 'scroll-area')
+        scroll_content.setLayout(self.scroll_layout)
+        scroll_area = make_scrollable(scroll_content)
+        scroll_area.setProperty('class', 'scroll-bar-area')
+        left_panel_layout.addWidget(scroll_area)
+        self.scroll_layout.addStretch(1)
+
+        # --- Right Panel (Detail View - The Summary) ---
+        right_panel = QFrame()
+        right_panel.setProperty('class', 'detail-panel')
+        right_panel_layout = QVBoxLayout(right_panel)
+
+        self.detail_area_stack = QStackedWidget()  # Use a stack to show/hide content
+
+        # Page 0: Placeholder when nothing is selected
+        placeholder = QLabel('Select a foundation type from the list to see its details.')
+        placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        placeholder.setProperty('class', 'detail-placeholder')
+
+        # Page 1: The actual detail view
+        detail_view_widget = self.create_detail_panel()
+
+        self.detail_area_stack.addWidget(placeholder)
+        self.detail_area_stack.addWidget(detail_view_widget)
+        right_panel_layout.addWidget(self.detail_area_stack)
+
+        # --- Add panels to main layout ---
+        main_horizontal_layout.addWidget(left_panel, 2)  # 1 stretch factor
+        main_horizontal_layout.addWidget(right_panel, 5)  # 2 stretch factor (wider)
+        page_layout.addLayout(main_horizontal_layout)
+
+        # --- Bottom Navigation ---
+        button_layout = QHBoxLayout()
+        button_layout.addStretch(1)
+        next_button = HoverButton('Next')
+        next_button.setProperty('class', 'green-button')
+        next_button.clicked.connect(self.go_to_market_length_page)
+        button_layout.addWidget(next_button)
+        page_layout.addLayout(button_layout)
+
+        self.stacked_widget.addWidget(page)
 
     def create_market_lengths_page(self) -> None:
         """Builds the UI for the third page (Rebar Market Lengths)."""
@@ -868,7 +1525,7 @@ class MultiPageApp(QMainWindow):
             for col, length in enumerate(MARKET_LENGTHS):
                 cb = QCheckBox()
 
-                cb.setChecked(True)
+                cb.setChecked(False)
                 self.market_lengths_checkboxes[dia][length] = cb
                 # No width passed here, uses the default 65 for the cell
                 grid.addWidget(create_cell(cb, is_alternate=is_alternate_row), row + 1, col + 1)
@@ -892,12 +1549,12 @@ class MultiPageApp(QMainWindow):
         back_button = HoverButton('Back')
         back_button.setAutoDefault(True)
         back_button.setProperty('class', 'red-button')
-        back_button.clicked.connect(self.go_to_rsb_page)
+        back_button.clicked.connect(self.go_to_foundation_page)
 
-        next_button = HoverButton('Next')
+        next_button = HoverButton('Generate')
         next_button.setAutoDefault(True)
         next_button.setProperty('class', 'green-button')
-        next_button.clicked.connect(self.go_to_summary_page)
+        next_button.clicked.connect(self.generate_excel)
 
         button_layout.addWidget(back_button)
         button_layout.addStretch()
@@ -906,380 +1563,411 @@ class MultiPageApp(QMainWindow):
         main_layout.addLayout(button_layout)
         self.stacked_widget.addWidget(page)
 
-    def create_summary_page(self) -> None:
-        """Builds the UI for the fourth page (Summary and Generation)."""
-        page = QWidget()
-        page.setProperty('class', 'page')
-        main_layout = QVBoxLayout(page)
+    def add_foundation_item(self) -> None:
+        """Opens a dialog to add a new foundation item."""
+        dialog = FoundationDetailsDialog(parent=self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            data = dialog.get_data()
+            if data['name'].strip():
+                if not DEBUG_MODE:
+                    existing_names = [item.data['name'] for item in self.findChildren(FoundationItem)]
+                    if data['name'] in existing_names:
+                        QMessageBox.warning(self, 'Duplicate Name',
+                                            f'A foundation type with the name {data['name']} already exists.\n'
+                                            'Please choose a unique name.')
+                        return  # Stop the add process
+                new_item = FoundationItem(data)
+                new_item.edit_requested.connect(self.edit_foundation_item)
+                new_item.remove_requested.connect(self.remove_foundation_item)
+                new_item.selected.connect(self.update_detail_view)  # +++ CONNECT THE NEW SIGNAL +++
+                self.scroll_layout.insertWidget(self.scroll_layout.count() - 1, new_item)
 
-        # --- Helper to create a styled section ---
-        def create_summary_section(title):
-            group_box = QGroupBox(title)
-            layout = QFormLayout(group_box)
-            layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)  # Prevents ugly wrapping
-            return group_box, layout
+                # --- ADD THIS LOGIC TO AUTO-SELECT THE NEW ITEM ---
+                self.update_detail_view(new_item)
 
-        # Create the main sections
-        footing_box, footing_layout = create_summary_section('Footing Dimensions')
-        reinf_box, reinf_layout = create_summary_section('Reinforcement Details')
-        market_box, market_layout = create_summary_section('Market Lengths')
+    def create_detail_panel(self) -> QWidget:
+        """Creates a comprehensive, scrollable widget to display all foundation details."""
+        # The main container for the entire right panel's content
+        scroll_content = QWidget()
+        scroll_content.setProperty('class', 'detail-content')
+        layout = QVBoxLayout(scroll_content)
+        layout.setContentsMargins(15, 15, 15, 15)  # Add some nice padding
 
-        # --- Populate sections with labels and store the value labels for updating ---
-        # Footing Section
-        for field in self.footing_details.keys():
-            if field == 'n_ped':
-                continue
-            value_label = QLabel('...')
-            value_label.setProperty('class', 'summary-value')
-            self.summary_labels[field] = value_label
-            label = QLabel(f'{field}:')
-            label.setProperty('class', 'summary-label')
-            footing_layout.addRow(label, value_label)
+        self.detail_widgets = {'name_header': QLabel('Foundation Details')}  # Reset the dictionary
 
-        # Reinforcement Section
-        for field in self.rsb_details.keys():
-            if field == 'Stirrups':
-                label = QLabel('Stirrup:')
-                label.setProperty('class', 'summary-label')
-                reinf_layout.addRow(label)
-                extent = QLabel('...')
-                extent.setProperty('class', 'summary-value')
-                label = QLabel('Extent:')
-                label.setProperty('class', 'summary-label-2')
-                reinf_layout.addRow(label, extent)
-                spacing = QLabel('...')
-                spacing.setProperty('class', 'summary-value')
-                label = QLabel('Spacing:')
-                label.setProperty('class', 'summary-label-2')
-                reinf_layout.addRow(label, spacing)
-                types = QLabel('...')
-                types.setProperty('class', 'summary-value')
-                label = QLabel('Bundled Types:')
-                label.setProperty('class', 'summary-label-2')
-                reinf_layout.addRow(label, types)
-                self.summary_labels[field] = {'Extent': extent, 'Spacing': spacing, 'Types': types}
-                continue
-            value_label = QLabel('...')
-            value_label.setProperty('class', 'summary-value')
-            self.summary_labels[field] = value_label
+        # --- Main Title ---
+        self.detail_widgets['name_header'].setProperty('class', 'header-0')  # Big, bold title
+        self.detail_widgets['name_header'].setAlignment(Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(self.detail_widgets['name_header'])
 
-            label = QLabel(f'{field}:')
-            label.setProperty('class', 'summary-value')
-            reinf_layout.addRow(label, value_label)
+        # --- General & Dimensions Section ---
+        gen_info_label = QLabel('General Information')
+        gen_info_label.setProperty('class', 'detail-header')
+        layout.addWidget(gen_info_label)
 
-        # Market Lengths Section - Using a single label for rich text
-        market_label = QLabel('...')
-        market_label.setProperty('class', 'summary-value')
-        market_label.setWordWrap(True)
-        self.summary_labels['market_lengths'] = market_label
-        market_layout.addRow(market_label)  # AddRow without a label makes it span both columns
+        form_layout_general = QFormLayout()
+        form_layout_general.setSpacing(8)
+        form_layout_general.setContentsMargins(6, 0, 0, 0)
+        self.detail_widgets['n_footing'] = QLabel()
+        self.detail_widgets['n_ped'] = QLabel()
+        self.detail_widgets['cc'] = QLabel()
+        self.detail_widgets['pad_dims'] = QLabel()
+        self.detail_widgets['pedestal_dims'] = QLabel()
 
-        # --- Create two columns ---
-        label = QLabel('Summary')
-        label.setProperty('class', 'header-0')
-        main_layout.addWidget(label)
-        grid_layout = QGridLayout()
-        grid_layout.addWidget(footing_box, 0, 0)
-        grid_layout.addWidget(reinf_box, 0, 1, 2, 1)
-        grid_layout.addWidget(market_box, 1, 0)
-        main_layout.addLayout(grid_layout)
-        main_layout.addStretch(1)
+        form_layout_general.addRow('<b>Total Number of Footings:</b>', self.detail_widgets['n_footing'])
+        form_layout_general.addRow('<b>Pedestals per Footing:</b>', self.detail_widgets['n_ped'])
+        form_layout_general.addRow('<b>Concrete Cover:</b>', self.detail_widgets['cc'])
+        form_layout_general.addRow('<b>Pad Dimensions (Bx, By, t):</b>', self.detail_widgets['pad_dims'])
+        form_layout_general.addRow('<b>Pedestal Dims (bx, by, h):</b>', self.detail_widgets['pedestal_dims'])
+        layout.addLayout(form_layout_general)
 
-        # --- Navigation Buttons ---
-        button_layout = QHBoxLayout()
-        back_button = HoverButton('Back')
-        back_button.setProperty('class', 'red-button')
-        back_button.clicked.connect(self.go_back_to_market_lengths_page)
+        layout.addSpacing(15)  # Add some vertical space between sections
 
-        generate_button = HoverButton('Generate Excel')
-        generate_button.setProperty('class', 'green-button')
-        generate_button.clicked.connect(self.generate_cutting_list)
+        # --- Reinforcement Section ---
+        reinf_detail_label = QLabel('Reinforcement Details')
+        reinf_detail_label.setProperty('class', 'detail-header')
+        layout.addWidget(reinf_detail_label)
 
-        button_layout.addWidget(back_button)
-        button_layout.addStretch()
-        button_layout.addWidget(generate_button)
+        form_layout_rebar = QFormLayout()
+        form_layout_rebar.setSpacing(8)
+        form_layout_rebar.setContentsMargins(6, 0, 0, 0)
+        self.detail_widgets['top_bar'] = QLabel()
+        self.detail_widgets['bottom_bar'] = QLabel()
+        self.detail_widgets['vertical_bar'] = QLabel()
+        self.detail_widgets['perimeter_bar'] = QLabel()
+        self.detail_widgets['stirrups_summary'] = QLabel()
 
-        main_layout.addLayout(button_layout)
+        form_layout_rebar.addRow('<b>Top Bar:</b>', self.detail_widgets['top_bar'])
+        form_layout_rebar.addRow('<b>Bottom Bar:</b>', self.detail_widgets['bottom_bar'])
+        form_layout_rebar.addRow('<b>Vertical Bar:</b>', self.detail_widgets['vertical_bar'])
+        form_layout_rebar.addRow('<b>Perimeter Bar:</b>', self.detail_widgets['perimeter_bar'])
+        form_layout_rebar.addRow('<b>Stirrups:</b>', self.detail_widgets['stirrups_summary'])
+        layout.addLayout(form_layout_rebar)
 
-        self.stacked_widget.addWidget(page)
+        # --- Dynamic Layout for Stirrup Types ---
+        # This special layout will hold the list of individual stirrup shapes
+        self.detail_stirrup_types_layout = QVBoxLayout()
+        self.detail_stirrup_types_layout.setContentsMargins(20, 5, 0, 0)  # Indent the list
+        self.detail_stirrup_types_layout.setSpacing(5)
+        layout.addLayout(self.detail_stirrup_types_layout)
 
-    def populate_summary_page(self) -> None:
-        """Gathers data from all input pages and populates the summary page."""
-        # -- Clean the data ---
-        self.footing_details_values = parse_nested_dict(self.footing_details)
-        self.rsb_details_values = parse_nested_dict(self.rsb_details)
-        self.rsb_details_values['Stirrups']['Spacing'] = parse_spacing_string(self.rsb_details_values['Stirrups']['Spacing'])
+        layout.addStretch()
 
-        # --- Footing Details ---
-        for name, value in self.footing_details_values.items():
-            if name in self.summary_labels:
-                if value == '':
-                    continue
-                elif 'Number of Footing' in name:
-                    text = f'{value}'
-                else:
-                    text = f'{value} mm'
-                # Special case for 'n_ped' which is not a widget
-                if name == 'Footing Type':
-                    n_ped = self.footing_details_values['n_ped']
-                    if n_ped == 1:
-                        text += f' ({n_ped} Pedestal)'
-                    else:
-                        text += f' ({n_ped} Pedestals)'
-                self.summary_labels[name].setText(text)
+        # --- Set properties for all created labels ---
+        for widget in self.detail_widgets.values():
+            widget.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            widget.setWordWrap(True)
 
-        # --- Reinforcement Details ---
-        top_bar_enabled = self.group_box['Top Bar'].isChecked()
-        perimeter_bar_enabled = self.group_box['Perimeter Bar'].isChecked()
-        stirrups_enabled = self.group_box['Stirrups'].isChecked()
+        # --- Make the entire panel scrollable ---
+        scroll_area = make_scrollable(scroll_content)
+        scroll_area.setProperty('class', 'detail-scroll-area')  # For styling
+        return scroll_area
 
-        # Top & Bottom Bars
-        for bar_type in ['Top Bar', 'Bottom Bar']:
-            details = self.rsb_details_values[bar_type]
-            if (bar_type == 'Top Bar' and top_bar_enabled) or (bar_type == 'Bottom Bar'):
-                dia = details['Diameter']
-                qty_or_spacing = details['Input Type']
-                qty_or_spacing = qty_or_spacing.strip(':')
-                x_value = details['Value Along X']
-                y_value = details['Value Along Y']
-                unit = 'mm' if qty_or_spacing=='Spacing' else ('pcs' if x_value > 1 else 'pc')
-                text = (f'{dia} | {qty_or_spacing} along X: {x_value} {unit}'
-                        f' | {qty_or_spacing} along Y: {y_value} {unit}')
-            else:
-                text = 'None'
-            self.summary_labels[bar_type].setText(text)
-
-        # Vertical Bars
-        details: dict
-        details = self.rsb_details_values['Vertical Bar']
-        dia = details['Diameter']
-        qty = details['Quantity']
-        hook_calc = details['Hook Calculation']
-        hook_len = details['Hook Length']
-        if hook_calc == 'Manual':
-            text = f'{dia} | Qty: {qty} pcs/pedestal | Hook: {hook_len} mm'
-        else:
-            text = f'{dia} | Qty: {qty} pcs/pedestal | Hook: {hook_calc}'
-        self.summary_labels['Vertical Bar'].setText(text)
-
-        # Perimeter Bars
-        details = self.rsb_details_values['Perimeter Bar']
-        dia = details['Diameter']
-        layers = details['Layers']
-        if not perimeter_bar_enabled:
-            self.summary_labels['Perimeter Bar'].setText('None')
-        elif layers == '1':
-            self.summary_labels['Perimeter Bar'].setText(f'{dia} | {layers} layer')
-        else:
-            self.summary_labels['Perimeter Bar'].setText(f'{dia} | {layers} layers')
-
-        # Stirrup Detail
-        details = self.rsb_details_values['Stirrups']
-        if stirrups_enabled:
-            extent_text = details['Extent']
-        else:
-            extent_text = 'N/A'
-        self.summary_labels['Stirrups']['Extent'].setText(extent_text)
-        if stirrups_enabled:
-            rebuilt_listed_spacing = []
-            for qty, spacing in details['Spacing']:
-                rebuilt_listed_spacing.append(f'{qty}@{spacing}')
-            self.summary_labels['Stirrups']['Spacing'].setText(', '.join(rebuilt_listed_spacing))
-        else:
-            self.summary_labels['Stirrups']['Spacing'].setText('N/A')
-
-        if stirrups_enabled:
-            stirrup_types_text = []
-            for row in details['Types']:
-                s_type = row['Type']
-                s_dia = row['Diameter']
-                s_a = row['a_input']
-                type_str = f'{s_type} ({s_dia})'
-                if s_type in ['Tall', 'Wide', 'Octagon']:
-                    type_str += f' | a = {s_a} mm'
-                stirrup_types_text.append(type_str)
-            self.summary_labels['Stirrups']['Types'].setText('\n'.join(stirrup_types_text))
-        else:
-            self.summary_labels['Stirrups']['Types'].setText('None')
-
-        # --- Market Lengths ---
-        market_text_lines = []
-        for dia, lengths in self.market_lengths_checkboxes.items():
-            available = [l for l, cb in lengths.items() if cb.isChecked()]
-            if available:
-                market_text_lines.append(f'<b>{dia}:</b> {', '.join(available)}')
-        self.summary_labels['market_lengths'].setText('<br>'.join(market_text_lines))
-
-    def setup_connections(self) -> None:
-        """Connects signals from input widgets to their corresponding slots."""
-        # Widgets from the footing page that affect the stirrup drawing
-        self.group_box['Top Bar'].toggled.connect(self.on_top_bar_toggled)
-        self.footing_details['Pedestal Height'].textChanged.connect(self.update_stirrup_drawing)
-        self.footing_details['Pedestal Width (Along X)'].textChanged.connect(self.update_stirrup_drawing)
-        self.footing_details['Pad Thickness'].textChanged.connect(self.update_stirrup_drawing)
-        self.footing_details['Concrete Cover'].textChanged.connect(self.update_stirrup_drawing)
-
-        # Widgets from the rsb page that affect the stirrup drawing
-        self.rsb_details['Bottom Bar']['Diameter'].currentTextChanged.connect(self.update_stirrup_drawing)
-        self.rsb_details['Vertical Bar']['Diameter'].currentTextChanged.connect(self.update_stirrup_drawing)
-        self.rsb_details['Stirrups']['Extent'].currentTextChanged.connect(self.update_stirrup_drawing)
-        self.rsb_details['Stirrups']['Spacing'].textChanged.connect(self.on_stirrup_spacing_changed)
-        # noinspection PyUnresolvedReferences
-        self.debounce_timer.timeout.connect(self.update_stirrup_drawing)
-
-        self.group_box['Stirrups'].toggled.connect(self.update_stirrup_drawing)
-        # noinspection PyUnresolvedReferences
-        self.stacked_widget.currentChanged.connect(self.on_page_changed)
-
-    def on_page_changed(self, index: int) -> None:
+    def toggle_market_row(self, dia: str) -> None:
         """
-        Slot that triggers when the stacked widget's current page changes.
+        Toggles all checkboxes in a given market length row.
 
         Args:
-            index: The index of the newly visible page.
+            dia: The diameter string (e.g., '#10') identifying the row.
         """
-        # Check if the new page is the summary page (index 3)
-        if index == 3:
-            self.populate_summary_page()
+        row_cbs = self.market_lengths_checkboxes[dia]
+        if not row_cbs: return
 
-    def update_spinbox_suffixes(self, title: str, selection: str) -> None:
-        """Updates the suffix for the value spin boxes."""
-        details = self.rsb_details[title]
-        suffix = ' pcs' if 'Quantity' in selection else ' mm'
-        details['Value Along X'].setSuffix(suffix)
-        details['Value Along Y'].setSuffix(suffix)
+        # Determine target state based on the opposite of the first checkbox
+        first_len = MARKET_LENGTHS[0]
+        new_state = not row_cbs[first_len].isChecked()
 
-    def toggle_same_for_both(self, title: str, state: int) -> None:
-        """Enables/disables the Y-value spinbox and connects/disconnects signals."""
-        details = self.rsb_details[title]
-        value_x_spinbox = details['Value Along X']
-        value_y_spinbox = details['Value Along Y']
+        for cb in row_cbs.values():
+            cb.setChecked(new_state)
 
-        # --- THIS IS THE CORRECTED LINE ---
-        if state == Qt.CheckState.Checked.value:
-            value_y_spinbox.setValue(value_x_spinbox.value())
-            value_y_spinbox.setEnabled(False)
-            # Store the connection within the details dictionary
-            details['connection'] = value_x_spinbox.valueChanged.connect(
-                value_y_spinbox.setValue
-            )
+    def toggle_market_column(self, length: str) -> None:
+        """
+        Toggles all checkboxes in a given market length column.
+
+        Args:
+            length: The market length string (e.g., '6m') identifying the column.
+        """
+        if not BAR_DIAMETERS: return
+
+        # Determine target state based on the opposite of the first row's checkbox in this column
+        first_dia = BAR_DIAMETERS[0]
+        new_state = not self.market_lengths_checkboxes[first_dia][length].isChecked()
+
+        for dia in BAR_DIAMETERS:
+            self.market_lengths_checkboxes[dia][length].setChecked(new_state)
+
+    def get_all_foundation_data(self) -> list[dict]:
+        """
+        Iterates through the layout and collects the .data dictionary from
+        every FoundationItem widget.
+
+        Returns:
+            A list of dictionaries, where each dictionary contains all the
+            details for one foundation type.
+        """
+        all_data = []
+        # A QLayout's items are accessed by index.
+        for i in range(self.scroll_layout.count()):
+            # itemAt() returns a QLayoutItem, which is a wrapper.
+            layout_item = self.scroll_layout.itemAt(i)
+
+            # We need to get the actual widget from the layout item.
+            widget = layout_item.widget()
+
+            # IMPORTANT: Check if the widget is a FoundationItem.
+            # This safely ignores the stretch/spacer at the end of the layout,
+            # which has no .data attribute and would otherwise cause a crash.
+            if isinstance(widget, FoundationItem):
+                all_data.append(widget.data)
+
+        return all_data
+
+    def update_detail_view(self, item: FoundationItem):
+        """Updates the right panel with ALL details of the selected item."""
+        if self.current_item:
+            self.current_item.deselect()
+
+        self.current_item = item
+        self.current_item.select()
+        data = item.data
+
+        # --- Populate General & Dimensions ---
+        self.detail_widgets['name_header'].setText(data.get('name', 'N/A'))
+        self.detail_widgets['n_footing'].setText(str(data.get('n_footing', 0)))
+        self.detail_widgets['n_ped'].setText(str(data.get('n_ped', 0)))
+        self.detail_widgets['cc'].setText(f'{data.get('cc', 0)} mm')
+        pad_dims_text = f'{data.get('Bx', 0)} x {data.get('By', 0)} x {data.get('t', 0)} mm'
+        self.detail_widgets['pad_dims'].setText(pad_dims_text)
+        ped_dims_text = f'{data.get('bx', 0)} x {data.get('by', 0)} x {data.get('h', 0)} mm'
+        self.detail_widgets['pedestal_dims'].setText(ped_dims_text)
+
+        # --- Helper function for styling disabled text ---
+        def format_disabled(text):
+            return f'<i><font color='#7f8c8d'>{text}</font></i>'
+
+        # --- Populate Top Bar ---
+        top_bar_data = data['Top Bar']
+        if top_bar_data['Enabled']:
+            if top_bar_data['Input Type'] == 'Quantity':
+                details = f'{top_bar_data['Value Along X']} pcs (Along X), {top_bar_data['Value Along Y']} pcs (Along Y)'
+            else:  # Spacing
+                details = f'@{top_bar_data['Value Along X']} mm (Along X), @{top_bar_data['Value Along Y']} mm (Along Y)'
+            self.detail_widgets['top_bar'].setText(f'{top_bar_data['Diameter']} | {details}')
         else:
-            value_y_spinbox.setEnabled(True)
-            # Disconnect the signal if the connection exists
-            if details['connection']:
-                try:
-                    value_x_spinbox.valueChanged.disconnect(details['connection'])
-                except TypeError:
-                    pass  # Connection might have already been broken
-                details['connection'] = None
+            self.detail_widgets['top_bar'].setText(format_disabled('Not Used'))
 
-    def generate_cutting_list(self) -> None:
-        """
-        Performs all calculations, generates the Excel file, and handles post-generation actions.
-        """
-        results = {}
-        footing_details = self.footing_details_values
-        rsb_details = self.rsb_details_values
-
-        n_ped = footing_details['n_ped']
-        n_footing = footing_details['Total Number of Footing']
-        cc = footing_details['Concrete Cover']
-        bx = footing_details['Pedestal Width (Along X)']
-        by = footing_details['Pedestal Width (Along Y)']
-        h = footing_details['Pedestal Height']
-        Bx = footing_details['Pad Width (Along X)']
-        By = footing_details['Pad Width (Along Y)']
-        t = footing_details['Pad Thickness']
-
-        # Top and Bottom Bar
-        def top_bottom_bar_helper(title):
-            bar_detail = rsb_details[title]
-            qty_or_spacing = bar_detail['Input Type']
-            value_along_x = bar_detail['Value Along X']
-            value_along_y = bar_detail['Value Along Y']
-            if 'Spacing' in qty_or_spacing:
-                bar_spacing_value_x = value_along_x
-                bar_spacing_value_y = value_along_y
-                bar_qty_x = bar_qty_y = None
-            else:
-                bar_spacing_value_x = bar_spacing_value_y = None
-                bar_qty_x = value_along_x
-                bar_qty_y = value_along_y
-            return top_bottom_bar_calculation(get_bar_dia(bar_detail['Diameter']), Bx, By, t, cc, bar_spacing_value_x,
-                                              bar_spacing_value_y, bar_qty_x, bar_qty_y)
-        if self.group_box['Top Bar'].isChecked():
-            results['Top Bar'] = top_bottom_bar_helper('Top Bar')
-            results['Top Bar']['bar_in_x_direction']['quantity'] *= n_footing
-            results['Top Bar']['bar_in_y_direction']['quantity'] *= n_footing
-        results['Bottom Bar'] = top_bottom_bar_helper('Bottom Bar')
-        results['Bottom Bar']['bar_in_x_direction']['quantity'] *= n_footing
-        results['Bottom Bar']['bar_in_y_direction']['quantity'] *= n_footing
-
-        # Perimeter Bar
-        if self.group_box['Perimeter Bar'].isChecked():
-            perim_bar = rsb_details['Perimeter Bar']
-            layers = perim_bar['Layers']
-            if isinstance(layers, int):
-                dia = get_bar_dia(perim_bar['Diameter'])
-                results['Perimeter Bar'] = perimeter_bar_calculation(dia, layers, Bx, By, cc)
-                results['Perimeter Bar']['bar_in_x_direction']['quantity'] *= n_footing
-                results['Perimeter Bar']['bar_in_y_direction']['quantity'] *= n_footing
-
-        # Vertical Bar
-        vert_bar = rsb_details['Vertical Bar']
-        dia = get_bar_dia(vert_bar['Diameter'])
-        hook_calc = vert_bar['Hook Calculation']
-        bot_bar_dia = get_bar_dia(rsb_details['Bottom Bar']['Diameter'])
-        qty = vert_bar['Quantity']
-        if 'Manual' in hook_calc:
-            hook_len = vert_bar['Hook Length']
+        # --- Populate Bottom Bar ---
+        bot_bar_data = data['Bottom Bar']
+        if bot_bar_data['Enabled']:
+            if bot_bar_data['Input Type'] == 'Quantity':
+                details = f'{bot_bar_data['Value Along X']} pcs (Along X), {bot_bar_data['Value Along Y']} pcs (Along Y)'
+            else:  # Spacing
+                details = f'@{bot_bar_data['Value Along X']} mm (Along X), @{bot_bar_data['Value Along Y']} mm (Along Y)'
+            self.detail_widgets['bottom_bar'].setText(f'{bot_bar_data['Diameter']} | {details}')
         else:
-            hook_len = None
-        results['Vertical Bar'] = vertical_bar_calculation(dia, qty, h, t, cc, bot_bar_dia, hook_len)
-        results['Vertical Bar']['quantity'] *= n_ped * n_footing
+            self.detail_widgets['bottom_bar'].setText(format_disabled('Not Used'))
 
-        # Stirrups
-        if self.group_box['Stirrups'].isChecked():
-            stirrup = rsb_details['Stirrups']
-            qty = self.stirrup_canvas.get_qty() * n_ped
-            if qty > 0:
-                stirrups_cutting_list = []
-                for row in stirrup['Types']:
-                    dia = get_bar_dia(row['Diameter'])
-                    a = row['a_input']
-                    if a == '':
-                        a = None
-                    stirrup_result = stirrups_calculation(dia, qty, bx, by, cc, row['Type'].lower(), a)
-                    stirrup_result['quantity'] *= n_footing
-                    stirrups_cutting_list.append(stirrup_result)
-                results['Stirrups'] = stirrups_cutting_list
+        # --- Populate Vertical Bar ---
+        vert_bar_data = data['Vertical Bar']
+        if vert_bar_data['Enabled']:
+            hook_details = f'({vert_bar_data['Hook Calculation']}'
+            if vert_bar_data['Hook Calculation'] == 'Manual':
+                hook_details += f': {vert_bar_data['Hook Length']} mm'
+            hook_details += ')'
+            details = f'{vert_bar_data['Quantity']} pcs | {vert_bar_data['Diameter']} {hook_details}'
+            self.detail_widgets['vertical_bar'].setText(details)
+        else:
+            self.detail_widgets['vertical_bar'].setText(format_disabled('Not Used'))
 
-        # Market Length
-        processed_for_optimization = process_rebar_input(results)
-        cuts_by_diameter = {}
-        for bar in processed_for_optimization:
-            dia = get_dia_code(bar['diameter'])
-            if dia not in cuts_by_diameter:
-                cuts_by_diameter[dia] = {}
+        # --- Populate Perimeter Bar ---
+        perim_bar_data = data['Perimeter Bar']
+        if perim_bar_data['Enabled']:
+            layers = perim_bar_data.get('Layers', '1')
+            self.detail_widgets['perimeter_bar'].setText(f'{layers} Layer(s) | {perim_bar_data['Diameter']}')
+        else:
+            self.detail_widgets['perimeter_bar'].setText(format_disabled('Not Used'))
 
-            length = bar['cut_length']
-            quantity = bar['quantity']
+        # --- Populate Stirrups ---
+        stirrup_data = data['Stirrups']
+        # Clear previous stirrup type labels
+        while self.detail_stirrup_types_layout.count():
+            child = self.detail_stirrup_types_layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
 
-            if length in cuts_by_diameter[dia]:
-                cuts_by_diameter[dia][length] += quantity
-            else:
-                cuts_by_diameter[dia][length] = quantity
-        for key, value in cuts_by_diameter.items():
-            cuts_by_diameter[key] = [(q, l/1000) for l, q in value.items()]
+        if stirrup_data['Enabled']:
+            summary = f'{stirrup_data['Quantity']} total sets, starting from <b>{stirrup_data['Extent']}</b>'
+            summary += f'<br>Spacing: <code>{stirrup_data['Spacing']}</code>'
+            self.detail_widgets['stirrups_summary'].setText(summary)
 
+            # Dynamically add a label for each stirrup type in the bundle
+            for stirrup_type in stirrup_data.get('Types', []):
+                type_text = f'&bull; <b>{stirrup_type['Type']}:</b> {stirrup_type['Diameter']}'
+                if stirrup_type['Type'] in ['Tall', 'Wide', 'Octagon']:
+                    type_text += f' (a: {stirrup_type['a_input']} mm)'
+
+                type_label = QLabel(type_text)
+                type_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+                self.detail_stirrup_types_layout.addWidget(type_label)
+        else:
+            self.detail_widgets['stirrups_summary'].setText(format_disabled('Not Used'))
+
+        # Switch the stacked widget to show the details
+        self.detail_area_stack.setCurrentIndex(1)
+
+    def edit_foundation_item(self, item: FoundationItem) -> None:
+        """Opens a dialog to edit an existing foundation item."""
+        dialog = FoundationDetailsDialog(existing_details=item.data, parent=self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            new_data = dialog.get_data()
+            if new_data['name'].strip():
+                item.update_details(new_data)
+                # --- ADD THIS LINE TO REFRESH THE DETAILS ---
+                self.update_detail_view(item)
+
+    def remove_foundation_item(self, item: FoundationItem) -> None:
+        """Removes a foundation item from the list."""
+        # --- ADD THIS LOGIC ---
+        if item == self.current_item:
+            self.current_item = None
+            self.detail_area_stack.setCurrentIndex(0)  # Show placeholder
+
+        self.scroll_layout.removeWidget(item)
+        item.deleteLater()
+
+    def prefill_debug_data(self):
+        """Creates and adds sample foundation data if DEBUG_MODE is True."""
+        print('--- DEBUG MODE: Prefilling sample data ---')
+        debug_data_1 = {
+            'name': 'F1 (Debug)', 'n_footing': 10, 'n_ped': 1, 'cc': 75,
+            'bx': 700, 'by': 700, 'h': 1200, 'Bx': 2500, 'By': 2500, 't': 400,
+            'Top Bar': {
+                'Enabled': True, 'Diameter': '#16', 'Input Type': 'Spacing',
+                'Value Along X': 150, 'Value Along Y': 150
+            },
+            'Bottom Bar': {
+                'Enabled': True, 'Diameter': '#20 ', 'Input Type': 'Quantity',
+                'Value Along X': 12, 'Value Along Y': 12
+            },
+            'Vertical Bar': {
+                'Enabled': True, 'Diameter': '#16', 'Quantity': 8,
+                'Hook Calculation': 'Automatic', 'Hook Length': 0
+            },
+            'Perimeter Bar': {'Enabled': False, 'Diameter': '#12', 'Layers': 1},
+            'Stirrups': {
+                'Enabled': True, 'Extent': 'From Face of Pad',
+                'Spacing': '1@50, 5@100, rest@150', 'Quantity': 0,
+                'Types': [
+                    {'Type': 'Outer', 'Diameter': '#10', 'a_input': 0},
+                    {'Type': 'Tall', 'Diameter': '#10', 'a_input': 150}
+                ]
+            }
+        }
+
+        debug_data_2 = {
+            'name': 'F2 (Debug)', 'n_footing': 5, 'n_ped': 2, 'cc': 75,
+            'bx': 600, 'by': 800, 'h': 1500, 'Bx': 3000, 'By': 3200, 't': 500,
+            'Top Bar': {'Enabled': False, 'Diameter': '#16', 'Input Type': 'Spacing', 'Value Along X': 200,
+                        'Value Along Y': 200},
+            'Bottom Bar': {'Enabled': True, 'Diameter': '#25', 'Input Type': 'Quantity', 'Value Along X': 15,
+                           'Value Along Y': 16},
+            'Vertical Bar': {'Enabled': True, 'Diameter': '#20', 'Quantity': 12, 'Hook Calculation': 'Manual',
+                             'Hook Length': 300},
+            'Perimeter Bar': {'Enabled': True, 'Diameter': '#12', 'Layers': 2},
+            'Stirrups': {'Enabled': True, 'Extent': 'From Bottom Bar', 'Spacing': '1@75, rest@200', 'Quantity': 0,
+                         'Types': [{'Type': 'Outer', 'Diameter': '#10', 'a_input': 0}]}
+        }
+
+        all_debug_data = [debug_data_1, debug_data_2]
+        first_item = None
+
+        for data in all_debug_data:
+            new_item = FoundationItem(data)
+            new_item.edit_requested.connect(self.edit_foundation_item)
+            new_item.remove_requested.connect(self.remove_foundation_item)
+            new_item.selected.connect(self.update_detail_view)
+            self.scroll_layout.insertWidget(self.scroll_layout.count() - 1, new_item)
+            if not first_item:
+                first_item = new_item
+
+        # Auto-select the first item to show details on startup
+        if first_item:
+            self.update_detail_view(first_item)
+
+    def reset_application(self):
+        """Resets the application to its initial state."""
+        # 1. Clear all foundation items from the list
+        # We loop until only the stretch item (count = 1) is left.
+        while self.scroll_layout.count() > 1:
+            layout_item = self.scroll_layout.takeAt(0)
+            if layout_item.widget():
+                # Remove the widget from the layout and schedule it for deletion
+                layout_item.widget().deleteLater()
+
+        # 2. Reset the detail view to the placeholder
+        self.current_item = None
+        self.detail_area_stack.setCurrentIndex(0)
+
+        # 3. Reset all checkboxes on the market lengths page
+        if self.market_lengths_checkboxes:
+            for dia_dict in self.market_lengths_checkboxes.values():
+                for checkbox in dia_dict.values():
+                    checkbox.setChecked(False)
+
+        # 4. Switch back to the first page
+        self.stacked_widget.setCurrentIndex(0)
+
+    def go_to_foundation_page(self):
+        self.stacked_widget.setCurrentIndex(0)
+
+    def go_to_market_length_page(self):
+        self.stacked_widget.setCurrentIndex(1)
+
+
+    def generate_excel(self):
+        all_data = self.get_all_foundation_data()
         market_lengths = {}
         for dia_code, lengths in self.market_lengths_checkboxes.items():
-            if dia_code in cuts_by_diameter:
-                # Market lengths are already whole numbers, so they are fine.
-                available_lengths = [float(l.replace('m', '')) for l, cb in lengths.items() if cb.isChecked()]
-                if not available_lengths:
-                    continue
-                market_lengths[dia_code] = available_lengths
+            available_lengths = [float(l.replace('m', '')) for l, cb in lengths.items() if cb.isChecked()]
+            if not available_lengths:
+                continue
+            market_lengths[dia_code] = available_lengths
+        all_results = []
+
+        proceed_purchase_plan = True
+        wb = Workbook()
+        for data in all_data:
+            rebars_per_fdn_type = compile_rebar(data)
+            all_results.append(rebars_per_fdn_type)
+            grouped_rebars_per_fdn_type = process_rebar_input(rebars_per_fdn_type)
+            wb, proceed = add_sheet_cutting_list(data['name'], grouped_rebars_per_fdn_type, market_lengths, wb)
+            if not proceed:
+                proceed_purchase_plan = False
+
+        # add purchase plan sheet
+        if proceed_purchase_plan:
+            cuts_by_diameter = {}
+            for bar in process_rebar_input(all_results):
+                dia = get_dia_code(bar['diameter'])
+                if dia not in cuts_by_diameter:
+                    cuts_by_diameter[dia] = {}
+
+                length = bar['cut_length']
+                quantity = bar['quantity']
+
+                if length in cuts_by_diameter[dia]:
+                    cuts_by_diameter[dia][length] += quantity
+                else:
+                    cuts_by_diameter[dia][length] = quantity
+            for key, value in cuts_by_diameter.items():
+                cuts_by_diameter[key] = [(q, l / 1000) for l, q in value.items()]
+
+            purchase_list, cutting_plan = find_optimized_cutting_plan(cuts_by_diameter, market_lengths)
+            wb = add_shet_purchase_plan(wb, purchase_list)
+            wb = add_sheet_cutting_plan(wb, cutting_plan)
+
+        # Clean up
+        wb = delete_blank_worksheets(wb)
 
         # --- Prompt user for save location ---
         save_path, _ = QFileDialog.getSaveFileName(
@@ -1293,15 +1981,14 @@ class MultiPageApp(QMainWindow):
             print('File save cancelled by user.')
             return
 
-        # --- Try to save the file and handle potential errors ---
         try:
-            # Pass optimization_results to the Excel function
-            create_excel_cutting_list(results, cuts_by_diameter, market_lengths, output_filename=save_path)
+            wb.save(save_path)
+            print(f'Excel sheet {save_path} has been created successfully.')
         except PermissionError:
             QMessageBox.warning(
                 self,
                 'Save Error',
-                f"Could not save the file to '{os.path.basename(save_path)}'.\n\n"
+                f'Could not save the file to {os.path.basename(save_path)}.\n\n'
                 'Please ensure the file is not already open in another program and that you have permission to write to this location.'
             )
             return  # Stop execution if save fails
@@ -1354,724 +2041,12 @@ class MultiPageApp(QMainWindow):
         else:
             self.close()
 
-    def prefill_for_debug(self) -> None:
-        """Pre-fills all input fields with sample data for faster testing."""
-        print("--- DEBUG MODE: Pre-filling forms with sample data. ---")
-
-        # --- Page 1: Footing Details ---
-        self.footing_details['Footing Type'].setCurrentText('Isolated')
-        self.footing_details['Total Number of Footing'].setValue(2)
-        self.footing_details['Concrete Cover'].setValue(75)
-        self.footing_details['Pedestal Width (Along X)'].setValue(600)
-        self.footing_details['Pedestal Width (Along Y)'].setValue(600)
-        self.footing_details['Pedestal Height'].setValue(1200)
-        self.footing_details['Pad Width (Along X)'].setValue(1800)
-        self.footing_details['Pad Width (Along Y)'].setValue(1800)
-        self.footing_details['Pad Thickness'].setValue(400)
-
-        # --- Page 2: Reinforcement Details ---
-        # Top Bar
-        self.rsb_details['Top Bar']['Diameter'].setCurrentText('#20')
-        self.rsb_details['Top Bar']['Input Type'].setCurrentText('Spacing:')
-        self.rsb_details['Top Bar']['Value Along X'].setValue(150)
-        self.rsb_details['Top Bar']['Value Along Y'].setValue(150)
-
-        # Bottom Bar
-        self.rsb_details['Bottom Bar']['Diameter'].setCurrentText('#20')
-        self.rsb_details['Bottom Bar']['Input Type'].setCurrentText('Spacing:')
-        self.rsb_details['Bottom Bar']['Value Along X'].setValue(170)
-        self.rsb_details['Bottom Bar']['Value Along Y'].setValue(170)
-
-        # Vertical Bar
-        self.rsb_details['Vertical Bar']['Diameter'].setCurrentText('#20')
-        self.rsb_details['Vertical Bar']['Quantity'].setValue(8)
-        self.rsb_details['Vertical Bar']['Hook Calculation'].setCurrentText('Manual')
-        self.rsb_details['Vertical Bar']['Hook Length'].setValue(300)
-
-        # Perimeter Bar
-        self.rsb_details['Perimeter Bar']['Layers'].setCurrentText('2')
-        self.rsb_details['Perimeter Bar']['Diameter'].setCurrentText('#12')
-
-        # Stirrups
-        self.rsb_details['Stirrups']['Extent'].setCurrentText('From Face of Pad')
-        self.rsb_details['Stirrups']['Spacing'].setText('1 @ 50, 5 @ 100, rest @ 150')
-        # Add a second stirrup type for more complex testing
-        self.add_stirrup_row()
-        stirrup_row_1 = self.rsb_details['Stirrups']['Types'][0]
-        stirrup_row_1['Type'].setCurrentText('Outer')
-        stirrup_row_1['Diameter'].setCurrentText('#10')
-
-        stirrup_row_2 = self.rsb_details['Stirrups']['Types'][1]
-        stirrup_row_2['Type'].setCurrentText('Tall')
-        stirrup_row_2['Diameter'].setCurrentText('#10')
-        stirrup_row_2['a_input'].setValue(250)
-
-        # --- Page 3: Market Lengths ---
-        # Uncheck a couple of options for testing
-        self.market_lengths_checkboxes['#10']['6m'].setChecked(False)
-        self.market_lengths_checkboxes['#25']['12m'].setChecked(False)
-
-    def reset_application(self) -> None:
-        """Resets all input fields to their default states and returns to the first page."""
-        # --- Reset Footing Page ---
-        for name, widget in self.footing_details.items():
-            if name == 'Footing Type':
-                widget.setCurrentIndex(0)
-            elif name == 'Total Number of Footing':
-                widget.setValue(1)
-            elif name == 'Concrete Cover':
-                widget.setValue(75)
-            elif isinstance(widget, QLineEdit):
-                widget.clear()
-            elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
-                widget.setValue(widget.minimum())
-
-        # --- Reset RSB Page ---
-        for section, details in self.rsb_details.items():
-            for widget in details.values():
-                if isinstance(widget, QComboBox):
-                    widget.setCurrentIndex(0)
-                elif isinstance(widget, (QLineEdit, QTextEdit)):
-                    widget.clear()
-                elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
-                    widget.setValue(widget.minimum())
-
-        # Reset stirrup rows to a single, default row
-        while len(self.rsb_details['Stirrups']['Types']) > 1:
-            self.remove_stirrup_row()
-
-        if self.rsb_details['Stirrups']['Types']:
-            first_row = self.rsb_details['Stirrups']['Types'][0]
-            first_row['Type'].setCurrentIndex(0)
-            first_row['Diameter'].setCurrentIndex(0)
-            first_row['a_input'].setValue(first_row['a_input'].minimum())
-
-        # --- Reset Market Lengths Page ---
-        for dia_lengths in self.market_lengths_checkboxes.values():
-            for checkbox in dia_lengths.values():
-                checkbox.setChecked(True)
-
-        # --- Go back to the first page ---
-        self.stacked_widget.setCurrentIndex(0)
-
-    def validate_and_style_stirrup_spacing(self) -> bool:
-        """
-        Validates the stirrup spacing QTextEdit, applies styling, and returns the validity.
-
-        Returns:
-            True if the spacing format is valid, False otherwise.
-        """
-        widget = self.rsb_details['Stirrups']['Spacing']
-        text = widget.toPlainText()
-        is_valid = True
-
-        # An empty string is considered valid (no stirrups)
-        if text.strip():
-            try:
-                parse_spacing_string(text)
-            except (ValueError, TypeError):
-                is_valid = False
-
-        style_invalid_input(widget, is_valid)
-        return is_valid
-
-    def show_error_message(self, title: str, message: str) -> None:
-        """
-        Displays a standardized error message box.
-
-        Args:
-            title: The title for the message box window.
-            message: The informative text to display.
-        """
-        msg_box = QMessageBox(self)
-        msg_box.setIcon(QMessageBox.Icon.Warning)
-        msg_box.setWindowTitle(title)
-        msg_box.setText('Please correct the following errors before proceeding:')
-        msg_box.setInformativeText(message)
-        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
-        msg_box.exec()
-
-    def validate_footing_page(self) -> list[str]:
-        """
-        Validates all inputs on the footing dimensions page with enhanced logic.
-
-        Returns:
-            A list of error messages. An empty list indicates success.
-        """
-        errors = []
-        details = self.footing_details
-        validity_map = {widget: True for widget in details.values() if isinstance(widget, QWidget)}
-
-        # --- Get key values for cross-validation ---
-        cc_widget = details['Concrete Cover']
-        cc = cc_widget.value()
-        pad_t_widget = details['Pad Thickness']
-        ped_h_widget = details['Pedestal Height']
-        pad_bx_widget = details['Pad Width (Along X)']
-        ped_bx_widget = details['Pedestal Width (Along X)']
-        pad_by_widget = details['Pad Width (Along Y)']
-        ped_by_widget = details['Pedestal Width (Along Y)']
-
-        # --- Rule 1: All dimension and quantity fields must be > 0 ---
-        required_fields = [
-            'Total Number of Footing', 'Concrete Cover', 'Pedestal Width (Along X)',
-            'Pedestal Width (Along Y)', 'Pedestal Height', 'Pad Width (Along X)',
-            'Pad Width (Along Y)', 'Pad Thickness'
-        ]
-        for name in required_fields:
-            widget = details[name]
-            if widget.value() <= 0:
-                validity_map[widget] = False
-                errors.append(f"- '{name}' must be greater than 0.")
-
-        # --- Rule 2: Pedestal must be smaller than the Pad ---
-        if ped_bx_widget.value() >= pad_bx_widget.value():
-            validity_map[ped_bx_widget] = validity_map[pad_bx_widget] = False
-            errors.append("- 'Pedestal Width (X)' must be smaller than 'Pad Width (X)'.")
-
-        if ped_by_widget.value() >= pad_by_widget.value():
-            validity_map[ped_by_widget] = validity_map[pad_by_widget] = False
-            errors.append("- 'Pedestal Width (Y)' must be smaller than 'Pad Width (Y)'.")
-
-        # --- NEW: Rule 3: Dimensions must be greater than twice the concrete cover ---
-        if cc > 0:
-            min_dim = 2 * cc
-            if pad_t_widget.value() <= min_dim:
-                validity_map[pad_t_widget] = validity_map[cc_widget] = False
-                errors.append(f"- 'Pad Thickness' must be > 2 * Concrete Cover (> {min_dim} mm).")
-
-            if ped_bx_widget.value() <= min_dim:
-                validity_map[ped_bx_widget] = validity_map[cc_widget] = False
-                errors.append(f"- 'Pedestal Width (X)' must be > 2 * Concrete Cover (> {min_dim} mm).")
-
-            if ped_by_widget.value() <= min_dim:
-                validity_map[ped_by_widget] = validity_map[cc_widget] = False
-                errors.append(f"- 'Pedestal Width (Y)' must be > 2 * Concrete Cover (> {min_dim} mm).")
-
-            if ped_h_widget.value() <= min_dim:
-                validity_map[ped_h_widget] = validity_map[cc_widget] = False
-                errors.append(f"- 'Pedestal Height' must be > 2 * Concrete Cover (> {min_dim} mm).")
-
-        # --- Apply styles based on final validity ---
-        for widget, is_valid in validity_map.items():
-            style_invalid_input(widget, is_valid)
-
-        return sorted(list(set(errors)))
-
-    def validate_rsb_page(self) -> list[str]:
-        """
-        Validates all inputs on the reinforcement (RSB) page with enhanced, cross-dependent logic.
-
-        Returns:
-            A list of error messages. An empty list indicates success.
-        """
-        errors = []
-        validity_map = {}
-
-        # --- Get necessary values from the Footing page for cross-validation ---
-        footing = self.footing_details
-        cc_widget = footing['Concrete Cover']
-        cc = cc_widget.value()
-        pad_bx_widget = footing['Pad Width (Along X)']
-        pad_bx = pad_bx_widget.value()
-        pad_by_widget = footing['Pad Width (Along Y)']
-        pad_by = pad_by_widget.value()
-        ped_bx_widget = footing['Pedestal Width (Along X)']
-        ped_bx = ped_bx_widget.value()
-        ped_by_widget = footing['Pedestal Width (Along Y)']
-        ped_by = ped_by_widget.value()
-
-        # --- Rule 1: Validate Top and Bottom Bars ---
-        for bar_type in ['Top Bar', 'Bottom Bar']:
-            details = self.rsb_details[bar_type]
-            # Map directions to their corresponding pad dimensions
-            dir_map = {
-                'Value Along X': (pad_bx_widget, pad_bx, 'X'),
-                'Value Along Y': (pad_by_widget, pad_by, 'Y')
-            }
-
-            for direction, (pad_widget, pad_dim, axis) in dir_map.items():
-                widget = details[direction]
-                validity_map.setdefault(widget, True)
-                value = widget.value()
-                input_type = details['Input Type'].currentText()
-
-                if value <= 0:
-                    validity_map[widget] = False
-                    errors.append(f"- {bar_type} ({axis}): {input_type.strip(':')} must be > 0.")
-                    continue  # Skip further checks if the base rule fails
-
-                if 'Spacing' in input_type:
-                    limit = pad_dim / 2
-                    if pad_dim > 0 and value > limit:
-                        validity_map[widget] = validity_map[pad_widget] = False
-                        errors.append(
-                            f"- {bar_type} ({axis}): Spacing cannot be > half the Pad Width (> {limit:.0f} mm).")
-                else:  # Quantity
-                    if value < 3:
-                        validity_map[widget] = False
-                        errors.append(f"- {bar_type} ({axis}): Quantity should not be less than 3.")
-
-                    limit = pad_dim - 2 * cc
-                    if pad_dim > 0 and cc > 0 and value > limit:
-                        validity_map[widget] = validity_map[pad_widget] = validity_map[cc_widget] = False
-                        errors.append(
-                            f"- {bar_type} ({axis}): Quantity seems too high for the Pad Width (limit is approx. {limit:.0f}).")
-
-        # --- Rule 2: Validate Vertical Bar ---
-        vert_details = self.rsb_details['Vertical Bar']
-        qty_widget = vert_details['Quantity']
-        validity_map.setdefault(qty_widget, True)
-        if qty_widget.value() <= 0:
-            validity_map[qty_widget] = False
-            errors.append("- Vertical Bar: 'Quantity' must be > 0.")
-        else:
-            # NEW: Check quantity against a calculated perimeter (as a loose upper bound)
-            if ped_bx > 0 and ped_by > 0:
-                perimeter = 2 * (ped_bx + ped_by)
-                if qty_widget.value() > perimeter:
-                    validity_map[qty_widget] = validity_map[ped_bx_widget] = validity_map[ped_by_widget] = False
-                    errors.append(
-                        f"- Vertical Bar: Quantity ({qty_widget.value()}) is unusually high for the pedestal perimeter ({perimeter:.0f} mm).")
-
-        if vert_details['Hook Calculation'].currentText() == 'Manual':
-            hook_widget = vert_details['Hook Length']
-            validity_map.setdefault(hook_widget, True)
-            if hook_widget.value() <= 0:
-                validity_map[hook_widget] = False
-                errors.append("- Vertical Bar: Manual 'Hook Length' must be > 0.")
-            # NEW: Check hook length against pad dimensions
-            elif pad_bx > 0 and pad_by > 0 and cc > 0:
-                limit = (min(pad_bx, pad_by) / 2) - cc
-                if hook_widget.value() > limit:
-                    validity_map[hook_widget] = validity_map[pad_bx_widget] = validity_map[pad_by_widget] = \
-                    validity_map[cc_widget] = False
-                    errors.append(
-                        f"- Vertical Bar: 'Hook Length' cannot extend beyond the center of the pad (> {limit:.0f} mm).")
-
-        # --- Rule 3: Validate Stirrup Spacing Format ---
-        if not self.validate_and_style_stirrup_spacing():
-            errors.append("- Stirrup 'Spacing': Invalid format. Example: 1@50, rest@100")
-
-        # --- Rule 4: Validate Stirrup Bundle 'a' inputs ---
-        if ped_bx > 0 and cc > 0:
-            limit = min(ped_bx, ped_by) - 2 * cc
-            for i, stirrup_row in enumerate(self.rsb_details['Stirrups']['Types']):
-                stirrup_type = stirrup_row['Type'].currentText()
-                a_input_widget = stirrup_row['a_input']
-                validity_map.setdefault(a_input_widget, True)
-
-                if stirrup_type in ['Tall', 'Wide', 'Octagon']:
-                    if a_input_widget.value() <= 0:
-                        validity_map[a_input_widget] = False
-                        errors.append(
-                            f"- Stirrup (Row {i + 1}): The 'a' value for a '{stirrup_type}' type must be > 0.")
-                    # NEW: Check 'a' value against pedestal dimensions
-                    elif a_input_widget.value() > limit:
-                        validity_map[a_input_widget] = validity_map[ped_bx_widget] = validity_map[ped_by_widget] = \
-                        validity_map[cc_widget] = False
-                        errors.append(
-                            f"- Stirrup (Row {i + 1}): 'a' value cannot be larger than the internal pedestal dimension (> {limit:.0f} mm).")
-
-        # --- Apply styles based on final validity ---
-        for widget, is_valid in validity_map.items():
-            if widget:  # Ensure widget is not None
-                style_invalid_input(widget, is_valid)
-
-        return sorted(list(set(errors)))
-
-    def update_remove_button_state(self) -> None:
-        """Enables or disables the 'remove stirrup row' button based on the row count."""
-        self.remove_stirrup_button.setEnabled(len(self.rsb_details['Stirrups']['Types']) > 1)
-
-    def add_stirrup_row(self) -> None:
-        """Creates and adds a new UI row for defining a stirrup type."""
-        # --- Main container for the row ---
-        row_widget = QWidget()
-        row_widget.setProperty('class', 'stirrup-row')
-        row_layout = QHBoxLayout(row_widget)
-
-        # --- Image (Left) ---
-        image_label = get_img(resource_path('images/stirrup_outer.png'), STIRRUP_ROW_IMAGE_WIDTH, STIRRUP_ROW_IMAGE_WIDTH)
-        row_layout.addWidget(image_label)
-
-        image_map = {
-            'Outer': resource_path('images/stirrup_outer.png'),
-            'Diamond': resource_path('images/stirrup_diamond.png'),
-            'Tall': resource_path('images/stirrup_tall.png'),
-            'Wide': resource_path('images/stirrup_wide.png'),
-            'Octagon': resource_path('images/stirrup_octagon.png')
-        }
-
-        # --- Form (Right) ---
-        form_layout = QFormLayout()
-        type_combo = QComboBox()
-        type_combo.addItems(image_map.keys())
-        size_policy = type_combo.sizePolicy()
-        size_policy.setHorizontalPolicy(QSizePolicy.Policy.Expanding)
-        type_combo.setSizePolicy(size_policy)
-
-        dia_combo = QComboBox()
-        dia_combo.addItems(BAR_DIAMETERS_FOR_STIRRUPS)
-
-        a_label = QLabel('a:')
-        a_label.setProperty('class', 'rsb-forms-label')
-        a_input = BlankSpinBox(0, 99_999, suffix=' mm')
-
-        label = QLabel('Type:')
-        label.setProperty('class', 'rsb-forms-label')
-        form_layout.addRow(label, type_combo)
-        label = QLabel('Diameter:')
-        label.setProperty('class', 'rsb-forms-label')
-        form_layout.addRow(label, dia_combo)
-        form_layout.addRow(a_label, a_input)
-        row_layout.addLayout(form_layout)
-
-        # --- Store widgets for later access ---
-        row_widgets = {
-            'Row': row_widget,
-            'Image': image_label,
-            'Type': type_combo,
-            'Diameter': dia_combo,
-            'a_label': a_label,
-            'a_input': a_input
-        }
-        self.rsb_details['Stirrups']['Types'].append(row_widgets)
-
-        # --- Connections ---
-        # noinspection PyUnresolvedReferences
-        type_combo.currentTextChanged.connect(
-            lambda text, widgets=row_widgets: self.update_stirrup_row_visibility(text, widgets, image_map)
-        )
-
-        # --- Set initial state ---
-        self.update_stirrup_row_visibility(type_combo.currentText(), row_widgets, image_map)
-
-        # --- Add to the main container ---
-        self.stirrup_rows_layout.addWidget(row_widget)
-        self.update_remove_button_state()
-
-    def remove_stirrup_row(self) -> None:
-        """Removes the last stirrup definition row from the UI."""
-        if len(self.rsb_details['Stirrups']['Types']) > 1:  # Keep at least one row
-            widgets_to_remove = self.rsb_details['Stirrups']['Types'].pop()
-            widgets_to_remove['Row'].deleteLater()  # Safely delete the widget
-
-        self.update_remove_button_state()
-
-    @staticmethod
-    def update_stirrup_row_visibility(selected_text: str, widgets: dict[str, Any],
-                                      image_map: dict[str, str]) -> None:
-        """
-        Updates a stirrup row's image and the visibility of its 'a' input field.
-
-        Args:
-            selected_text: The selected stirrup type from the combo box.
-            widgets: A dictionary of the widgets in that specific row.
-            image_map: A dictionary mapping stirrup types to image paths.
-        """
-        update_image(selected_text, image_map, widgets['Image'], STIRRUP_ROW_IMAGE_WIDTH,
-                     fallback=resource_path('images/stirrup_none.png'))
-
-        # Update visibility of 'a' input
-        is_visible = selected_text in ['Tall', 'Wide', 'Octagon']
-        widgets['a_label'].setVisible(is_visible)
-        widgets['a_input'].setVisible(is_visible)
-
-    def eventFilter(self, obj, event):
-        """
-        Filters out mouse wheel events on all QComboBoxes to prevent
-        accidental value changes while scrolling the page.
-        """
-        # Check if the event is a wheel event and the object is a QComboBox.
-        if event.type() == QEvent.Type.Wheel and isinstance(obj, (QComboBox, QSpinBox, QDoubleSpinBox)):
-            # Return True to indicate the event has been handled and should be ignored.
-            return True
-
-        # For all other events, pass them to the default implementation.
-        return super().eventFilter(obj, event)
-
-    def show_hook_info(self) -> None:
-        """Displays an informational popup for the hook calculation method."""
-        # NOTE: You should update the text to reflect the actual standard you are using.
-        # For example, ACI 318 or a local building code.
-        info_text = (
-            "<b>Hook Calculation Method</b>"
-            "<ul><li><b>Automatic:</b> Calculates the required hook length "
-            "based on ACI 318-25 Table 25.3.1 Standard 90° hook geometry for "
-            "development of deformed bars in tension (<i>12d</i><sub>b</sub>) </li>"
-            "<li><b>Manual:</b> Allows you to enter a custom, pre-calculated "
-            "length for the hook.</li></ul>"
-        )
-        self.info_popup.set_info_text(info_text)
-
-        # Position and show the popup
-        cursor_pos = self.cursor().pos()
-        self.info_popup.move(cursor_pos.x() + 15, cursor_pos.y() + 15)
-        self.info_popup.show()
-
-    def show_spacing_header_info(self) -> None:
-        """Displays an informational popup for the stirrup spacing section."""
-        info_text = (
-            """<b>Stirrup Placement Guide</b><br><br>
-This section controls the vertical position and distribution of the stirrup bundles along the pedestal.
-<br><br>
-It's a two-step process:
-<ol>
-    <li><b>Start From:</b> First, select your 'zero' reference point from which all measurements will begin.</li>
-    <li><b>Spacing:</b> Next, enter the series of spacing values. The first value positions the first stirrup relative to your chosen start point.</li>
-</ol>
-Use the diagram on the left to visually confirm that the stirrup placement matches your input."""
-        )
-        self.info_popup.set_info_text(info_text)
-
-        # Position and show the popup
-        cursor_pos = self.cursor().pos()
-        self.info_popup.move(cursor_pos.x() + 15, cursor_pos.y() + 15)
-        self.info_popup.show()
-
-    def show_spacing_extent_info(self) -> None:
-        """Displays an informational popup for the stirrup extent."""
-        info_text = (
-            """<b>Spacing Start Point</b><br><br>
-This sets the <b>'zero' reference point</b> for the first measurement in the 'Spacing' field.
-<hr>
-<ul>
-    <li><b>From Face of Pad:</b> 'Zero' is the top face of the footing (pad).</li>
-    <li><b>From Bottom Bar:</b> 'Zero' is at the elevation of the bottom rebar.</li>
-    <li><b>From Top (to Face of Pad):</b> 'Zero' is the top of the pedestal, measuring downwards. Spacing will only be applied within the concrete pedestal.</li>
-</ul>"""
-        )
-        self.info_popup.set_info_text(info_text)
-
-        # Position and show the popup
-        cursor_pos = self.cursor().pos()
-        self.info_popup.move(cursor_pos.x() + 15, cursor_pos.y() + 15)
-        self.info_popup.show()
-
-    def show_bundle_info(self) -> None:
-        """Displays an informational popup for the stirrup bundle."""
-        info_text = (
-            """<b>Understanding the Stirrup Bundle</b><br><br>
-This section defines the combination of stirrups that will be installed together as a single unit.
-<ul>
-    <li><b>Forms One Set:</b> All stirrup shapes you add (e.g., an Outer, a Tall) are considered one complete set.</li>
-    <li><b>Installed as a Group:</b> At each specified height, all stirrups in the set are installed as a single, tightly packed group.</li>
-    <li><b>Spacing Applies to the Group:</b> The spacing you define (e.g., <code>5@100</code>) dictates the vertical distance from the center of one group to the center of the next.</li>
-</ul>
-Think of it as designing a "kit" of stirrups that gets repeated along the height of the pedestal."""
-        )
-        self.info_popup.set_info_text(info_text)
-
-        # Position and show the popup
-        cursor_pos = self.cursor().pos()
-        self.info_popup.move(cursor_pos.x() + 15, cursor_pos.y() + 15)
-        self.info_popup.show()
-
-    def show_spacing_info(self) -> None:
-        """Displays an informational popup for the stirrup spacing format."""
-        info_text = (
-            """<b>Stirrup Spacing Guide</b><br><br>
-Defines stirrup locations relative to your chosen 'Start From' point.
-
-<hr>
-
-<b>Key Principle:</b>
-<p>The <u>first spacing value</u> in your list always positions the <u>first stirrup</u>.</p>
-
-<b>Example: </b> <b><code>5@100, rest@150</code></b></p>
-<ul>
-    <li>The <b>first</b> of the 5 stirrups is placed <b>100mm</b> from the start point.</li>
-    <li>The next 4 are also 100mm apart. The remaining are 150mm apart.</li>"""
-        )
-        self.info_popup.set_info_text(info_text)
-
-        # Position and show the popup
-        cursor_pos = self.cursor().pos()
-        self.info_popup.move(cursor_pos.x() + 15, cursor_pos.y() + 15)
-        self.info_popup.show()
-
-    def on_stirrup_spacing_changed(self) -> None:
-        """Slot called on every keystroke in the stirrup spacing editor to start the debounce timer."""
-        self.validate_and_style_stirrup_spacing()
-        self.debounce_timer.start()  # This restarts the timer for the drawing
-
-    def update_stirrup_drawing(self) -> None:
-        """Triggers a repaint of the stirrup drawing canvas with current input values."""
-        if hasattr(self, 'stirrup_canvas'):  # Check if canvas exists
-            self.stirrup_canvas.update_dimensions(
-                self.footing_details,
-                self.rsb_details['Stirrups']['Extent'],
-                self.rsb_details['Stirrups']['Spacing'],
-                self.rsb_details['Bottom Bar']['Diameter'],
-                self.rsb_details['Vertical Bar']['Diameter']
-            )
-
-    def on_top_bar_toggled(self, checked: bool) -> None:
-        """
-        Updates the image for the 'Top Bar' section based on its checked state.
-        """
-        # Ensure the widgets have been created before trying to access them
-        if 'Top Bar' not in self.rsb_details:
-            return
-
-        image_label = self.rsb_details['Top Bar']['Image Label']
-        image_width = RSB_IMAGE_WIDTH
-
-        if checked:
-            # If the box is checked, show the normal 'top_bar.png'
-            image_path = resource_path('images/top_bar.png')
-        else:
-            # If it's unchecked, show the new 'no_top_bar.png'
-            image_path = resource_path('images/no_top_bar.png')
-
-        # Use the existing get_img utility to create a new, correctly scaled pixmap
-        new_pixmap = get_img(image_path, image_width, image_width, return_pixmap=True)
-
-        # Update the label with the new pixmap
-        if not new_pixmap.isNull():
-            image_label.setPixmap(new_pixmap)
-
-    def toggle_market_row(self, dia: str) -> None:
-        """
-        Toggles all checkboxes in a given market length row.
-
-        Args:
-            dia: The diameter string (e.g., '#10') identifying the row.
-        """
-        row_cbs = self.market_lengths_checkboxes[dia]
-        if not row_cbs: return
-
-        # Determine target state based on the opposite of the first checkbox
-        first_len = MARKET_LENGTHS[0]
-        new_state = not row_cbs[first_len].isChecked()
-
-        for cb in row_cbs.values():
-            cb.setChecked(new_state)
-
-    def toggle_market_column(self, length: str) -> None:
-        """
-        Toggles all checkboxes in a given market length column.
-
-        Args:
-            length: The market length string (e.g., '6m') identifying the column.
-        """
-        if not BAR_DIAMETERS: return
-
-        # Determine target state based on the opposite of the first row's checkbox in this column
-        first_dia = BAR_DIAMETERS[0]
-        new_state = not self.market_lengths_checkboxes[first_dia][length].isChecked()
-
-        for dia in BAR_DIAMETERS:
-            self.market_lengths_checkboxes[dia][length].setChecked(new_state)
-
-    def go_to_footing_page(self) -> None:
-        """Navigates to the footing dimensions page (index 0)."""
-        self.stacked_widget.setCurrentIndex(0)
-
-    def go_to_rsb_page(self) -> None:
-        """Validates the footing page and navigates to the reinforcement page (index 1)."""
-        if not DEBUG_MODE:
-            errors = self.validate_footing_page()
-            if errors:
-                self.show_error_message('Footing Page Errors', '\n'.join(errors))
-                return  # Stop navigation
-
-        self.update_stirrup_drawing()
-        self.stacked_widget.setCurrentIndex(1)
-
-    def go_to_market_lengths_page(self) -> None:
-        """Validates the reinforcement page and navigates to the market lengths page (index 2)."""
-        # --- Pre-navigation Validation ---
-        if not DEBUG_MODE:
-            errors = self.validate_rsb_page()
-            if errors:
-                self.show_error_message('Reinforcement Page Errors', '\n'.join(errors))
-                return  # Stop navigation
-
-        # --- Confirmation for Disabled GroupBoxes ---
-        disabled_groups = []
-        # We check the essential, commonly used bar types.
-        # Perimeter are often optional, so we can omit them from this warning.
-        if not self.group_box['Top Bar'].isChecked():
-            disabled_groups.append("'Top Bar'")
-        # if not self.group_box['Perimeter Bar'].isChecked():
-        #     disabled_groups.append("'Perimeter Bar'")
-        if not self.group_box['Stirrups'].isChecked():
-            disabled_groups.append("'Stirrups'")
-
-        if disabled_groups:
-            msg_box = QMessageBox(self)
-            msg_box.setIcon(QMessageBox.Icon.Warning)
-            msg_box.setWindowTitle('Confirm Omissions')
-            msg_box.setText(
-                "You have disabled the following reinforcement sections:\n\n"
-                f"- {', '.join(disabled_groups)}\n\n"
-                "This means they will be excluded from the cutting list calculation. "
-                "Do you want to proceed?"
-            )
-            msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-            yes_btn = msg_box.button(QMessageBox.StandardButton.Yes)
-            yes_btn.setText('Yes')
-            yes_btn.setStyleSheet("""background-color: #3498db; 
-                    color: white; 
-                    border: 1px solid #2980b9;
-                    min-width: 90px; 
-                    font-weight: bold; 
-                    padding: 8px 16px; 
-                    border-radius: 5px;""")
-
-            no_btn = msg_box.button(QMessageBox.StandardButton.No)
-            no_btn.setText('No')
-            no_btn.setStyleSheet("""background-color: #E1E1E1; 
-                    color: #2c3e50; 
-                    border: 1px solid #ADADAD;
-                    min-width: 90px; 
-                    font-weight: bold; 
-                    padding: 8px 16px; 
-                    border-radius: 5px;""")
-
-            msg_box.setDefaultButton(no_btn)
-            reply = msg_box.exec()
-
-            if reply == no_btn:
-                return # Stop navigation if user clicks No
-
-        self.stacked_widget.setCurrentIndex(2)
-
-    def go_back_to_market_lengths_page(self) -> None:
-        """Navigates back to the market lengths page (index 2) without validation."""
-        self.stacked_widget.setCurrentIndex(2)
-
-    def go_to_summary_page(self) -> None:
-        """Navigates to the summary page (index 3)."""
-        self.stacked_widget.setCurrentIndex(3)
-
-    @staticmethod
-    def make_scrollable(widget: QWidget, always_on: bool = False) -> QScrollArea:
-        """
-        Wraps a widget in a QScrollArea.
-
-        Args:
-            widget: The widget to make scrollable.
-            always_on: If True, the vertical scrollbar is always visible.
-
-        Returns:
-            The configured QScrollArea containing the widget.
-        """
-        scroll = QScrollArea()
-        scroll.setWidget(widget)
-        scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        if always_on:
-            scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
-        else:
-            scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        return scroll
 
 if __name__ == '__main__':
     sys.excepthook = global_exception_hook
     app = QApplication(sys.argv)
+    wheel_event_filter = GlobalWheelEventFilter()
+    app.installEventFilter(wheel_event_filter)
     app.setStyleSheet(load_stylesheet('style.qss'))
     window = MultiPageApp()
     window.show()
