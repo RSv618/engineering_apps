@@ -5,9 +5,9 @@ from typing import Any
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QStackedWidget, QWidget, QVBoxLayout,
-    QHBoxLayout, QScrollArea, QLabel, QPushButton, QLineEdit, QDialog,
+    QHBoxLayout, QLabel, QPushButton, QLineEdit, QDialog,
     QFormLayout, QSpinBox, QComboBox, QGridLayout, QCheckBox, QTextEdit, QFrame,
-    QSizePolicy, QGroupBox, QStyle, QStyleOption, QMessageBox, QFileDialog
+    QSizePolicy, QGroupBox, QStyle, QStyleOption, QMessageBox, QFileDialog, QInputDialog
 )
 from PyQt6.QtGui import QIcon, QColor, QPen, QPainter, QPaintEvent
 from PyQt6.QtCore import (Qt, pyqtSignal as Signal, QEvent, QPointF,
@@ -679,9 +679,9 @@ class FoundationDetailsDialog(QDialog):
             label.mouseEntered.connect(self.show_bundle_info)
             label.mouseLeft.connect(self.info_popup.hide)
             add_button = HoverButton('+')
-            add_button.setProperty('class', 'green-button add-row-button')
+            add_button.setProperty('class', 'green-button add-button')
             self.remove_stirrup_button = HoverButton('-')
-            self.remove_stirrup_button.setProperty('class', 'red-button remove-row-button')
+            self.remove_stirrup_button.setProperty('class', 'red-button remove-button')
             add_button.clicked.connect(self.add_stirrup_row)
             self.remove_stirrup_button.clicked.connect(self.remove_stirrup_row)
             add_remove_layout.addWidget(label)
@@ -1316,7 +1316,7 @@ class FoundationItem(QWidget):
         layout.addWidget(self.edit_button)
 
         self.remove_button = HoverButton('-')
-        self.remove_button.setProperty('class', 'red-button remove-row-button')
+        self.remove_button.setProperty('class', 'red-button remove-button')
         self.remove_button.clicked.connect(lambda: self.remove_requested.emit(self))
         layout.addWidget(self.remove_button)
 
@@ -1390,6 +1390,8 @@ class MultiPageApp(QMainWindow):
         self.current_item = None
         self.detail_stirrup_types_layout = None
         self.market_lengths_checkboxes = None
+        self.market_lengths_grid = None  # Add this
+        self.current_market_lengths = list(MARKET_LENGTHS)  # Add this
 
         self.create_foundation_entry_page()
         self.create_market_lengths_page()
@@ -1423,12 +1425,12 @@ class MultiPageApp(QMainWindow):
 
         self.scroll_layout = QVBoxLayout()
         self.scroll_layout.setContentsMargins(5, 5, 5, 5)
-        self.scroll_layout.setSpacing(10)
+        self.scroll_layout.setSpacing(0)
         scroll_content = QWidget()
-        scroll_content.setProperty('class', 'scroll-area')
+        scroll_content.setProperty('class', 'scroll-area-panel')
         scroll_content.setLayout(self.scroll_layout)
         scroll_area = make_scrollable(scroll_content)
-        scroll_area.setProperty('class', 'scroll-bar-area')
+        scroll_area.setProperty('class', 'scroll-bar-area-panel')
         left_panel_layout.addWidget(scroll_area)
         self.scroll_layout.addStretch(1)
 
@@ -1468,88 +1470,60 @@ class MultiPageApp(QMainWindow):
         self.stacked_widget.addWidget(page)
 
     def create_market_lengths_page(self) -> None:
-        """Builds the UI for the third page (Rebar Market Lengths)."""
+        """Builds the UI for the third page (Rebar Market Lengths) with improved layout."""
         page = QWidget()
         page.setProperty('class', 'page')
         main_layout = QVBoxLayout(page)
 
-        container = QFrame()
-        grid = QGridLayout(container)
-        grid.setSpacing(0)
+        # --- This will be the main container for the title and the grid ---
+        content_container = QWidget()
+        content_layout = QVBoxLayout(content_container)
+        content_layout.setContentsMargins(0, 0, 0, 0)
 
-        # --- Helper function to create a styled cell ---
-        def create_cell(widget, is_header=False, is_alternate=False):
-            cell = QWidget()
-            cell.setAutoFillBackground(True)
+        # --- 1. Create the Title and Buttons Row ---
+        title_and_buttons_layout = QHBoxLayout()
 
-            cell_layout = QHBoxLayout(cell)
-            cell_layout.setContentsMargins(0, 0, 0, 0)
-            cell_layout.setSpacing(0)
-            if isinstance(widget, QPushButton):
-                cell_layout.addWidget(widget)
-            else:
-                cell_layout.addStretch(1)
-                cell_layout.addWidget(widget)
-                cell_layout.addStretch(1)
+        title_label = QLabel('Rebar Market Lengths')
+        title_label.setProperty('class', 'header-0')
+        # Override the QSS center-alignment to make it align left
+        title_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
+        add_button = HoverButton('+')
+        add_button.setProperty('class', 'add-button green-button')
+        add_button.clicked.connect(self.add_market_length)
+        remove_button = HoverButton('-')
+        remove_button.setProperty('class', 'remove-button red-button')
+        remove_button.clicked.connect(self.remove_market_length)
 
-            style_class = 'grid-cell'
-            if is_header:
-                style_class += ' header-cell'
-            if is_alternate:
-                style_class += ' alternate-row-cell'
-            cell.setProperty('class', style_class)
-            return cell
+        # CORRECTED LAYOUT: Add title and buttons to the SAME horizontal layout
+        title_and_buttons_layout.addWidget(title_label)
+        title_and_buttons_layout.addStretch()
+        title_and_buttons_layout.addWidget(add_button)
+        title_and_buttons_layout.addWidget(remove_button)
+        title_and_buttons_layout.setContentsMargins(15, 0, 15, 0)
 
-        # --- Top-Left Header ('Diameter') ---
-        dia_header = QLabel('Diameter')
-        dia_header.setProperty('class', 'market-header-label')
-        grid.addWidget(create_cell(dia_header, is_header=True), 0, 0)
+        # --- 2. Create the Grid Container ---
+        grid_frame = QFrame()
+        self.market_lengths_grid = QGridLayout(grid_frame)
+        self.market_lengths_grid.setSpacing(0)
+        # Initial drawing of the grid with a default empty state
+        self.redraw_market_lengths_grid({})
 
-        # --- Column Headers (Lengths) ---
-        for col, length in enumerate(MARKET_LENGTHS):
-            btn = HoverButton(length)
-            btn.setProperty('class', 'clickable-header clickable-column-header')
-            btn.clicked.connect(lambda checked, l=length: self.toggle_market_column(l))
-            # No width passed, so it uses the default of 65
-            grid.addWidget(create_cell(btn, is_header=True), 0, col + 1)
+        # --- 3. Add Title Row and Grid to the Content Layout ---
+        content_layout.addLayout(title_and_buttons_layout)  # Add the combined layout
+        content_layout.addWidget(grid_frame)
 
-        # --- Rows (Diameters and Checkboxes) ---
-        self.market_lengths_checkboxes = {}
-        for row, dia in enumerate(BAR_DIAMETERS):
-            is_alternate_row = row % 2 == 1
-            self.market_lengths_checkboxes[dia] = {}
+        # --- 4. Center the entire content block on the page ---
+        centering_layout = QHBoxLayout()
+        centering_layout.addStretch(1)
+        centering_layout.addWidget(content_container)
+        centering_layout.addStretch(1)
 
-            # Row Header (Diameter)
-            btn = HoverButton(dia)
-            btn.setProperty('class', 'clickable-header clickable-row-header')
-            btn.clicked.connect(lambda checked, d=dia: self.toggle_market_row(d))
-            grid.addWidget(create_cell(btn, is_header=True, is_alternate=is_alternate_row), row + 1, 0)
-
-            # Checkboxes for each length
-            for col, length in enumerate(MARKET_LENGTHS):
-                cb = QCheckBox()
-
-                cb.setChecked(False)
-                self.market_lengths_checkboxes[dia][length] = cb
-                # No width passed here, uses the default 65 for the cell
-                grid.addWidget(create_cell(cb, is_alternate=is_alternate_row), row + 1, col + 1)
-
-        # Horizontal layout to center the grid and keep it from stretching
-        h_layout = QHBoxLayout()
-        h_layout.addStretch(1)
-        h_layout.addWidget(container)
-        h_layout.addStretch(1)
-
-        # Add title and the centering layout to the main page layout
         main_layout.addStretch(1)
-        label = QLabel('Rebar Market Lengths')
-        label.setProperty('class', 'header-0')
-        main_layout.addWidget(label)
-        main_layout.addLayout(h_layout)
+        main_layout.addLayout(centering_layout)
         main_layout.addStretch(1)
 
-        # --- Navigation Buttons ---
+        # --- 5. Navigation Buttons (at the bottom of the page) ---
         button_layout = QHBoxLayout()
         back_button = HoverButton('Back')
         back_button.setAutoDefault(True)
@@ -1668,18 +1642,160 @@ class MultiPageApp(QMainWindow):
         scroll_area.setProperty('class', 'detail-scroll-area')  # For styling
         return scroll_area
 
-    def toggle_market_row(self, dia: str) -> None:
+    # --- NEW HELPER METHOD ---
+    def get_current_checkbox_states(self) -> dict:
+        """Captures the checked state of all checkboxes into a simple dictionary."""
+        states = {}
+        if not self.market_lengths_checkboxes:
+            return {}
+        for dia, lengths_dict in self.market_lengths_checkboxes.items():
+            states[dia] = {}
+            for length, cb_widget in lengths_dict.items():
+                states[dia][length] = cb_widget.isChecked()
+        return states
+
+    # --- MODIFIED METHOD ---
+    def redraw_market_lengths_grid(self, previous_states: dict):
         """
-        Toggles all checkboxes in a given market length row.
+        Clears and redraws the grid, applying states from the provided dictionary.
 
         Args:
-            dia: The diameter string (e.g., '#10') identifying the row.
+            previous_states: A dict of {'dia': {'length': is_checked}} to restore.
         """
+        if self.market_lengths_grid is None:
+            return
+
+        # Clear all existing widgets from the grid
+        while self.market_lengths_grid.count():
+            item = self.market_lengths_grid.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        self.market_lengths_checkboxes = {}
+
+        # Helper to create styled cells (this is unchanged)
+        def create_cell(widget, is_header=False, is_alternate=False):
+            cell = QWidget()
+            cell.setAutoFillBackground(True)
+            cell_layout = QHBoxLayout(cell)
+            cell_layout.setContentsMargins(0, 0, 0, 0)
+            cell_layout.setSpacing(0)
+            if isinstance(widget, QPushButton):
+                cell_layout.addWidget(widget)
+            else:
+                cell_layout.addStretch(1);
+                cell_layout.addWidget(widget);
+                cell_layout.addStretch(1)
+            style_class = 'grid-cell'
+            if is_header: style_class += ' header-cell'
+            if is_alternate: style_class += ' alternate-row-cell'
+            cell.setProperty('class', style_class)
+            return cell
+
+        # Re-create Top-Left Header as a "Toggle All" button
+        toggle_all_btn = HoverButton('Diameter')
+        toggle_all_btn.setToolTip("Toggle All Checkboxes")  # Helpful tooltip
+        toggle_all_btn.setProperty('class', 'clickable-header')
+        toggle_all_btn.clicked.connect(self.toggle_all_market_checkboxes)
+        self.market_lengths_grid.addWidget(create_cell(toggle_all_btn, is_header=True), 0, 0)
+
+        # Re-create Column Headers
+        for col, length in enumerate(self.current_market_lengths):
+            btn = HoverButton(length)
+            btn.setProperty('class', 'clickable-header clickable-column-header')
+            btn.clicked.connect(lambda checked, l=length: self.toggle_market_column(l))
+            self.market_lengths_grid.addWidget(create_cell(btn, is_header=True), 0, col + 1)
+
+        # Re-create Rows
+        for row, dia in enumerate(BAR_DIAMETERS):
+            is_alternate_row = row % 2 == 1
+            self.market_lengths_checkboxes[dia] = {}
+
+            # Row Header
+            btn = HoverButton(dia)
+            btn.setProperty('class', 'clickable-header clickable-row-header')
+            btn.clicked.connect(lambda checked, d=dia: self.toggle_market_row(d))
+            self.market_lengths_grid.addWidget(create_cell(btn, is_header=True, is_alternate=is_alternate_row),
+                                               row + 1,
+                                               0)
+
+            # Checkboxes for each length
+            for col, length in enumerate(self.current_market_lengths):
+                cb = QCheckBox()
+
+                # --- THIS IS THE KEY CHANGE ---
+                # Restore the state if it exists, otherwise default to True for new lengths
+                is_checked = previous_states.get(dia, {}).get(length, False)
+                cb.setChecked(is_checked)
+                # -----------------------------
+
+                self.market_lengths_checkboxes[dia][length] = cb
+                self.market_lengths_grid.addWidget(create_cell(cb, is_alternate=is_alternate_row), row + 1, col + 1)
+
+    # --- MODIFIED METHOD ---
+    def add_market_length(self):
+        """Prompts the user for a new market length and redraws the grid."""
+        new_length, ok = QInputDialog.getDouble(self, "Add Market Length", "Enter new length (in meters):",
+                                                value=1.0, min=1.0, max=50.0, decimals=1)
+        if ok and new_length > 0:
+            new_length_str = f"{new_length:.0f}m" if int(new_length) == new_length else f"{new_length:.1f}m"
+
+            if new_length_str not in self.current_market_lengths:
+                # --- SAVE STATE BEFORE REDRAWING ---
+                saved_states = self.get_current_checkbox_states()
+                self.current_market_lengths.append(new_length_str)
+                self.current_market_lengths.sort(key=lambda s: float(s.replace('m', '')))
+                # --- PASS SAVED STATE TO REDRAW METHOD ---
+                self.redraw_market_lengths_grid(saved_states)
+            else:
+                QMessageBox.warning(self, "Duplicate Length", "That market length already exists.")
+
+    def toggle_all_market_checkboxes(self):
+        """Toggles the state of every checkbox in the market lengths grid."""
+        # Do nothing if the grid is empty
+        if not self.market_lengths_checkboxes or not BAR_DIAMETERS or not self.current_market_lengths:
+            return
+
+        # Determine the new state by checking the first checkbox
+        try:
+            first_dia = BAR_DIAMETERS[0]
+            first_len = self.current_market_lengths[0]
+            first_checkbox = self.market_lengths_checkboxes[first_dia][first_len]
+            new_state = not first_checkbox.isChecked()
+        except (IndexError, KeyError):
+            # If the grid is somehow malformed, default to checking all
+            new_state = True
+
+        # Apply the new state to all checkboxes
+        for dia_dict in self.market_lengths_checkboxes.values():
+            for checkbox in dia_dict.values():
+                checkbox.setChecked(new_state)
+
+    # --- MODIFIED METHOD ---
+    def remove_market_length(self):
+        """Prompts the user to select a market length to remove and redraws the grid."""
+        if not self.current_market_lengths:
+            QMessageBox.information(self, "No Lengths", "There are no market lengths to remove.")
+            return
+
+        length_to_remove, ok = QInputDialog.getItem(self, "Remove Market Length",
+                                                    "Select a length to remove:", self.current_market_lengths, 0,
+                                                    False)
+
+        if ok and length_to_remove:
+            # --- SAVE STATE BEFORE REDRAWING ---
+            saved_states = self.get_current_checkbox_states()
+            self.current_market_lengths.remove(length_to_remove)
+            # --- PASS SAVED STATE TO REDRAW METHOD ---
+            self.redraw_market_lengths_grid(saved_states)
+
+    def toggle_market_row(self, dia: str) -> None:
+        """Toggles all checkboxes in a given market length row."""
         row_cbs = self.market_lengths_checkboxes[dia]
         if not row_cbs: return
 
-        # Determine target state based on the opposite of the first checkbox
-        first_len = MARKET_LENGTHS[0]
+        if not self.current_market_lengths: return
+        first_len = self.current_market_lengths[0]
         new_state = not row_cbs[first_len].isChecked()
 
         for cb in row_cbs.values():

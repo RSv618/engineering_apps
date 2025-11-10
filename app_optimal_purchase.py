@@ -66,11 +66,11 @@ class MultiPageApp(QMainWindow):
 
         # --- Add/Remove Buttons ---
         add_button = HoverButton('+')
-        add_button.setProperty('class', 'green-button add-row-button')
+        add_button.setProperty('class', 'green-button add-button')
         add_button.clicked.connect(self.add_cutting_row)
 
         self.remove_cutting_button = HoverButton('-')
-        self.remove_cutting_button.setProperty('class', 'red-button remove-row-button')
+        self.remove_cutting_button.setProperty('class', 'red-button remove-button')
         self.remove_cutting_button.clicked.connect(self.remove_cutting_row)
 
         header_layout.addWidget(header)

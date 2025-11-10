@@ -156,7 +156,7 @@ QPushButton:disabled { background-color: #E5E5E5; color: #7f8c8d; }
 .red-button:hover { background-color: #d63031; }
 .red-button:pressed { background-color: #c92829; }
 
-.add-row-button, .remove-row-button {
+.add-button, .remove-button {
     font-family: "Courier New", "Verdana", sans-serif;
     font-size: 10pt;
     font-weight: bold;
@@ -383,7 +383,7 @@ QGroupBox::indicator:unchecked {
 .detail-header {
     font-size: 11pt;
     font-weight: bold;
-    color: #3498db; /* Your theme's primary blue color */
+    color: #e74c3c; /* Your theme's primary blue color */
     padding-bottom: 4px;
     padding-left: 0;
     margin-top: 10px; /* Space above the header */
@@ -397,24 +397,24 @@ QGroupBox::indicator:unchecked {
 
 /* Base style for each foundation item in the list */
 .list-item {
-    background-color: #FFFFFF; /* Give it a solid white background */
-    border: 1px solid #ced4da; /* A clean border to create a "cell" */
-    border-radius: 5px;
-    min-height: 28px;
+    min-height: 35px;
+    border-bottom: 1px solid #e9ecef; /* A clean border to create a "cell" */
 }
 
 /* Style for the item when the mouse is hovering over it */
 .list-item:hover {
     background-color: #e9ecef; /* Use your theme's hover color */
-    border-color: #a8b0b7;     /* Slightly darken border on hover */
 }
 
 /* Style for the currently selected item */
 .list-item.selected {
-    background-color: #e9f2fa; /* A very light blue for the background */
-    border: 1px solid #3498db;  /* Use your theme's primary blue for the border */
+    background-color: #ffffff; /* A very light blue for the background */
 }
-
+.scroll-area-panel {
+}
+.scroll-bar-area-panel {
+    background-color: transparent
+}
 
 /*
  * ===============================================

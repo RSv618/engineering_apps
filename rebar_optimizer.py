@@ -186,6 +186,8 @@ def find_optimized_cutting_plan(demands: dict[str, list[tuple]], stocks: dict[st
                                 verbose: bool = False):
     cutting_plan = []
     purchase_list = []
+    all_available_stocks = sorted(list(set(l for stock_list in stocks.values() for l in stock_list)))
+
     for size in demands:
         piecelist = demands[size]
         piece_qty = [q for (q, l) in piecelist]
@@ -198,7 +200,9 @@ def find_optimized_cutting_plan(demands: dict[str, list[tuple]], stocks: dict[st
             print(f'Could not find optimal solution for diameter {size}: {result['message']}')
             continue
 
-        row = {'Diameter': size, '6.0m': 0, '7.5m': 0, '9.0m': 0, '10.5m': 0, '12.0m': 0, '13.5m': 0, '15.0m': 0}
+        row: dict[str, int | float | str] = {'Diameter': size}
+        row.update({f'{l:.1f}m': 0 for l in all_available_stocks})
+
         for res in result['purchases']:
             # Use a robust way to format the stock length key
             market_length_key = f"{res['stock_length_m']:.1f}m"
