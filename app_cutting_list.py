@@ -1390,8 +1390,8 @@ class MultiPageApp(QMainWindow):
         self.current_item = None
         self.detail_stirrup_types_layout = None
         self.market_lengths_checkboxes = None
-        self.market_lengths_grid = None  # Add this
-        self.current_market_lengths = list(MARKET_LENGTHS)  # Add this
+        self.market_lengths_grid = None
+        self.current_market_lengths = list(MARKET_LENGTHS)
 
         self.create_foundation_entry_page()
         self.create_market_lengths_page()
@@ -1642,7 +1642,6 @@ class MultiPageApp(QMainWindow):
         scroll_area.setProperty('class', 'detail-scroll-area')  # For styling
         return scroll_area
 
-    # --- NEW HELPER METHOD ---
     def get_current_checkbox_states(self) -> dict:
         """Captures the checked state of all checkboxes into a simple dictionary."""
         states = {}
@@ -1654,7 +1653,6 @@ class MultiPageApp(QMainWindow):
                 states[dia][length] = cb_widget.isChecked()
         return states
 
-    # --- MODIFIED METHOD ---
     def redraw_market_lengths_grid(self, previous_states: dict):
         """
         Clears and redraws the grid, applying states from the provided dictionary.
@@ -1732,7 +1730,6 @@ class MultiPageApp(QMainWindow):
                 self.market_lengths_checkboxes[dia][length] = cb
                 self.market_lengths_grid.addWidget(create_cell(cb, is_alternate=is_alternate_row), row + 1, col + 1)
 
-    # --- MODIFIED METHOD ---
     def add_market_length(self):
         """Prompts the user for a new market length and redraws the grid."""
         new_length, ok = QInputDialog.getDouble(self, "Add Market Length", "Enter new length (in meters):",
@@ -1771,7 +1768,6 @@ class MultiPageApp(QMainWindow):
             for checkbox in dia_dict.values():
                 checkbox.setChecked(new_state)
 
-    # --- MODIFIED METHOD ---
     def remove_market_length(self):
         """Prompts the user to select a market length to remove and redraws the grid."""
         if not self.current_market_lengths:
