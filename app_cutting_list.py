@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QIcon, QColor, QPen, QPainter, QPaintEvent
 from PyQt6.QtCore import (Qt, pyqtSignal as Signal, QEvent, QPointF,
-                          QTimer, QSize)
+                          QTimer)
 
 from constants import (FOOTING_IMAGE_WIDTH, RSB_IMAGE_WIDTH,
                        BAR_DIAMETERS, STIRRUP_ROW_IMAGE_WIDTH,
@@ -28,7 +28,7 @@ from utils import (HoverButton, HoverLabel, resource_path,
                    parse_spacing_string, get_bar_dia, make_scrollable,
                    LinkSpinboxes, toggle_obj_visibility,
                    GlobalWheelEventFilter, is_widget_empty,
-                   style_invalid_input, get_dia_code, AnimatedStackedWidget)
+                   style_invalid_input, get_dia_code)
 from openpyxl import Workbook
 
 """
@@ -1347,6 +1347,8 @@ Defines stirrup locations relative to your chosen 'Start From' point.
                 ]
             }
         }
+        if data['Perimeter Bar']['Enabled']:
+            data['Perimeter Bar']['Layers'] = int(data['Perimeter Bar']['Layers'])
         return data
 
 

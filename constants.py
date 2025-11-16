@@ -17,4 +17,4 @@ STIRRUP_ROW_IMAGE_WIDTH = 80
 
 # --- Application Configuration ---
 # This is the perfect place for the debug flag.
-DEBUG_MODE = True
+DEBUG_MODE = False
