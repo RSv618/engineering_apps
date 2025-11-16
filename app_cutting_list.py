@@ -2352,6 +2352,17 @@ class MultiPageApp(QMainWindow):
         # 4. Switch back to the first page
         self.stacked_widget.setCurrentIndex(0)
 
+    def keyPressEvent(self, event):
+        """
+        Handles key press events for the main window.
+        """
+        # If the Escape key is pressed, set focus to the main window.
+        if event.key() == Qt.Key.Key_Escape:
+            self.setFocus()
+        else:
+            # Otherwise, let the default event handling proceed
+            super().keyPressEvent(event)
+
     def go_to_foundation_page(self):
         self.stacked_widget.setCurrentIndex(0)
 

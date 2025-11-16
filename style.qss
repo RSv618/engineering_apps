@@ -188,13 +188,12 @@ QLineEdit, QTextEdit, QComboBox, QSpinBox, QDoubleSpinBox {
     border-radius: 7px;
 }
 QLineEdit:focus, QTextEdit:focus, QComboBox:focus, QPushButton:focus,
-QSpinBox:focus, QDoubleSpinBox:focus, QCheckBox:indicator:focus, QGroupBox::indicator:focus{
+QSpinBox:focus, QDoubleSpinBox:focus, QCheckBox::indicator:focus, QGroupBox::indicator:focus {
     border: 1px solid #36a4ff; /* A clear, blue focus ring */
 }
 QPushButton:focus,
 QCheckBox:focus,
-QGroupBox:focus,
-.list-item:focus {
+QGroupBox:focus {
     outline: none;
 }
 QLineEdit:disabled, QTextEdit:disabled, QComboBox:disabled,
