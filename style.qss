@@ -187,9 +187,15 @@ QLineEdit, QTextEdit, QComboBox, QSpinBox, QDoubleSpinBox {
     border: 1px solid #e0e0e0; /* A subtle border to define the field */
     border-radius: 7px;
 }
-QLineEdit:focus, QTextEdit:focus, QComboBox:focus,
-QSpinBox:focus, QDoubleSpinBox:focus  {
+QLineEdit:focus, QTextEdit:focus, QComboBox:focus, QPushButton:focus,
+QSpinBox:focus, QDoubleSpinBox:focus, QCheckBox:indicator:focus, QGroupBox::indicator:focus{
     border: 1px solid #36a4ff; /* A clear, blue focus ring */
+}
+QPushButton:focus,
+QCheckBox:focus,
+QGroupBox:focus,
+.list-item:focus {
+    outline: none;
 }
 QLineEdit:disabled, QTextEdit:disabled, QComboBox:disabled,
 QSpinBox:disabled, QDoubleSpinBox:disabled {
@@ -221,7 +227,7 @@ QComboBox, QComboBox QAbstractItemView {
 }
 QComboBox QAbstractItemView {
     border: none;
-    outline: 0px; /* Prevents the highlight due to keyboard */
+    outline: none; /* Prevents the highlight due to keyboard */
 }
 QComboBox QAbstractItemView::item {
     height: 25px;
