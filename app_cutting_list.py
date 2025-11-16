@@ -1453,6 +1453,17 @@ Defines stirrup locations relative to your chosen 'Start From' point.
 
         self.update_remove_button_state()
 
+    def keyPressEvent(self, event):
+        """
+        Handles key press events for the main window.
+        """
+        # If the Escape key is pressed, set focus to the main window.
+        if event.key() == Qt.Key.Key_Escape:
+            self.setFocus()
+        else:
+            # Otherwise, let the default event handling proceed
+            super().keyPressEvent(event)
+
 class FoundationItem(QFrame):
     """A custom widget representing a single item in the foundation list."""
     edit_requested = Signal(object)
