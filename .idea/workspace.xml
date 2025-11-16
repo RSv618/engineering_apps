@@ -4,9 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="defocus with esc key">
+    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Fixed 'Layers' being str instead of int">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_cutting_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_cutting_list.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rebar_optimizer.py" beforeDir="false" afterPath="$PROJECT_DIR$/rebar_optimizer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -50,7 +51,7 @@
     "Python.app_optimal_purchase.executor": "Run",
     "Python.app_refactored.executor": "Run",
     "Python.constants.executor": "Run",
-    "Python.rebar_calculations.executor": "Debug",
+    "Python.rebar_calculations.executor": "Run",
     "Python.rebar_optimizer.executor": "Run",
     "Python.test.executor": "Run",
     "Python.test2.executor": "Run",
@@ -212,7 +213,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763268374000</updated>
     </task>
-    <option name="localTasksCounter" value="17" />
+    <task id="LOCAL-00017" summary="Fixed 'Layers' being str instead of int">
+      <option name="closed" value="true" />
+      <created>1763269691064</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1763269691064</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -241,14 +250,15 @@
     <MESSAGE value="fixed outline focus styles" />
     <MESSAGE value="stirrup quantity debug_mode fix" />
     <MESSAGE value="defocus with esc key" />
-    <option name="LAST_COMMIT_MESSAGE" value="defocus with esc key" />
+    <MESSAGE value="Fixed 'Layers' being str instead of int" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fixed 'Layers' being str instead of int" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/app_cutting_list.py</url>
-          <line>2425</line>
+          <line>2427</line>
           <option name="timeStamp" value="3" />
         </line-breakpoint>
       </breakpoints>

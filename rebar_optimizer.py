@@ -1,6 +1,7 @@
 import pulp
 from typing import Any
-from utils import resource_path
+import sys
+import os
 
 
 def mm(x_m: float) -> int:
@@ -28,13 +29,18 @@ def m(x_mm: int) -> float:
     return x_mm / 1000.0
 
 def get_solver_path():
-    """Gets the correct path to the CBC solver executable."""
-    # The default solver is included with pulp
-    # We can get its path relative to the pulp library
+    """
+    Gets the correct path to the CBC solver executable, whether running from
+    source or from a PyInstaller bundle.
+    """
+    # When bundled by PyInstaller, the solver will be in the same directory
+    # as the main executable. sys._MEIPASS gives us the path to that directory.
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, 'cbc.exe')
+
+    # When running as a normal script, use the default PuLP path.
     import pulp.apis
-    solver_path = pulp.apis.PULP_CBC_CMD().path
-    # resource_path will handle the temporary folder for PyInstaller
-    return resource_path(solver_path)
+    return pulp.apis.PULP_CBC_CMD().path
 
 def enumerate_patterns(stock_len_mm: int, piece_lengths_mm: list[int], max_counts: list[int]) -> list:
     """
