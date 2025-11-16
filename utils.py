@@ -335,6 +335,8 @@ class HoverButton(QPushButton):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.setAutoDefault(False)  # <--- Add this line
+        self.setDefault(False)      # <--- And this line to be safe
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
 def load_stylesheet(filename):
@@ -764,6 +766,7 @@ def make_scrollable(widget: QWidget, always_on: bool = False) -> QScrollArea:
     scroll.setProperty('class', 'scroll-bar')
     scroll.setWidget(widget)
     scroll.setWidgetResizable(True)
+    scroll.setFocusPolicy(Qt.FocusPolicy.NoFocus)
     scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
     if always_on:
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)

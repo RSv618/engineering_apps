@@ -1415,6 +1415,7 @@ class FoundationItem(QFrame):
         self.data = data
         self.setProperty('class', 'list-item')
         self._is_selected = False
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
