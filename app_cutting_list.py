@@ -80,8 +80,58 @@ class DrawStirrup(QWidget):
                 self.spacing = parse_spacing_string(spacing.toPlainText())
             except (TypeError, ValueError):
                 self.spacing = []
-
+        self._recalculate_quantity() # Recalculate the quantity immediately whenever dimensions change.
         self.update()  # Crucial: schedules a repaint which calls paintEvent
+
+    def _recalculate_quantity(self):
+        """
+        Calculates the stirrup quantity without performing any drawing.
+        This allows the value to be updated even if the widget is not visible.
+        """
+        # This logic is a subset of paintEvent, focused only on calculation.
+        real_h = self.ped_h
+        real_bx = self.ped_bx
+        real_t = self.pad_t
+
+        if real_h + real_t == 0 or real_bx == 0:
+            self.stirrup_qty = 0
+            return
+
+        # Simplified scale calculation (only what's needed for Y-axis)
+        scale = (self.height() - 4) / (real_h + real_t)
+        px_cc = self.cc * scale
+        px_t = real_t * scale
+        px_h = real_h * scale
+
+        # Simplified Y-coordinate setup
+        y1 = self.height() - 2
+        y2 = y1 - px_t
+        y3 = y2 - px_h
+        vbar_y2 = y3 + px_cc
+
+        if self.extent == 'From Face of Pad':
+            start_y = y2
+            target_y = vbar_y2
+        elif self.extent == 'From Bottom Bar':
+            start_y = (y1 - px_cc - scale * (2 * self.bot_bar_diameter + self.vert_bar_diameter))
+            target_y = vbar_y2
+        else:  # From Top
+            start_y = vbar_y2
+            target_y = y2
+
+        actual_count = 0
+        if self.extent in ['From Face of Pad', 'From Bottom Bar']:
+            _, count, last_y = self.loop_stirrup(self.spacing, start_y=start_y, target_y=target_y,
+                                                 left_x=0, right_x=0, scale=scale)  # xs don't matter for count
+            actual_count += count
+            if (actual_count > 0) and (last_y - vbar_y2 >= px_cc):
+                actual_count += 1
+        else:  # From Top
+            _, count, _ = self.loop_stirrup(self.spacing, start_y=start_y, target_y=target_y,
+                                            left_x=0, right_x=0, scale=scale)
+            actual_count += count
+
+        self.stirrup_qty = actual_count
 
     def paintEvent(self, event: QPaintEvent) -> None:
         """
@@ -2244,7 +2294,7 @@ class MultiPageApp(QMainWindow):
             'Vertical Bar': {'Enabled': True, 'Diameter': '#20', 'Quantity': 12, 'Hook Calculation': 'Manual',
                              'Hook Length': 300},
             'Perimeter Bar': {'Enabled': True, 'Diameter': '#12', 'Layers': 2},
-            'Stirrups': {'Enabled': True, 'Extent': 'From Bottom Bar', 'Spacing': '1@75, rest@200', 'Quantity': 0,
+            'Stirrups': {'Enabled': True, 'Extent': 'From Bottom Bar', 'Spacing': '1@50, rest@200', 'Quantity': 0,
                          'Types': [{'Type': 'Outer', 'Diameter': '#10', 'a_input': 0}]}
         }
 
@@ -2252,7 +2302,22 @@ class MultiPageApp(QMainWindow):
         first_item = None
 
         for data in all_debug_data:
-            new_item = FoundationItem(data)
+            # 1. Create a temporary dialog in memory to run the calculations
+            temp_dialog = FoundationDetailsDialog(existing_details=data, parent=self)
+
+            # 2. The dialog's __init__ automatically populates and updates the drawing,
+            #    which calculates the correct stirrup quantity.
+
+            # 3. Get the complete, CORRECTED data (including the new quantity) from the dialog.
+            corrected_data = temp_dialog.get_data()
+
+            # 4. Create the FoundationItem with the corrected data.
+            new_item = FoundationItem(corrected_data)
+
+            # 5. Clean up the temporary dialog (optional, but good practice)
+            temp_dialog.deleteLater()
+
+            # --- Original logic continues below ---
             new_item.edit_requested.connect(self.edit_foundation_item)
             new_item.remove_requested.connect(self.remove_foundation_item)
             new_item.selected.connect(self.update_detail_view)

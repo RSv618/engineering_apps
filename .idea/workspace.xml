@@ -4,9 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="remove focus on scroll areas">
+    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="fixed outline focus styles">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/style.qss" beforeDir="false" afterPath="$PROJECT_DIR$/style.qss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_cutting_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_cutting_list.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -43,25 +43,25 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.app_cutting_list.executor&quot;: &quot;Run&quot;,
-    &quot;Python.app_optimal_purchase.executor&quot;: &quot;Run&quot;,
-    &quot;Python.app_refactored.executor&quot;: &quot;Run&quot;,
-    &quot;Python.constants.executor&quot;: &quot;Run&quot;,
-    &quot;Python.rebar_optimizer.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test2.executor&quot;: &quot;Run&quot;,
-    &quot;Python.utils.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;full.screen.before.presentation.mode&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/rober/PycharmProjects/engineering_apps&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.app_cutting_list.executor": "Debug",
+    "Python.app_optimal_purchase.executor": "Run",
+    "Python.app_refactored.executor": "Run",
+    "Python.constants.executor": "Run",
+    "Python.rebar_optimizer.executor": "Run",
+    "Python.test.executor": "Run",
+    "Python.test2.executor": "Run",
+    "Python.utils.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "full.screen.before.presentation.mode": "false",
+    "git-widget-placeholder": "master",
+    "last_opened_file_path": "C:/Users/rober/PycharmProjects/engineering_apps"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\rober\PycharmProjects\engineering_apps" />
@@ -179,7 +179,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763264783929</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="fixed outline focus styles">
+      <option name="closed" value="true" />
+      <created>1763265465706</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1763265465706</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -205,6 +213,18 @@
     <MESSAGE value="Added feature: custom market lengths" />
     <MESSAGE value="Complete refactor for styling." />
     <MESSAGE value="remove focus on scroll areas" />
-    <option name="LAST_COMMIT_MESSAGE" value="remove focus on scroll areas" />
+    <MESSAGE value="fixed outline focus styles" />
+    <option name="LAST_COMMIT_MESSAGE" value="fixed outline focus styles" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/app_cutting_list.py</url>
+          <line>2264</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>
