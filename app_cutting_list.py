@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QIcon, QColor, QPen, QPainter, QPaintEvent
 from PyQt6.QtCore import (Qt, pyqtSignal as Signal, QEvent, QPointF,
-                          QTimer)
+                          QTimer, QSize)
 
 from constants import (FOOTING_IMAGE_WIDTH, RSB_IMAGE_WIDTH,
                        BAR_DIAMETERS, STIRRUP_ROW_IMAGE_WIDTH,
@@ -27,8 +27,8 @@ from utils import (HoverButton, HoverLabel, resource_path,
                    BlankSpinBox, update_image, MemoryGroupBox, InfoPopup,
                    parse_spacing_string, get_bar_dia, make_scrollable,
                    LinkSpinboxes, toggle_obj_visibility,
-                   GlobalWheelEventFilter,  is_widget_empty,
-                   style_invalid_input, get_dia_code)
+                   GlobalWheelEventFilter, is_widget_empty,
+                   style_invalid_input, get_dia_code, AnimatedStackedWidget)
 from openpyxl import Workbook
 
 """
@@ -46,7 +46,7 @@ class DrawStirrup(QWidget):
             parent: The parent widget, if any.
         """
         super().__init__(parent)
-        width += 20
+        width += 0
         self.setFixedWidth(width)
         self.setMaximumHeight(int(1.6 * width))
 
@@ -94,8 +94,8 @@ class DrawStirrup(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)  # Makes the lines smooth
 
         # Get the dimensions of the widget
-        padding = 10
-        c_width = self.width()
+        padding = 2
+        c_width = self.width()  # Make the final drawing thinner
         c_height = self.height()
 
         real_h = self.ped_h
@@ -272,12 +272,14 @@ class FoundationDetailsDialog(QDialog):
         self.setWindowTitle('Foundation Details')
         self.setModal(True)
         self.setWindowIcon(QIcon(resource_path('images/logo.png')))
-        self.setGeometry(100, 100, 1000, 720)
-        self.setMinimumWidth(1000)
-        self.setMinimumHeight(600)
+        self.setGeometry(100, 100, 500, 650)
+        self.setMinimumWidth(500)
+        self.setMinimumHeight(650)
 
         # Main layout
         main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
 
         # Stacked widget for pages
         self.stacked_widget = QStackedWidget()
@@ -317,30 +319,41 @@ class FoundationDetailsDialog(QDialog):
     def create_footing_page(self):
         """Creates the first page of the form."""
         page = QWidget()
+        page.setObjectName('footingPage')
         page.setProperty('class', 'page')
         page_layout = QVBoxLayout(page)
-        content_layout = QHBoxLayout()
+        page_layout.setContentsMargins(0, 0, 0, 0)
+        page_layout.setSpacing(0)
 
-        # Left side: Image
-        footing_img = get_img(resource_path('images/label_1ped.png'), FOOTING_IMAGE_WIDTH, FOOTING_IMAGE_WIDTH)
-        content_layout.addWidget(footing_img)
-
-        # --- Create the form widget and the QGridLayout ---
-        form_widget = QWidget()
-        form_layout = QGridLayout(form_widget)
-        form_layout.setColumnMinimumWidth(1, 50)
-        form_layout.setColumnStretch(2, 1)  # Allow the column (2) to stretch, keeping other columns fixed
+        content_frame = QFrame()
+        content_frame.setProperty('class', 'footing-content')
+        content_layout = QVBoxLayout(content_frame)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
 
         # Name
+        label = QLabel('Foundation Type')
+        label.setProperty('class', 'footing-title-label')
         name = QLineEdit()
-        name.setPlaceholderText('(e.g. Fdn Type F1)')
-        label = QLabel('Name:')
-        form_layout.addWidget(label, 0, 0, 1, 2)
-        form_layout.addWidget(name, 0, 2, 1, 2)
+        name.setProperty('class', 'footing-content-name header-1')
+        content_layout.addWidget(name)
+        content_layout.addWidget(label)
         self.widgets['name'] = name
+
+        # Image
+        footing_img = get_img(resource_path('images/label_1ped.png'), FOOTING_IMAGE_WIDTH, FOOTING_IMAGE_WIDTH)
+        content_layout.addWidget(footing_img)
+        content_layout.addSpacing(10)
+
+        # --- Create the form widget and the QGridLayout ---
+        form_layout = QGridLayout()
+        form_layout.setContentsMargins(0, 0, 0, 0)
+        form_layout.setSpacing(0)
+        form_layout.setColumnStretch(2, 1)  # Allow the column (2) to stretch, keeping other columns fixed
 
         # Pedestal Per Footing
         ped_per_footing = QSpinBox()
+        ped_per_footing.setProperty('class', 'footing-form-value')
         ped_per_footing.setRange(1, 4)
         image_map = {
             '1': resource_path('images/label_1ped.png'),
@@ -349,6 +362,7 @@ class FoundationDetailsDialog(QDialog):
             '4': resource_path('images/label_4ped.png')
         }
         label = QLabel('Pedestal Per Footing:')
+        label.setProperty('class', 'footing-form-name')
         form_layout.addWidget(label, 1, 0, 1, 2)
         form_layout.addWidget(ped_per_footing, 1, 2, 1, 2)
         ped_per_footing.valueChanged.connect(
@@ -358,14 +372,18 @@ class FoundationDetailsDialog(QDialog):
 
         # Total Number of Footing
         n_footing = BlankSpinBox(1, 9_999, 1)
+        n_footing.setProperty('class', 'footing-form-value')
         label = QLabel('Total Number of Footing:')
+        label.setProperty('class', 'footing-form-name')
         form_layout.addWidget(label, 2, 0, 1, 2)
         form_layout.addWidget(n_footing, 2, 2, 1, 2)
         self.widgets['n_footing'] = n_footing
 
         # Concrete Cover
         cc = BlankSpinBox(1, 999, 75, suffix=' mm')
+        cc.setProperty('class', 'footing-form-value')
         label = QLabel('Concrete Cover:')
+        label.setProperty('class', 'footing-form-name')
         form_layout.addWidget(label, 3, 0, 1, 2)
         form_layout.addWidget(cc, 3, 2, 1, 2)
         self.widgets['cc'] = cc
@@ -373,8 +391,11 @@ class FoundationDetailsDialog(QDialog):
         # Pedestal Width
         ped_width_x = BlankSpinBox(0, 99_999, suffix=' mm')
         ped_width_y = BlankSpinBox(0, 99_999, suffix=' mm')
+        ped_width_x.setProperty('class', 'footing-form-value')
+        ped_width_y.setProperty('class', 'footing-form-value')
         ped_link_checkbox = LinkSpinboxes(ped_width_x, ped_width_y, 'Keep square')
         label = QLabel('Pedestal Width (Along X)')
+        label.setProperty('class', 'footing-form-name')
         form_layout.addWidget(label, 4, 0)
         variable = QLabel('bx')
         variable.setProperty('class', 'footing-variable')
@@ -382,6 +403,7 @@ class FoundationDetailsDialog(QDialog):
         form_layout.addWidget(variable, 4, 1)
         form_layout.addWidget(ped_width_x, 4, 2, 1, 2)
         label = QLabel('Pedestal Width (Along Y)')
+        label.setProperty('class', 'footing-form-name')
         form_layout.addWidget(label, 5, 0)
         variable = QLabel('by')
         variable.setProperty('class', 'footing-variable')
@@ -394,7 +416,9 @@ class FoundationDetailsDialog(QDialog):
 
         # Pedestal Height
         ped_height = BlankSpinBox(0, 999_999, suffix=' mm')
+        ped_height.setProperty('class', 'footing-form-value')
         label = QLabel('Pedestal Height')
+        label.setProperty('class', 'footing-form-name')
         form_layout.addWidget(label, 6, 0)
         variable = QLabel('h')
         variable.setProperty('class', 'footing-variable')
@@ -406,8 +430,11 @@ class FoundationDetailsDialog(QDialog):
         # Pad Width
         pad_width_x = BlankSpinBox(0, 999_999, suffix=' mm')
         pad_width_y = BlankSpinBox(0, 999_999, suffix=' mm')
+        pad_width_x.setProperty('class', 'footing-form-value')
+        pad_width_y.setProperty('class', 'footing-form-value')
         pad_link_checkbox = LinkSpinboxes(pad_width_x, pad_width_y, 'Keep square')
         label = QLabel('Pad Width (Along X)')
+        label.setProperty('class', 'footing-form-name')
         form_layout.addWidget(label, 7, 0)
         variable = QLabel('Bx')
         variable.setProperty('class', 'footing-variable')
@@ -415,6 +442,7 @@ class FoundationDetailsDialog(QDialog):
         form_layout.addWidget(variable, 7, 1)
         form_layout.addWidget(pad_width_x, 7, 2, 1, 2)
         label = QLabel('Pad Width (Along Y)')
+        label.setProperty('class', 'footing-form-name')
         form_layout.addWidget(label, 8, 0)
         variable = QLabel('By')
         variable.setProperty('class', 'footing-variable')
@@ -427,7 +455,9 @@ class FoundationDetailsDialog(QDialog):
 
         # Pad thickness
         pad_thickness = BlankSpinBox(0, 99_999, suffix=' mm')
+        pad_thickness.setProperty('class', 'footing-form-value')
         label = QLabel('Pad Thickness')
+        label.setProperty('class', 'footing-form-name')
         form_layout.addWidget(label, 9, 0)
         variable = QLabel('t')
         variable.setProperty('class', 'footing-variable')
@@ -436,41 +466,38 @@ class FoundationDetailsDialog(QDialog):
         form_layout.addWidget(pad_thickness, 9, 2, 1, 2)
         self.widgets['t'] = pad_thickness
 
-        # Container to vertically center the form
-        right_side_widget = QWidget()
-        right_side_layout = QVBoxLayout(right_side_widget)
-        right_side_layout.addStretch(1)
-        label = QLabel('Footing Dimensions')
-        label.setProperty('class', 'header-0')
-        right_side_layout.addWidget(label)
-        right_side_layout.addWidget(form_widget)
-        right_side_layout.addStretch(1)
+        # Add layouts and widgets to page
+        content_layout.addLayout(form_layout)
+        content_layout.addStretch()
+        horizontal_layout = QHBoxLayout()
+        horizontal_layout.setContentsMargins(0, 0, 0, 0)
+        horizontal_layout.setSpacing(0)
+        horizontal_layout.addWidget(content_frame)
+        page_layout.addLayout(horizontal_layout)
 
-        content_layout.addWidget(right_side_widget)
-        page_layout.addLayout(content_layout)
-
-        # Bottom: Navigation buttons (Your existing code is perfect)
-        button_layout = QHBoxLayout()
-        button_layout.addStretch(1)
+        # --- Bottom Navigation ---
+        bottom_nav = QFrame()
+        bottom_nav.setProperty('class', 'bottom-nav')
+        button_layout = QHBoxLayout(bottom_nav)
+        button_layout.setContentsMargins(0, 0, 0, 0)
+        button_layout.setSpacing(0)
+        button_layout.addStretch()
         next_button = HoverButton('Next')
-        next_button.setProperty('class', 'green-button')
+        next_button.setProperty('class', 'green-button next-button')
         next_button.clicked.connect(self.go_to_rsb_page)
         button_layout.addWidget(next_button)
-        page_layout.addLayout(button_layout)
+        page_layout.addWidget(bottom_nav)
+
         self.stacked_widget.addWidget(page)
 
     def create_rsb_page(self) -> None:
         """Builds the UI for the second page (Reinforcement Details)."""
         page = QWidget()
+        page.setObjectName('rsbPage')
         page.setProperty('class', 'page')
         page_layout = QVBoxLayout(page)
-
-        # Create a container widget for the scrollable content
-        scroll_content = QWidget()
-        scroll_content.setProperty('class', 'scroll-area')
-        grid_layout = QGridLayout(scroll_content)  # This will now hold your GroupBoxes
-        grid_layout.setColumnStretch(0, 1)
-        grid_layout.setColumnStretch(1, 1)
+        page_layout.setContentsMargins(0, 0, 0, 0)
+        page_layout.setSpacing(0)
 
         # --- A helper function to create each group box to avoid repeating code ---
         def create_top_bot_bar_section(title, image_path, image_width):
@@ -479,54 +506,77 @@ class FoundationDetailsDialog(QDialog):
             else:
                 group_box = QGroupBox(title)
             section_layout = QHBoxLayout(group_box)
+            section_layout.setContentsMargins(0,0,0,0)
+            section_layout.setSpacing(0)
 
             # Left Image
             image_map = {'True': image_path, 'False': resource_path('images/no_top_bar.png')}
             image_label = get_img(image_map['True'], image_width, image_width)
             section_layout.addWidget(image_label)
 
-            grid_top_bottom = QGridLayout()
-            grid_top_bottom.setColumnStretch(0, 1)
-            grid_top_bottom.setColumnStretch(1, 1)
-            grid_top_bottom.setColumnStretch(2, 1)
-            grid_top_bottom.setColumnStretch(3, 1)
+            form_layout = QVBoxLayout()
+            form_layout.setContentsMargins(0,0,0,0)
+            form_layout.setSpacing(3)
 
             # Row 0: Diameter
+            row_1 = QHBoxLayout()
+            row_1.setContentsMargins(0, 0, 0, 0)
+            row_1.setSpacing(0)
             label = QLabel('Diameter:')
             label.setProperty('class', 'rsb-forms-label')
-            grid_top_bottom.addWidget(label, 0, 0)
             bar_size = QComboBox()
             bar_size.addItems(BAR_DIAMETERS)
-            grid_top_bottom.addWidget(bar_size, 0, 1, 1, 3)
+            size_policy = bar_size.sizePolicy()
+            size_policy.setHorizontalPolicy(QSizePolicy.Policy.Expanding)
+            bar_size.setSizePolicy(size_policy)
+            row_1.addWidget(label)
+            row_1.addWidget(bar_size, 1)
+            form_layout.addLayout(row_1)
 
             # Row 1: ComboBox
             input_type = QComboBox()
             input_type.addItems(['Quantity', 'Spacing'])
-            grid_top_bottom.addWidget(input_type, 1, 0, 1, 4)
+            input_type.setObjectName('rsbInputType')
+            form_layout.addWidget(input_type)
 
             # Row 2: Inputs
+            row_3 = QHBoxLayout()
+            row_3.setContentsMargins(0, 0, 0, 0)
+            row_3.setSpacing(3)
             value_along_x = BlankSpinBox(0, 99_999, suffix=' pcs')
-            value_along_x.setMinimumWidth(100)
-            grid_top_bottom.addWidget(value_along_x, 2, 0, 1, 2)
             value_along_y = BlankSpinBox(0, 99_999, suffix=' pcs')
-            value_along_y.setMinimumWidth(100)
-            grid_top_bottom.addWidget(value_along_y, 2, 2, 1, 2)
+            row_3.addWidget(value_along_x)
+            row_3.addWidget(value_along_y)
+            form_layout.addLayout(row_3)
 
             # Row 3: Along X / Y
+            row_4 = QHBoxLayout()
+            row_4.setContentsMargins(0, 0, 0, 0)
+            row_4.setSpacing(0)
             along_x_label = QLabel('Along X')
-            along_x_label.setProperty('class', 'rsb-forms-label along')
-            grid_top_bottom.addWidget(along_x_label, 3, 0, 1, 2)
+            along_x_label.setProperty('class', 'along')
+            left_along_layout = QHBoxLayout()
+            left_along_layout.setContentsMargins(0,0,0,0)
             along_y_label = QLabel('Along Y')
-            along_y_label.setProperty('class', 'rsb-forms-label along')
-            grid_top_bottom.addWidget(along_y_label, 3, 2, 1, 1)
-            h_layout = QHBoxLayout()
+            along_y_label.setProperty('class', 'along')
+            right_along_layout = QHBoxLayout()
+            right_along_layout.setContentsMargins(0,0,0,0)
+            right_along_layout.setSpacing(0)
             link_spinbox = LinkSpinboxes(value_along_x, value_along_y, 'Same for both directions')
-            h_layout.addStretch()
-            h_layout.addWidget(link_spinbox)
-            grid_top_bottom.addLayout(h_layout, 3, 3)
+
+            left_along_layout.addWidget(along_x_label)
+            left_along_layout.addStretch()
+            right_along_layout.addWidget(along_y_label)
+            right_along_layout.addStretch()
+            right_along_layout.addWidget(link_spinbox)
+            row_4.addLayout(left_along_layout)
+            row_4.addLayout(right_along_layout)
+            form_layout.addLayout(row_4)
 
             v_layout = QVBoxLayout()
-            v_layout.addLayout(grid_top_bottom)
+            v_layout.setContentsMargins(0,0,0,0)
+            v_layout.setSpacing(3)
+            v_layout.addLayout(form_layout)
             v_layout.addStretch()
             section_layout.addLayout(v_layout)
 
@@ -556,12 +606,16 @@ class FoundationDetailsDialog(QDialog):
             title = 'Vertical Bar'
             group_box = QGroupBox(title)
             section_layout = QHBoxLayout(group_box)
+            section_layout.setContentsMargins(0,0,0,0)
+            section_layout.setSpacing(0)
 
             # --- Image (Left side) ---
             section_layout.addWidget(get_img(resource_path('images/vert_bar.png'), image_width, image_width))
 
             # --- Container for the right side controls ---
             form_layout = QFormLayout()
+            form_layout.setContentsMargins(0,0,0,0)
+            form_layout.setSpacing(3)
 
             # Row 0: Diameter
             bar_size = QComboBox()
@@ -575,7 +629,7 @@ class FoundationDetailsDialog(QDialog):
 
             # Row 1: Qty
             qty = BlankSpinBox(0, 99_999, suffix=' pcs')
-            label = QLabel('Qty:')
+            label = QLabel('Quantity:')
             label.setProperty('class', 'rsb-forms-label')
             form_layout.addRow(label, qty)
 
@@ -620,6 +674,8 @@ class FoundationDetailsDialog(QDialog):
             title = 'Perimeter Bar'
             group_box = MemoryGroupBox(title)
             section_layout = QHBoxLayout(group_box)
+            section_layout.setContentsMargins(0,0,0,0)
+            section_layout.setSpacing(0)
 
             # --- Image (Left side) ---
             image_map = {  # 'None': resource_path('images/perim_bar_0.png'),
@@ -634,6 +690,8 @@ class FoundationDetailsDialog(QDialog):
 
             # --- Container for the right side controls ---
             form_layout = QFormLayout()
+            form_layout.setContentsMargins(0,0,0,0)
+            form_layout.setSpacing(3)
 
             # Row 0: Diameter
             bar_size = QComboBox()
@@ -668,14 +726,79 @@ class FoundationDetailsDialog(QDialog):
         def create_stirrup_group_box(image_width):
             title = 'Stirrups'
             group_box = MemoryGroupBox(title)
-            main_layout = QHBoxLayout(group_box)
-            left_section = QVBoxLayout()
-            left_section.setContentsMargins(0, 0, 10, 0)
+            main_layout = QVBoxLayout(group_box)
+            main_layout.setContentsMargins(0, 0, 0, 0)
+            main_layout.setSpacing(5)
+
+            # Initialize
+            self.widgets[title] = {'Types': []}
+
+            # Spacing section
+            spacing_layout = QHBoxLayout()
+            spacing_layout.setContentsMargins(0, 0, 0, 0)
+            spacing_layout.setSpacing(0)
+
+            # --- Image (Left side) ---
+            canvas_container = QVBoxLayout()
+            canvas_container.setContentsMargins(0, 0, 0, 0)
+            canvas_container.setSpacing(0)
+            label = HoverLabel('Spacing Per Bundle')
+            label.setProperty('class', 'rsb-stirrup-header')
+            label.mouseEntered.connect(self.show_spacing_header_info)
+            label.mouseLeft.connect(self.info_popup.hide)
+            canvas_container.addWidget(label)
+            self.stirrup_canvas = DrawStirrup(image_width)
+            self.stirrup_canvas.setProperty('class', 'rsb-stirrup-canvas')
+            canvas_container.addWidget(self.stirrup_canvas)
+            spacing_layout.addLayout(canvas_container)
+
+            # --- Container for the right side controls ---
+            form_layout = QFormLayout()
+            form_layout.setContentsMargins(0, 0, 0, 0)
+            form_layout.setSpacing(3)
+
+            # Row 0: Start From
+            start_from = QComboBox()
+            start_from.addItems(['From Face of Pad', 'From Bottom Bar', 'From Top'])
+            extent_label = HoverLabel('Start From:')
+            extent_label.setProperty('class', 'rsb-forms-label')
+            extent_label.mouseEntered.connect(self.show_spacing_extent_info)
+            extent_label.mouseLeft.connect(self.info_popup.hide)
+            form_layout.addRow(extent_label, start_from)
+
+            # Row 1: Spacing
+            spacing = QTextEdit()
+            spacing.setProperty('class', 'rsb-spacing-text-edit')
+            spacing.setPlaceholderText('Example: 1@50, 5@80, rest@100')
+            spacing.textChanged.connect(self.debounce_timer.start)
+            spacing_label = HoverLabel('Spacing:')
+            spacing_label.setProperty('class', 'rsb-forms-label')
+            spacing_label.mouseEntered.connect(self.show_spacing_info)
+            spacing_label.mouseLeft.connect(self.info_popup.hide)
+            form_layout.addRow(spacing_label, spacing)
+
+            form_container = QVBoxLayout()
+            form_container.setContentsMargins(0, 0, 0, 0)
+            form_container.setSpacing(0)
+            form_container.addLayout(form_layout)
+            form_container.addStretch()
+            spacing_layout.addLayout(form_container)
+
+            # Store
+            self.widgets[title]['Extent'] = start_from
+            self.widgets[title]['Spacing'] = spacing
+
+            # Spacing section
+            bundle_layout = QVBoxLayout()
+            bundle_layout.setContentsMargins(0, 0, 0, 0)
+            bundle_layout.setSpacing(0)
 
             # --- Button Layout for adding/removing rows ---
             add_remove_layout = QHBoxLayout()
-            label = HoverLabel('Bundle of Shapes')
-            label.setProperty('class', 'stirrup-header')
+            add_remove_layout.setContentsMargins(0, 0, 0, 10)
+            add_remove_layout.setSpacing(4)
+            label = HoverLabel('Stirrup Bundle')
+            label.setProperty('class', 'rsb-stirrup-header')
             label.mouseEntered.connect(self.show_bundle_info)
             label.mouseLeft.connect(self.info_popup.hide)
             add_button = HoverButton('+')
@@ -688,82 +811,30 @@ class FoundationDetailsDialog(QDialog):
             add_remove_layout.addStretch()
             add_remove_layout.addWidget(add_button)
             add_remove_layout.addWidget(self.remove_stirrup_button)
-            left_section.addLayout(add_remove_layout)
+            # bundle_layout.addLayout(add_remove_layout)
 
             # --- Container for dynamic stirrup rows ---
-            stirrup_rows_container = QWidget()
-            self.stirrup_rows_layout = QVBoxLayout(stirrup_rows_container)
+            stirrup_rows_container = QFrame()
+            stirrup_rows_container.setProperty('class', 'rsb-stirrup-row-container')
+            self.stirrup_rows_layout = QVBoxLayout()
             self.stirrup_rows_layout.setContentsMargins(0, 0, 0, 0)
-            self.stirrup_rows_layout.setSpacing(5)
+            self.stirrup_rows_layout.setSpacing(3)
+            container = QVBoxLayout(stirrup_rows_container)
+            container.setContentsMargins(0, 0, 0, 0)
+            container.setSpacing(0)
+            container.addLayout(add_remove_layout)
+            container.addLayout(self.stirrup_rows_layout)
 
-            left_section.addWidget(stirrup_rows_container)
-
-            left_section.addStretch(1)  # Pushes rows to the top
+            bundle_layout.addWidget(stirrup_rows_container)
+            bundle_layout.addStretch()  # Pushes rows to the top
 
             # --- Add the first, initial row ---
-            self.widgets[title] = {'Types': []}
             # self.add_stirrup_row()
 
-            # --- RIGHT SECTION ---
-            right_section = QHBoxLayout()
-
-            # --- Image (Left side) ---
-            canvas_container = QVBoxLayout()
-            canvas_container.setContentsMargins(10, 0, 0, 0)
-            label = HoverLabel('Spacing Per Bundle')
-            label.setProperty('class', 'stirrup-header')
-            label.mouseEntered.connect(self.show_spacing_header_info)
-            label.mouseLeft.connect(self.info_popup.hide)
-            canvas_container.addWidget(label)
-            self.stirrup_canvas = DrawStirrup(image_width)
-            self.stirrup_canvas.setProperty('class', 'stirrup-canvas')
-            canvas_container.addWidget(self.stirrup_canvas)
-            canvas_container.addStretch()
-            right_section.addLayout(canvas_container)
-
-            # --- Container for the right side controls ---
-            form_layout = QFormLayout()
-
-            # Row 0: Extent
-            extent = QComboBox()
-            extent.addItems(['From Face of Pad', 'From Bottom Bar', 'From Top'])
-            extent_label = HoverLabel('Start From:')
-            extent_label.setProperty('class', 'rsb-forms-label')
-            extent_label.mouseEntered.connect(self.show_spacing_extent_info)
-            extent_label.mouseLeft.connect(self.info_popup.hide)
-            form_layout.addRow(extent_label, extent)
-
-            # Row 1: Spacing
-            spacing = QTextEdit()
-            spacing.setProperty('class', 'rsb-spacing-text-edit')
-            spacing.setPlaceholderText('Example: 1@50, 5@80, rest@100')
-            spacing.textChanged.connect(self.debounce_timer.start)
-            spacing_label = HoverLabel('Spacing:')  # Use HoverLabel
-            spacing_label.setProperty('class', 'rsb-forms-label')
-
-            # Connect its hover signals
-            spacing_label.mouseEntered.connect(self.show_spacing_info)
-            spacing_label.mouseLeft.connect(self.info_popup.hide)
-
-            form_layout.addRow(spacing_label, spacing)
-
-            vert_layout = QVBoxLayout()
-            vert_layout.addLayout(form_layout)
-            vert_layout.addStretch(1)
-            right_section.addLayout(vert_layout)
-
-            # Store
-            self.widgets[title]['Extent'] = extent
-            self.widgets[title]['Spacing'] = spacing
-
             # --- COMBINE SECTION ---
-            main_layout.addLayout(left_section, 1)
-            separator = QFrame()
-            separator.setFrameShape(QFrame.Shape.VLine)
-            separator.setProperty('class', 'separator')
-            # separator.setFrameShadow(QFrame.Shadow.Sunken)  # Optional: adds a 3D effect
-            main_layout.addWidget(separator)
-            main_layout.addLayout(right_section, 1)
+            main_layout.addLayout(spacing_layout)
+            main_layout.addSpacing(10)
+            main_layout.addLayout(bundle_layout)
 
             self.group_box[title] = group_box
             return group_box
@@ -775,33 +846,65 @@ class FoundationDetailsDialog(QDialog):
         perim_bar_box = create_perim_bar_section(RSB_IMAGE_WIDTH)
         stirrup_group_box = create_stirrup_group_box(RSB_IMAGE_WIDTH)
 
-        grid_layout.addWidget(top_bar_box, 0, 0)
-        grid_layout.addWidget(bot_bar_box, 0, 1)
-        grid_layout.addWidget(vert_bar_box, 1, 0)
-        grid_layout.addWidget(perim_bar_box, 1, 1)
-        grid_layout.addWidget(stirrup_group_box, 2, 0, 1, 2)
-        grid_layout.setRowStretch(2, 1)
+        def create_hline():
+            separator = QFrame()
+            separator.setProperty('class', 'separator')
+            separator.setFrameShape(QFrame.Shape.HLine)
+            # separator.setFrameShadow(QFrame.Shadow.Sunken)
+            return separator
+
+        separator_space = 30
+        scroll_content = QFrame()
+        scroll_content.setObjectName('rsbScrollContent')
+        v_layout = QVBoxLayout(scroll_content)
+        v_layout.setContentsMargins(0, 0, 0, 0)
+        v_layout.setSpacing(0)
+        v_layout.addWidget(top_bar_box)
+        v_layout.addWidget(create_hline())
+        v_layout.addSpacing(separator_space)
+        v_layout.addWidget(bot_bar_box)
+        v_layout.addWidget(create_hline())
+        v_layout.addSpacing(separator_space)
+        v_layout.addWidget(vert_bar_box)
+        v_layout.addWidget(create_hline())
+        v_layout.addSpacing(separator_space)
+        v_layout.addWidget(perim_bar_box)
+        v_layout.addWidget(create_hline())
+        v_layout.addSpacing(separator_space)
+        v_layout.addWidget(stirrup_group_box)
+
+        # center_layout = QHBoxLayout(scroll_content)
+        # center_layout.setContentsMargins(0, 0, 0, 0)
+        # center_layout.setSpacing(0)
+        # center_layout.addStretch()
+        # center_layout.addLayout(v_layout)
+        # center_layout.addStretch()
 
         # Connection to redraw
         self.connect_stirrup_redraw_signals()
 
-        # --- Navigation Buttons ---
-        button_layout = QHBoxLayout()
-        back_button = HoverButton('Back')
-        back_button.setProperty('class', 'red-button')
-        back_button.clicked.connect(self.go_to_footing_page)
-        save_button = HoverButton('Save')
-        save_button.setProperty('class', 'green-button')
-        save_button.clicked.connect(self.save_and_accept)
+        scroll_area = make_scrollable(scroll_content, True)
+        scroll_area.setProperty('class', 'scroll-bar')
+        scroll_area.setObjectName('scrollBar')
+        scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        page_layout.addWidget(scroll_area)  # Add the scrollable part
 
+        # --- Bottom Navigation ---
+        bottom_nav = QFrame()
+        bottom_nav.setProperty('class', 'bottom-nav')
+        button_layout = QHBoxLayout(bottom_nav)
+        button_layout.setContentsMargins(0, 0, 0, 0)
+        button_layout.setSpacing(0)
+        back_button = HoverButton('Back')
+        back_button.setProperty('class', 'red-button back-button')
+        back_button.clicked.connect(self.go_to_footing_page)
         button_layout.addWidget(back_button)
         button_layout.addStretch()
-        button_layout.addWidget(save_button)
-
-        scroll_area = make_scrollable(scroll_content, True)
-        scroll_area.setProperty('class', 'scroll-bar-area')
-        page_layout.addWidget(scroll_area)  # Add the scrollable part
-        page_layout.addLayout(button_layout)  # Add the fixed buttons at the bottom
+        next_button = HoverButton('Save')
+        next_button.setProperty('class', 'green-button next-button')
+        next_button.clicked.connect(self.save_and_accept)
+        button_layout.addWidget(next_button)
+        page_layout.addWidget(bottom_nav)
 
         self.stacked_widget.addWidget(page)
 
@@ -834,7 +937,12 @@ class FoundationDetailsDialog(QDialog):
                 is_globally_valid = False
 
         if not is_globally_valid:
-            QMessageBox.warning(self, 'Invalid Input', 'Please fill in all required fields on this page.')
+            msg_box = QMessageBox(self)
+            msg_box.setObjectName("warningMessageBox")
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle("Invalid Input")
+            msg_box.setText("Please fill in all required fields on this page.")
+            msg_box.exec()
 
         return is_globally_valid
 
@@ -880,8 +988,13 @@ class FoundationDetailsDialog(QDialog):
                     is_globally_valid = False
 
         if not is_globally_valid:
-            QMessageBox.warning(self, 'Invalid Input',
-                                'Please fill in all visible fields correctly.\nCheck for empty inputs or invalid spacing format.')
+            msg_box = QMessageBox(self)
+            msg_box.setObjectName("warningMessageBox")
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle("Invalid Input")
+            msg_box.setText("Please fill in all visible fields correctly.")
+            msg_box.setInformativeText("Check for empty inputs or invalid spacing format.")
+            msg_box.exec()
 
         return is_globally_valid
 
@@ -1190,9 +1303,11 @@ Defines stirrup locations relative to your chosen 'Start From' point.
     def add_stirrup_row(self) -> None:
         """Creates and adds a new UI row for defining a stirrup type."""
         # --- Main container for the row ---
-        row_widget = QWidget()
-        row_widget.setProperty('class', 'stirrup-row')
+        row_widget = QFrame()
+        row_widget.setProperty('class', 'rsb-stirrup-row')
         row_layout = QHBoxLayout(row_widget)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.setSpacing(0)
 
         # --- Image (Left) ---
         image_label = get_img(resource_path('images/stirrup_outer.png'), STIRRUP_ROW_IMAGE_WIDTH, STIRRUP_ROW_IMAGE_WIDTH)
@@ -1210,6 +1325,8 @@ Defines stirrup locations relative to your chosen 'Start From' point.
 
         # --- Form (Right) ---
         form_layout = QFormLayout()
+        form_layout.setContentsMargins(0, 0, 0, 0)
+        form_layout.setSpacing(3)
         type_combo = QComboBox()
         type_combo.addItems(image_map.keys())
         size_policy = type_combo.sizePolicy()
@@ -1286,7 +1403,7 @@ Defines stirrup locations relative to your chosen 'Start From' point.
 
         self.update_remove_button_state()
 
-class FoundationItem(QWidget):
+class FoundationItem(QFrame):
     """A custom widget representing a single item in the foundation list."""
     edit_requested = Signal(object)
     remove_requested = Signal(object)
@@ -1300,23 +1417,23 @@ class FoundationItem(QWidget):
         self._is_selected = False
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 5, 10, 5)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
         self.label = QLabel(self.data.get('name', 'Unnamed'))
+        self.label.setProperty('class', 'list-item-label')
         layout.addWidget(self.label)
         layout.addStretch(1)
 
         # --- Edit Button (Icon) ---
         self.edit_button = HoverButton('')
-        self.edit_button.setProperty('class', 'yellow-button icon-button') # Use your yellow class
-        edit_icon = QIcon(resource_path('images/edit.svg'))
-        self.edit_button.setIcon(edit_icon)
+        self.edit_button.setProperty('class', 'edit-button') # Use your yellow class
         self.edit_button.setToolTip('Edit Foundation')
         self.edit_button.clicked.connect(lambda: self.edit_requested.emit(self))
         layout.addWidget(self.edit_button)
 
-        self.remove_button = HoverButton('-')
-        self.remove_button.setProperty('class', 'red-button remove-button')
+        self.remove_button = HoverButton('')
+        self.remove_button.setProperty('class', 'trash-button')
         self.remove_button.clicked.connect(lambda: self.remove_requested.emit(self))
         layout.addWidget(self.remove_button)
 
@@ -1355,7 +1472,7 @@ class FoundationItem(QWidget):
     def select(self):
         """Sets the visual state to selected."""
         self._is_selected = True
-        self.setProperty('class', 'list-item selected')
+        self.setProperty('class', 'list-item list-item-selected')
         self.style().polish(self)
 
     def deselect(self):
@@ -1376,9 +1493,9 @@ class MultiPageApp(QMainWindow):
 
         self.setWindowTitle('Cutting List')
         self.setWindowIcon(QIcon(resource_path('images/logo.png')))
-        self.setGeometry(50, 50, 980, 720)
-        self.setMinimumWidth(980)
-        self.setMinimumHeight(600)
+        self.setGeometry(50, 50, 750, 700)
+        self.setMinimumWidth(750)
+        self.setMinimumHeight(500)
 
         self.stacked_widget = QStackedWidget()
         self.setCentralWidget(self.stacked_widget)
@@ -1402,47 +1519,59 @@ class MultiPageApp(QMainWindow):
     def create_foundation_entry_page(self) -> None:
         """Builds the UI with a master-detail layout."""
         page = QWidget()
+        page.setObjectName('foundationPage')
         page.setProperty('class', 'page')
         page_layout = QVBoxLayout(page)
+        page_layout.setContentsMargins(0, 0, 0, 0)
+        page_layout.setSpacing(0)
 
-        # title = HoverLabel('Foundation Types')
-        # title.setProperty('class', 'header-0')
-        # page_layout.addWidget(title)
-
-        # --- Main Horizontal Layout (Master-Detail) ---
+        # --- Main Horizontal Layout ---
         main_horizontal_layout = QHBoxLayout()
+        main_horizontal_layout.setContentsMargins(0, 0, 0, 0)
+        main_horizontal_layout.setSpacing(0)
 
         # --- Left Panel (Master View - The List) ---
-        left_panel = QFrame()
-        left_panel.setProperty('class', 'master-panel')
-        left_panel_layout = QVBoxLayout(left_panel)
-        left_panel_layout.setContentsMargins(0, 0, 0, 0)
+        panel = QFrame()
+        panel.setProperty('class', 'panel')
+        panel_layout = QVBoxLayout(panel)
+        panel_layout.setContentsMargins(0, 0, 0, 0)
+        panel_layout.setSpacing(0)
 
-        add_button = HoverButton('Add Foundation')
-        add_button.setProperty('class', 'green-button')
+        panel_title_widget = QFrame()
+        panel_title_widget.setProperty('class', 'panel-title-widget')
+        panel_title_layout = QHBoxLayout(panel_title_widget)
+        panel_title_layout.setContentsMargins(0, 0, 0, 0)
+        panel_title_layout.setSpacing(0)
+        label = QLabel('Foundation Types')
+        label.setProperty('class', 'header-2')
+        panel_title_layout.addWidget(label)
+        panel_title_layout.addStretch()
+        add_button = HoverButton('+')
+        add_button.setProperty('class', 'green-button add-button')
         add_button.clicked.connect(self.add_foundation_item)
-        left_panel_layout.addWidget(add_button, 0, Qt.AlignmentFlag.AlignLeft)
+        panel_title_layout.addWidget(add_button)
+        panel_layout.addWidget(panel_title_widget)
 
-        self.scroll_layout = QVBoxLayout()
-        self.scroll_layout.setContentsMargins(5, 5, 5, 5)
-        self.scroll_layout.setSpacing(0)
         scroll_content = QWidget()
-        scroll_content.setProperty('class', 'scroll-area-panel')
-        scroll_content.setLayout(self.scroll_layout)
-        scroll_area = make_scrollable(scroll_content)
-        scroll_area.setProperty('class', 'scroll-bar-area-panel')
-        left_panel_layout.addWidget(scroll_area)
+        scroll_content.setProperty('class', 'scroll-content')
+        self.scroll_layout = QVBoxLayout(scroll_content)
+        self.scroll_layout.setContentsMargins(0, 0, 0, 0)
+        self.scroll_layout.setSpacing(0)
         self.scroll_layout.addStretch(1)
+        scroll_area = make_scrollable(scroll_content)
+        panel_layout.addWidget(scroll_area)
 
         # --- Right Panel (Detail View - The Summary) ---
         right_panel = QFrame()
         right_panel.setProperty('class', 'detail-panel')
         right_panel_layout = QVBoxLayout(right_panel)
+        right_panel_layout.setContentsMargins(0, 0, 0, 0)
+        right_panel_layout.setSpacing(0)
 
         self.detail_area_stack = QStackedWidget()  # Use a stack to show/hide content
 
         # Page 0: Placeholder when nothing is selected
-        placeholder = QLabel('Select a foundation type from the list to see its details.')
+        placeholder = QLabel('Add a foundation type by clicking the plus button on the upper left corner.')
         placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         placeholder.setProperty('class', 'detail-placeholder')
 
@@ -1454,57 +1583,62 @@ class MultiPageApp(QMainWindow):
         right_panel_layout.addWidget(self.detail_area_stack)
 
         # --- Add panels to main layout ---
-        main_horizontal_layout.addWidget(left_panel, 2)  # 1 stretch factor
-        main_horizontal_layout.addWidget(right_panel, 5)  # 2 stretch factor (wider)
+        main_horizontal_layout.addWidget(panel, 2)  # 1 stretch factor
+        main_horizontal_layout.addWidget(right_panel, 6)  # 2 stretch factor (wider)
         page_layout.addLayout(main_horizontal_layout)
 
         # --- Bottom Navigation ---
-        button_layout = QHBoxLayout()
-        button_layout.addStretch(1)
+        bottom_nav = QFrame()
+        bottom_nav.setProperty('class', 'bottom-nav')
+        button_layout = QHBoxLayout(bottom_nav)
+        button_layout.setContentsMargins(0, 0, 0, 0)
+        button_layout.setSpacing(0)
+        button_layout.addStretch()
         next_button = HoverButton('Next')
-        next_button.setProperty('class', 'green-button')
+        next_button.setProperty('class', 'green-button next-button')
         next_button.clicked.connect(self.go_to_market_length_page)
         button_layout.addWidget(next_button)
-        page_layout.addLayout(button_layout)
+        page_layout.addWidget(bottom_nav)
 
         self.stacked_widget.addWidget(page)
 
     def create_market_lengths_page(self) -> None:
         """Builds the UI for the third page (Rebar Market Lengths) with improved layout."""
         page = QWidget()
+        page.setObjectName('marketLengthsPage')
         page.setProperty('class', 'page')
-        main_layout = QVBoxLayout(page)
+        page_layout = QVBoxLayout(page)
+        page_layout.setContentsMargins(0, 0, 0, 0)
+        page_layout.setSpacing(0)
 
         # --- This will be the main container for the title and the grid ---
-        content_container = QWidget()
+        content_container = QFrame()
+        content_container.setProperty('class', 'market-lengths-container')
         content_layout = QVBoxLayout(content_container)
         content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
 
         # --- 1. Create the Title and Buttons Row ---
         title_and_buttons_layout = QHBoxLayout()
-
+        title_and_buttons_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(4)
         title_label = QLabel('Rebar Market Lengths')
-        title_label.setProperty('class', 'header-0')
-        # Override the QSS center-alignment to make it align left
-        title_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-
+        title_label.setProperty('class', 'header-1')
         add_button = HoverButton('+')
         add_button.setProperty('class', 'add-button green-button')
         add_button.clicked.connect(self.add_market_length)
         remove_button = HoverButton('-')
         remove_button.setProperty('class', 'remove-button red-button')
         remove_button.clicked.connect(self.remove_market_length)
-
-        # CORRECTED LAYOUT: Add title and buttons to the SAME horizontal layout
         title_and_buttons_layout.addWidget(title_label)
         title_and_buttons_layout.addStretch()
         title_and_buttons_layout.addWidget(add_button)
         title_and_buttons_layout.addWidget(remove_button)
-        title_and_buttons_layout.setContentsMargins(15, 0, 15, 0)
 
         # --- 2. Create the Grid Container ---
         grid_frame = QFrame()
         self.market_lengths_grid = QGridLayout(grid_frame)
+        self.market_lengths_grid.setContentsMargins(0, 0, 0, 0)
         self.market_lengths_grid.setSpacing(0)
         # Initial drawing of the grid with a default empty state
         self.redraw_market_lengths_grid({})
@@ -1515,31 +1649,32 @@ class MultiPageApp(QMainWindow):
 
         # --- 4. Center the entire content block on the page ---
         centering_layout = QHBoxLayout()
-        centering_layout.addStretch(1)
+        centering_layout.setContentsMargins(0, 0, 0, 0)
+        centering_layout.setSpacing(0)
+        centering_layout.addStretch()
         centering_layout.addWidget(content_container)
-        centering_layout.addStretch(1)
+        centering_layout.addStretch()
 
-        main_layout.addStretch(1)
-        main_layout.addLayout(centering_layout)
-        main_layout.addStretch(1)
+        page_layout.addStretch()
+        page_layout.addLayout(centering_layout)
+        page_layout.addStretch()
 
         # --- 5. Navigation Buttons (at the bottom of the page) ---
-        button_layout = QHBoxLayout()
+        bottom_nav = QFrame()
+        bottom_nav.setProperty('class', 'bottom-nav')
+        button_layout = QHBoxLayout(bottom_nav)
+        button_layout.setContentsMargins(0, 0, 0, 0)
+        button_layout.setSpacing(0)
         back_button = HoverButton('Back')
-        back_button.setAutoDefault(True)
-        back_button.setProperty('class', 'red-button')
+        back_button.setProperty('class', 'red-button back-button')
         back_button.clicked.connect(self.go_to_foundation_page)
-
-        next_button = HoverButton('Generate')
-        next_button.setAutoDefault(True)
-        next_button.setProperty('class', 'green-button')
+        next_button = HoverButton('Generate Excel')
+        next_button.setProperty('class', 'green-button next-button')
         next_button.clicked.connect(self.generate_excel)
-
         button_layout.addWidget(back_button)
-        button_layout.addStretch()
+        button_layout.addStretch(0)
         button_layout.addWidget(next_button)
-
-        main_layout.addLayout(button_layout)
+        page_layout.addWidget(bottom_nav)
         self.stacked_widget.addWidget(page)
 
     def add_foundation_item(self) -> None:
@@ -1551,83 +1686,101 @@ class MultiPageApp(QMainWindow):
                 if not DEBUG_MODE:
                     existing_names = [item.data['name'] for item in self.findChildren(FoundationItem)]
                     if data['name'] in existing_names:
-                        QMessageBox.warning(self, 'Duplicate Name',
-                                            f'A foundation type with the name {data['name']} already exists.\n'
-                                            'Please choose a unique name.')
+                        msg_box = QMessageBox(self)
+                        msg_box.setObjectName("warningMessageBox")  # Use a generic name for all warnings
+                        msg_box.setIcon(QMessageBox.Icon.Warning)
+                        msg_box.setWindowTitle("Duplicate Name")
+                        msg_box.setText(f'A foundation type with the name {data["name"]} already exists.')
+                        msg_box.setInformativeText('Please choose a unique name.')
+                        msg_box.exec()
                         return  # Stop the add process
                 new_item = FoundationItem(data)
                 new_item.edit_requested.connect(self.edit_foundation_item)
                 new_item.remove_requested.connect(self.remove_foundation_item)
-                new_item.selected.connect(self.update_detail_view)  # +++ CONNECT THE NEW SIGNAL +++
+                new_item.selected.connect(self.update_detail_view)
                 self.scroll_layout.insertWidget(self.scroll_layout.count() - 1, new_item)
-
-                # --- ADD THIS LOGIC TO AUTO-SELECT THE NEW ITEM ---
                 self.update_detail_view(new_item)
 
     def create_detail_panel(self) -> QWidget:
         """Creates a comprehensive, scrollable widget to display all foundation details."""
         # The main container for the entire right panel's content
-        scroll_content = QWidget()
+        scroll_content = QFrame()
         scroll_content.setProperty('class', 'detail-content')
         layout = QVBoxLayout(scroll_content)
-        layout.setContentsMargins(15, 15, 15, 15)  # Add some nice padding
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
         self.detail_widgets = {'name_header': QLabel('Foundation Details')}  # Reset the dictionary
 
         # --- Main Title ---
-        self.detail_widgets['name_header'].setProperty('class', 'header-0')  # Big, bold title
-        self.detail_widgets['name_header'].setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.detail_widgets['name_header'].setProperty('class', 'header-1')  # Big, bold title
         layout.addWidget(self.detail_widgets['name_header'])
+
+        layout.addSpacing(14)
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setProperty('class', 'separator')
+        layout.addWidget(separator)
+        layout.addSpacing(21)
 
         # --- General & Dimensions Section ---
         gen_info_label = QLabel('General Information')
         gen_info_label.setProperty('class', 'detail-header')
-        layout.addWidget(gen_info_label)
+        layout.addWidget(gen_info_label, 0, Qt.AlignmentFlag.AlignLeft)
+        layout.addSpacing(14)
 
         form_layout_general = QFormLayout()
-        form_layout_general.setSpacing(8)
-        form_layout_general.setContentsMargins(6, 0, 0, 0)
+        form_layout_general.setSpacing(0)
+        form_layout_general.setContentsMargins(0, 0, 0, 0)
         self.detail_widgets['n_footing'] = QLabel()
         self.detail_widgets['n_ped'] = QLabel()
         self.detail_widgets['cc'] = QLabel()
         self.detail_widgets['pad_dims'] = QLabel()
         self.detail_widgets['pedestal_dims'] = QLabel()
 
-        form_layout_general.addRow('<b>Total Number of Footings:</b>', self.detail_widgets['n_footing'])
-        form_layout_general.addRow('<b>Pedestals per Footing:</b>', self.detail_widgets['n_ped'])
-        form_layout_general.addRow('<b>Concrete Cover:</b>', self.detail_widgets['cc'])
-        form_layout_general.addRow('<b>Pad Dimensions (Bx, By, t):</b>', self.detail_widgets['pad_dims'])
-        form_layout_general.addRow('<b>Pedestal Dims (bx, by, h):</b>', self.detail_widgets['pedestal_dims'])
+        def add_row(form_layout: Any, label: str, widget_name: str):
+            form_label = QLabel(label)
+            form_label.setProperty('class', 'detail-form-name')
+            form_value = self.detail_widgets[widget_name]
+            form_value.setProperty('class', 'detail-form-value')
+            form_layout.addRow(form_label, form_value)
+
+        add_row(form_layout_general, 'Total Number of Footings:', 'n_footing')
+        add_row(form_layout_general, 'Pedestals per Footing:', 'n_ped')
+        add_row(form_layout_general, 'Concrete Cover:', 'cc')
+        add_row(form_layout_general, 'Pad Dimensions (Bx, By, t):', 'pad_dims')
+        add_row(form_layout_general, 'Pedestal Dims (bx, by, h):', 'pedestal_dims')
         layout.addLayout(form_layout_general)
 
-        layout.addSpacing(15)  # Add some vertical space between sections
+        layout.addSpacing(21)  # Add some vertical space between sections
 
         # --- Reinforcement Section ---
-        reinf_detail_label = QLabel('Reinforcement Details')
+        reinf_detail_label = QLabel('Steel Reinforcements')
         reinf_detail_label.setProperty('class', 'detail-header')
-        layout.addWidget(reinf_detail_label)
+        layout.addWidget(reinf_detail_label, 0, Qt.AlignmentFlag.AlignLeft)
+        layout.addSpacing(14)
 
         form_layout_rebar = QFormLayout()
-        form_layout_rebar.setSpacing(8)
-        form_layout_rebar.setContentsMargins(6, 0, 0, 0)
-        self.detail_widgets['top_bar'] = QLabel()
+        form_layout_rebar.setSpacing(0)
+        form_layout_rebar.setContentsMargins(0, 0, 0, 0)
+        self.detail_widgets['top_bar'] = QLabel('None')
         self.detail_widgets['bottom_bar'] = QLabel()
         self.detail_widgets['vertical_bar'] = QLabel()
-        self.detail_widgets['perimeter_bar'] = QLabel()
-        self.detail_widgets['stirrups_summary'] = QLabel()
+        self.detail_widgets['perimeter_bar'] = QLabel('None')
+        self.detail_widgets['stirrups_summary'] = QLabel('None')
 
-        form_layout_rebar.addRow('<b>Top Bar:</b>', self.detail_widgets['top_bar'])
-        form_layout_rebar.addRow('<b>Bottom Bar:</b>', self.detail_widgets['bottom_bar'])
-        form_layout_rebar.addRow('<b>Vertical Bar:</b>', self.detail_widgets['vertical_bar'])
-        form_layout_rebar.addRow('<b>Perimeter Bar:</b>', self.detail_widgets['perimeter_bar'])
-        form_layout_rebar.addRow('<b>Stirrups:</b>', self.detail_widgets['stirrups_summary'])
+        add_row(form_layout_rebar, 'Top Bar:', 'top_bar')
+        add_row(form_layout_rebar, 'Bottom Bar:', 'bottom_bar')
+        add_row(form_layout_rebar, 'Vertical Bar:', 'vertical_bar')
+        add_row(form_layout_rebar, 'Perimeter Bar:', 'perimeter_bar')
+        add_row(form_layout_rebar, 'Stirrups:', 'stirrups_summary')
         layout.addLayout(form_layout_rebar)
 
         # --- Dynamic Layout for Stirrup Types ---
         # This special layout will hold the list of individual stirrup shapes
         self.detail_stirrup_types_layout = QVBoxLayout()
-        self.detail_stirrup_types_layout.setContentsMargins(20, 5, 0, 0)  # Indent the list
-        self.detail_stirrup_types_layout.setSpacing(5)
+        self.detail_stirrup_types_layout.setContentsMargins(0, 0, 0, 0)  # Indent the list
+        self.detail_stirrup_types_layout.setSpacing(0)
         layout.addLayout(self.detail_stirrup_types_layout)
 
         layout.addStretch()
@@ -1672,8 +1825,8 @@ class MultiPageApp(QMainWindow):
         self.market_lengths_checkboxes = {}
 
         # Helper to create styled cells (this is unchanged)
-        def create_cell(widget, is_header=False, is_alternate=False):
-            cell = QWidget()
+        def create_cell(widget, is_header=False, is_alternate=False, x=0, y=0):
+            cell = QFrame()
             cell.setAutoFillBackground(True)
             cell_layout = QHBoxLayout(cell)
             cell_layout.setContentsMargins(0, 0, 0, 0)
@@ -1681,28 +1834,36 @@ class MultiPageApp(QMainWindow):
             if isinstance(widget, QPushButton):
                 cell_layout.addWidget(widget)
             else:
-                cell_layout.addStretch(1);
-                cell_layout.addWidget(widget);
-                cell_layout.addStretch(1)
+                cell_layout.addStretch()
+                cell_layout.addWidget(widget)
+                cell_layout.addStretch()
             style_class = 'grid-cell'
             if is_header: style_class += ' header-cell'
             if is_alternate: style_class += ' alternate-row-cell'
+            if x==0 and y > 0:
+                style_class += ' header-column-cell'
+            elif y==0 and x > 0:
+                style_class += ' header-row-cell'
+            elif x==0 and y==0:
+                style_class += ' header-corner-cell'
+            else:
+                style_class += ' non-header-cell'
             cell.setProperty('class', style_class)
             return cell
 
         # Re-create Top-Left Header as a "Toggle All" button
         toggle_all_btn = HoverButton('Diameter')
-        toggle_all_btn.setToolTip("Toggle All Checkboxes")  # Helpful tooltip
+        toggle_all_btn.setToolTip('Toggle All Checkboxes')  # Helpful tooltip
         toggle_all_btn.setProperty('class', 'clickable-header')
         toggle_all_btn.clicked.connect(self.toggle_all_market_checkboxes)
-        self.market_lengths_grid.addWidget(create_cell(toggle_all_btn, is_header=True), 0, 0)
+        self.market_lengths_grid.addWidget(create_cell(toggle_all_btn, is_header=True, x=0, y=0), 0, 0)
 
         # Re-create Column Headers
         for col, length in enumerate(self.current_market_lengths):
             btn = HoverButton(length)
             btn.setProperty('class', 'clickable-header clickable-column-header')
             btn.clicked.connect(lambda checked, l=length: self.toggle_market_column(l))
-            self.market_lengths_grid.addWidget(create_cell(btn, is_header=True), 0, col + 1)
+            self.market_lengths_grid.addWidget(create_cell(btn, is_header=True, x=0, y=col + 1), 0, col + 1)
 
         # Re-create Rows
         for row, dia in enumerate(BAR_DIAMETERS):
@@ -1713,39 +1874,22 @@ class MultiPageApp(QMainWindow):
             btn = HoverButton(dia)
             btn.setProperty('class', 'clickable-header clickable-row-header')
             btn.clicked.connect(lambda checked, d=dia: self.toggle_market_row(d))
-            self.market_lengths_grid.addWidget(create_cell(btn, is_header=True, is_alternate=is_alternate_row),
+            self.market_lengths_grid.addWidget(create_cell(btn, is_header=True, is_alternate=is_alternate_row, x=row + 1, y=0),
                                                row + 1,
                                                0)
 
             # Checkboxes for each length
             for col, length in enumerate(self.current_market_lengths):
                 cb = QCheckBox()
+                cb.setProperty('class', 'check-box')
 
-                # --- THIS IS THE KEY CHANGE ---
                 # Restore the state if it exists, otherwise default to True for new lengths
                 is_checked = previous_states.get(dia, {}).get(length, False)
                 cb.setChecked(is_checked)
                 # -----------------------------
 
                 self.market_lengths_checkboxes[dia][length] = cb
-                self.market_lengths_grid.addWidget(create_cell(cb, is_alternate=is_alternate_row), row + 1, col + 1)
-
-    def add_market_length(self):
-        """Prompts the user for a new market length and redraws the grid."""
-        new_length, ok = QInputDialog.getDouble(self, "Add Market Length", "Enter new length (in meters):",
-                                                value=1.0, min=1.0, max=50.0, decimals=1)
-        if ok and new_length > 0:
-            new_length_str = f"{new_length:.0f}m" if int(new_length) == new_length else f"{new_length:.1f}m"
-
-            if new_length_str not in self.current_market_lengths:
-                # --- SAVE STATE BEFORE REDRAWING ---
-                saved_states = self.get_current_checkbox_states()
-                self.current_market_lengths.append(new_length_str)
-                self.current_market_lengths.sort(key=lambda s: float(s.replace('m', '')))
-                # --- PASS SAVED STATE TO REDRAW METHOD ---
-                self.redraw_market_lengths_grid(saved_states)
-            else:
-                QMessageBox.warning(self, "Duplicate Length", "That market length already exists.")
+                self.market_lengths_grid.addWidget(create_cell(cb, is_alternate=is_alternate_row, x=row+1, y=col+1), row + 1, col + 1)
 
     def toggle_all_market_checkboxes(self):
         """Toggles the state of every checkbox in the market lengths grid."""
@@ -1768,22 +1912,74 @@ class MultiPageApp(QMainWindow):
             for checkbox in dia_dict.values():
                 checkbox.setChecked(new_state)
 
+    def add_market_length(self):
+        """Prompts the user for a new market length and redraws the grid."""
+        # --- Create an instance of the dialog ---
+        dialog = QInputDialog(self)
+
+        # --- Set an objectName for QSS styling ---
+        dialog.setObjectName("marketLengthInputDialog")
+
+        # --- Configure the dialog's properties ---
+        dialog.setWindowTitle("Add Market Length")
+        dialog.setLabelText("Enter new length (in meters):")
+        dialog.setInputMode(QInputDialog.InputMode.DoubleInput)
+        dialog.setDoubleRange(1.0, 50.0)
+        dialog.setDoubleDecimals(1)
+        dialog.setDoubleValue(1.0)
+
+        # --- Execute the dialog and check the result ---
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            new_length = dialog.doubleValue()
+            # The rest of your logic remains the same
+            if new_length > 0:
+                new_length_str = f'{new_length:.0f}m' if int(new_length) == new_length else f'{new_length:.1f}m'
+
+                if new_length_str not in self.current_market_lengths:
+                    saved_states = self.get_current_checkbox_states()
+                    self.current_market_lengths.append(new_length_str)
+                    self.current_market_lengths.sort(key=lambda s: float(s.replace('m', '')))
+                    self.redraw_market_lengths_grid(saved_states)
+                else:
+                    # You can apply the same principle to QMessageBox
+                    msg_box = QMessageBox(self)
+                    msg_box.setObjectName("warningMessageBox")  # Style this in QSS
+                    msg_box.setIcon(QMessageBox.Icon.Warning)
+                    msg_box.setWindowTitle("Duplicate Length")
+                    msg_box.setText("That market length already exists.")
+                    msg_box.exec()
+
     def remove_market_length(self):
         """Prompts the user to select a market length to remove and redraws the grid."""
         if not self.current_market_lengths:
-            QMessageBox.information(self, "No Lengths", "There are no market lengths to remove.")
+            # You can style this info box as well
+            msg_box = QMessageBox(self)
+            msg_box.setObjectName("infoMessageBox")
+            msg_box.setIcon(QMessageBox.Icon.Information)
+            msg_box.setWindowTitle("No Lengths")
+            msg_box.setText("There are no market lengths to remove.")
+            msg_box.exec()
             return
 
-        length_to_remove, ok = QInputDialog.getItem(self, "Remove Market Length",
-                                                    "Select a length to remove:", self.current_market_lengths, 0,
-                                                    False)
+        # --- Instantiate the dialog ---
+        dialog = QInputDialog(self)
+        dialog.setObjectName("marketLengthRemoveDialog")  # For QSS styling
+        dialog.setWindowTitle("Remove Market Length")
+        dialog.setLabelText("Select a length to remove:")
 
-        if ok and length_to_remove:
-            # --- SAVE STATE BEFORE REDRAWING ---
-            saved_states = self.get_current_checkbox_states()
-            self.current_market_lengths.remove(length_to_remove)
-            # --- PASS SAVED STATE TO REDRAW METHOD ---
-            self.redraw_market_lengths_grid(saved_states)
+        # --- Configure for item selection ---
+        dialog.setInputMode(QInputDialog.InputMode.TextInput)  # Necessary for combo box mode
+        dialog.setComboBoxItems(self.current_market_lengths)
+        dialog.setComboBoxEditable(False)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            length_to_remove = dialog.textValue()
+            if length_to_remove:
+                # --- SAVE STATE BEFORE REDRAWING ---
+                saved_states = self.get_current_checkbox_states()
+                self.current_market_lengths.remove(length_to_remove)
+                # --- PASS SAVED STATE TO REDRAW METHOD ---
+                self.redraw_market_lengths_grid(saved_states)
 
     def toggle_market_row(self, dia: str) -> None:
         """Toggles all checkboxes in a given market length row."""
@@ -1850,17 +2046,17 @@ class MultiPageApp(QMainWindow):
 
         # --- Populate General & Dimensions ---
         self.detail_widgets['name_header'].setText(data.get('name', 'N/A'))
-        self.detail_widgets['n_footing'].setText(str(data.get('n_footing', 0)))
-        self.detail_widgets['n_ped'].setText(str(data.get('n_ped', 0)))
-        self.detail_widgets['cc'].setText(f'{data.get('cc', 0)} mm')
-        pad_dims_text = f'{data.get('Bx', 0)} x {data.get('By', 0)} x {data.get('t', 0)} mm'
+        self.detail_widgets['n_footing'].setText(f'{data.get('n_footing', 0):,.0f}')
+        self.detail_widgets['n_ped'].setText(f'{data.get('n_ped', 0):,.0f}')
+        self.detail_widgets['cc'].setText(f'{data.get('cc', 0):,.0f} mm')
+        pad_dims_text = f'{data.get('Bx', 0):,.0f} x {data.get('By', 0):,.0f} x {data.get('t', 0):,.0f} mm'
         self.detail_widgets['pad_dims'].setText(pad_dims_text)
-        ped_dims_text = f'{data.get('bx', 0)} x {data.get('by', 0)} x {data.get('h', 0)} mm'
+        ped_dims_text = f'{data.get('bx', 0):,.0f} x {data.get('by', 0):,.0f} x {data.get('h', 0):,.0f} mm'
         self.detail_widgets['pedestal_dims'].setText(ped_dims_text)
 
         # --- Helper function for styling disabled text ---
         def format_disabled(text):
-            return f'<i><font color='#7f8c8d'>{text}</font></i>'
+            return f'<i><font color="#A7A6A6">{text}</font></i>'
 
         # --- Populate Top Bar ---
         top_bar_data = data['Top Bar']
@@ -1887,7 +2083,7 @@ class MultiPageApp(QMainWindow):
         # --- Populate Vertical Bar ---
         vert_bar_data = data['Vertical Bar']
         if vert_bar_data['Enabled']:
-            hook_details = f'({vert_bar_data['Hook Calculation']}'
+            hook_details = f'({vert_bar_data['Hook Calculation']} Hook Length'
             if vert_bar_data['Hook Calculation'] == 'Manual':
                 hook_details += f': {vert_bar_data['Hook Length']} mm'
             hook_details += ')'
@@ -1919,11 +2115,12 @@ class MultiPageApp(QMainWindow):
 
             # Dynamically add a label for each stirrup type in the bundle
             for stirrup_type in stirrup_data.get('Types', []):
-                type_text = f'&bull; <b>{stirrup_type['Type']}:</b> {stirrup_type['Diameter']}'
+                type_text = f'• {stirrup_type['Type']}: {stirrup_type['Diameter']}'
                 if stirrup_type['Type'] in ['Tall', 'Wide', 'Octagon']:
                     type_text += f' (a: {stirrup_type['a_input']} mm)'
 
                 type_label = QLabel(type_text)
+                type_label.setProperty('class', 'detail-form-value')
                 type_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
                 self.detail_stirrup_types_layout.addWidget(type_label)
         else:
@@ -1939,18 +2136,73 @@ class MultiPageApp(QMainWindow):
             new_data = dialog.get_data()
             if new_data['name'].strip():
                 item.update_details(new_data)
-                # --- ADD THIS LINE TO REFRESH THE DETAILS ---
                 self.update_detail_view(item)
 
     def remove_foundation_item(self, item: FoundationItem) -> None:
-        """Removes a foundation item from the list."""
-        # --- ADD THIS LOGIC ---
-        if item == self.current_item:
-            self.current_item = None
-            self.detail_area_stack.setCurrentIndex(0)  # Show placeholder
+        """
+        Removes a foundation item from the list and selects the closest
+        remaining item.
+        """
+        was_selected = (item == self.current_item)
+        index = self.scroll_layout.indexOf(item)
 
+        # Remove the widget from the layout and schedule it for deletion
         self.scroll_layout.removeWidget(item)
         item.deleteLater()
+
+        # If the deleted item was the selected one, decide what to select next
+        if was_selected:
+            # The count of actual FoundationItem widgets (excluding the final stretch)
+            remaining_items_count = self.scroll_layout.count() - 1
+
+            if remaining_items_count > 0:
+                # Determine the index of the new item to select.
+                # Default to the item before the deleted one, but don't go below zero.
+                new_index = max(0, index - 1)
+
+                # Ensure the index is not out of bounds if the last item was removed
+                new_index = min(new_index, remaining_items_count - 1)
+
+                new_item_to_select = self.scroll_layout.itemAt(new_index).widget()
+                if isinstance(new_item_to_select, FoundationItem):
+                    self.update_detail_view(new_item_to_select)
+            else:
+                # No items left, so show the placeholder
+                self.current_item = None
+                self.detail_area_stack.setCurrentIndex(0)
+
+    @staticmethod
+    def _get_used_diameters(all_foundation_data: list[dict]) -> set[str]:
+        """
+        Parses all foundation data and returns a set of unique diameter codes (#10, #12, etc.) that are enabled and used.
+        """
+        used_diameters = set()
+        if not all_foundation_data:
+            return used_diameters
+
+        def process_section(section_data):
+            # A section is considered enabled if its 'Enabled' key is True,
+            # or if it doesn't have an 'Enabled' key (like Bottom Bar, which is always enabled).
+            is_enabled = section_data.get('Enabled', True)
+            if is_enabled:
+                dia_text = section_data.get('Diameter', '')
+                if dia_text:
+                    used_diameters.add(dia_text)
+
+        for data in all_foundation_data:
+            process_section(data.get('Top Bar', {}))
+            process_section(data.get('Bottom Bar', {}))
+            process_section(data.get('Vertical Bar', {}))
+            process_section(data.get('Perimeter Bar', {}))
+
+            stirrups_data = data.get('Stirrups', {})
+            if stirrups_data.get('Enabled', True):
+                for stirrup_type in stirrups_data.get('Types', []):
+                    dia_text = stirrup_type.get('Diameter', '')
+                    if dia_text:
+                        used_diameters.add(dia_text)
+
+        return used_diameters
 
     def prefill_debug_data(self):
         """Creates and adds sample foundation data if DEBUG_MODE is True."""
@@ -1963,7 +2215,7 @@ class MultiPageApp(QMainWindow):
                 'Value Along X': 150, 'Value Along Y': 150
             },
             'Bottom Bar': {
-                'Enabled': True, 'Diameter': '#20 ', 'Input Type': 'Quantity',
+                'Enabled': True, 'Diameter': '#20', 'Input Type': 'Quantity',
                 'Value Along X': 12, 'Value Along Y': 12
             },
             'Vertical Bar': {
@@ -2040,29 +2292,57 @@ class MultiPageApp(QMainWindow):
     def go_to_market_length_page(self):
         self.stacked_widget.setCurrentIndex(1)
 
-
     def generate_excel(self):
         all_data = self.get_all_foundation_data()
+        if not all_data:
+            msg_box = QMessageBox(self)
+            msg_box.setObjectName("infoMessageBox")
+            msg_box.setIcon(QMessageBox.Icon.Information)
+            msg_box.setWindowTitle("No Data")
+            msg_box.setText("Please add at least one foundation type before generating the Excel file.")
+            msg_box.exec()
+            return
+
+        required_diameters = self._get_used_diameters(all_data)
         market_lengths = {}
         for dia_code, lengths in self.market_lengths_checkboxes.items():
             available_lengths = [float(l.replace('m', '')) for l, cb in lengths.items() if cb.isChecked()]
-            if not available_lengths:
-                continue
-            market_lengths[dia_code] = available_lengths
-        all_results = []
+            if available_lengths:
+                market_lengths[dia_code] = available_lengths
 
-        proceed_purchase_plan = True
-        wb = Workbook()
+        missing_market_lengths = sorted([dia for dia in required_diameters if dia not in market_lengths])
+        proceed_with_optimization = True
+
+        if missing_market_lengths:
+            missing_list_str = "\n".join([f"•  {d}" for d in missing_market_lengths])
+            msg_box = QMessageBox(self)
+            # Give this a specific name for more detailed styling
+            msg_box.setObjectName("warningMessageBoxWithChoices")
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle("Missing Market Lengths")
+            msg_box.setText("The following required rebar diameters have no market lengths selected:")
+            msg_box.setInformativeText(
+                f"{missing_list_str}\n\n"
+                "This will prevent the generation of the Purchase and Cutting Plan sheets.\n\n"
+                "Do you want to proceed with generating only the Cutting Lists?"
+            )
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            msg_box.setDefaultButton(QMessageBox.StandardButton.No)
+
+            if msg_box.exec() == QMessageBox.StandardButton.No:
+                return
+            proceed_with_optimization = False
+
+        all_results, splicing_ok, wb = [], True, Workbook()
         for data in all_data:
             rebars_per_fdn_type = compile_rebar(data)
             all_results.append(rebars_per_fdn_type)
             grouped_rebars_per_fdn_type = process_rebar_input(rebars_per_fdn_type)
             wb, proceed = add_sheet_cutting_list(data['name'], grouped_rebars_per_fdn_type, market_lengths, wb)
             if not proceed:
-                proceed_purchase_plan = False
+                splicing_ok = False
 
-        # add purchase plan sheet
-        if proceed_purchase_plan:
+        if proceed_with_optimization and splicing_ok:
             cuts_by_diameter = {}
             for bar in process_rebar_input(all_results):
                 dia = get_dia_code(bar['diameter'])
@@ -2083,34 +2363,27 @@ class MultiPageApp(QMainWindow):
             wb = add_shet_purchase_plan(wb, purchase_list)
             wb = add_sheet_cutting_plan(wb, cutting_plan)
 
-        # Clean up
+        # --- 4. Save and Open the Excel File ---
         wb = delete_blank_worksheets(wb)
-
-        # --- Prompt user for save location ---
         save_path, _ = QFileDialog.getSaveFileName(
-            self,
-            'Save Cutting List As',
-            'rebar_cutting_schedule.xlsx',
+            self, 'Save Cutting List As', 'rebar_cutting_schedule.xlsx',
             'Excel Files (*.xlsx);;All Files (*)'
         )
-
         if not save_path:
-            print('File save cancelled by user.')
             return
 
         try:
             wb.save(save_path)
-            print(f'Excel sheet {save_path} has been created successfully.')
         except PermissionError:
-            QMessageBox.warning(
-                self,
-                'Save Error',
-                f'Could not save the file to {os.path.basename(save_path)}.\n\n'
-                'Please ensure the file is not already open in another program and that you have permission to write to this location.'
-            )
-            return  # Stop execution if save fails
+            err_box = QMessageBox(self)
+            err_box.setObjectName("criticalMessageBox")  # Style for critical errors
+            err_box.setIcon(QMessageBox.Icon.Critical)
+            err_box.setWindowTitle("Save Error")
+            err_box.setText(f'Could not save the file to {os.path.basename(save_path)}.')
+            err_box.setInformativeText('Please ensure the file is not already open in another program.')
+            err_box.exec()
+            return
 
-        # --- Open the saved file ---
         try:
             if sys.platform == 'win32':
                 os.startfile(save_path)
@@ -2121,43 +2394,25 @@ class MultiPageApp(QMainWindow):
         except Exception as e:
             print(f'Could not open file automatically: {e}')
 
-        # --- Ask the user what to do next, with reliable button styling ---
+            # Refactor the final prompt
         msg_box = QMessageBox(self)
+        msg_box.setObjectName("questionMessageBox")  # Style for questions
         msg_box.setWindowTitle('Generation Complete')
         msg_box.setText('The cutting list has been generated and saved.')
         msg_box.setInformativeText('What would you like to do next?')
         msg_box.setIcon(QMessageBox.Icon.Question)
 
-        msg_box.setStandardButtons(QMessageBox.StandardButton.Reset | QMessageBox.StandardButton.Close)
-
-        start_over_btn = msg_box.button(QMessageBox.StandardButton.Reset)
-        start_over_btn.setText('Start Over')
-        start_over_btn.setStyleSheet("""background-color: #3498db; 
-        color: white; 
-        border: 1px solid #2980b9;
-        min-width: 90px; 
-        font-weight: bold; 
-        padding: 8px 16px; 
-        border-radius: 5px;""")
-
-        close_btn = msg_box.button(QMessageBox.StandardButton.Close)
-        close_btn.setText('Close Program')
-        close_btn.setStyleSheet("""background-color: #E1E1E1; 
-        color: #2c3e50; 
-        border: 1px solid #ADADAD;
-        min-width: 90px; 
-        font-weight: bold; 
-        padding: 8px 16px; 
-        border-radius: 5px;""")
-
+        # Keep the existing button setup, we will style them via QSS
+        start_over_btn = msg_box.addButton('Start Over', QMessageBox.ButtonRole.ResetRole)
+        close_btn = msg_box.addButton('Close Program', QMessageBox.ButtonRole.RejectRole)
         msg_box.setDefaultButton(start_over_btn)
-        reply = msg_box.exec()
 
-        if reply == QMessageBox.StandardButton.Reset:
+        msg_box.exec()
+
+        if msg_box.clickedButton() == start_over_btn:
             self.reset_application()
         else:
             self.close()
-
 
 if __name__ == '__main__':
     sys.excepthook = global_exception_hook

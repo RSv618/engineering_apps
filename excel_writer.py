@@ -661,12 +661,23 @@ def add_sheet_cutting_list(title: str, rebar_config: list[dict[str, Any]],
                 cell = ws.cell(row=current_row, column=col_num, value=value)
 
             if col_num == 5:  # Cutlength
-                max_length = max(market_lengths[get_dia_code(bar['diameter'])])
-                if value > max_length * 1000:
+                dia_code = get_dia_code(bar['diameter'])
+                # Check if market lengths are defined for this diameter
+                if dia_code in market_lengths and market_lengths[dia_code]:
+                    max_length = max(market_lengths[dia_code])
+                    if value > max_length * 1000:
+                        proceed_purchase_plan = False
+                        cell.font = Font(color='FF0000')
+                        cell.comment = Comment(
+                            f'Splicing required.\nCutting length exceeds available market length of {max_length:}m.',
+                            '✨rs_uy', height=150, width=200)
+                else:
+                    # This case handles when validation is bypassed or no lengths are available.
                     proceed_purchase_plan = False
                     cell.font = Font(color='FF0000')
-                    cell.comment = Comment(f'Splicing required.\nCutting length exceeds available market length of {max_length:}m.',
-                                           '✨rs_uy', height=150, width=200)
+                    cell.comment = Comment(
+                        f'No market length selected for this diameter ({dia_code}).\nCannot proceed with purchase plan analysis.',
+                        '✨rs_uy', height=150, width=200)
 
             # Alternating BG Color Fill
             if current_row % 2 == 0:

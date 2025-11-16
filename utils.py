@@ -1,11 +1,14 @@
 from typing import Any
+
+from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtWidgets import (
     QLabel, QApplication, QMessageBox, QWidget, QVBoxLayout, QSpinBox, QDoubleSpinBox, QPushButton, QGroupBox,
-    QLineEdit, QComboBox, QTextEdit, QCheckBox, QScrollArea
+    QLineEdit, QComboBox, QTextEdit, QCheckBox, QScrollArea, QStackedWidget
 )
 import traceback
-from PyQt6.QtGui import QPixmap, QCursor, QEnterEvent
-from PyQt6.QtCore import Qt, QEvent, pyqtSignal, QObject
+from PyQt6.QtGui import QPixmap, QCursor, QEnterEvent, QPainter, QColor
+from PyQt6.QtCore import Qt, QEvent, pyqtSignal, QObject, QPropertyAnimation, QEasingCurve, QPoint, \
+    QParallelAnimationGroup
 import re
 from typing import Literal
 import os
@@ -28,6 +31,77 @@ class GlobalWheelEventFilter(QObject):
 
         # For all other objects and events, pass them to the default implementation.
         return super().eventFilter(obj, event)
+
+class AnimatedStackedWidget(QStackedWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._animation_duration = 500  # Animation duration in milliseconds
+        self._easing_curve = QEasingCurve.Type.OutCubic
+        self._next_widget_index = -1
+        self._current_widget_index = 0
+        self._p_now = QPoint(0, 0)
+        self._p_next = QPoint(0, 0)
+        self.animation_group = QParallelAnimationGroup(self)
+        self.animation_group.finished.connect(self._animation_finished)
+
+    def set_animation_duration(self, duration):
+        self._animation_duration = duration
+
+    def set_easing_curve(self, curve):
+        self._easing_curve = curve
+
+    def setCurrentIndex(self, index):
+        if self.currentIndex() == index:
+            return
+
+        self._current_widget_index = self.currentIndex()
+        self._next_widget_index = index
+
+        current_widget = self.widget(self._current_widget_index)
+        next_widget = self.widget(self._next_widget_index)
+
+        if not current_widget or not next_widget:
+            super().setCurrentIndex(index)
+            return
+
+        offset_x = self.frameRect().width()
+        if self._current_widget_index < self._next_widget_index:
+            # Slide from right to left
+            self._p_now = QPoint(0, 0)
+            self._p_next = QPoint(offset_x, 0)
+            next_widget.setGeometry(offset_x, 0, self.width(), self.height())
+        else:
+            # Slide from left to right
+            self._p_now = QPoint(0, 0)
+            self._p_next = QPoint(-offset_x, 0)
+            next_widget.setGeometry(-offset_x, 0, self.width(), self.height())
+
+        next_widget.show()
+        next_widget.raise_()
+
+        anim_now = QPropertyAnimation(current_widget, b"pos")
+        anim_now.setStartValue(self._p_now)
+        anim_now.setEndValue(-self._p_next)
+        anim_now.setDuration(self._animation_duration)
+        anim_now.setEasingCurve(self._easing_curve)
+
+        anim_next = QPropertyAnimation(next_widget, b"pos")
+        anim_next.setStartValue(self._p_next)
+        anim_next.setEndValue(self._p_now)
+        anim_next.setDuration(self._animation_duration)
+        anim_next.setEasingCurve(self._easing_curve)
+
+        self.animation_group.clear()
+        self.animation_group.addAnimation(anim_now)
+        self.animation_group.addAnimation(anim_next)
+        self.animation_group.start()
+
+    def _animation_finished(self):
+        super().setCurrentIndex(self._next_widget_index)
+        current_widget = self.widget(self._current_widget_index)
+        if current_widget:
+            current_widget.hide()
+            current_widget.move(self._p_now)
 
 class MemoryGroupBox(QGroupBox):
     def __init__(self, title='', parent=None):
@@ -285,7 +359,7 @@ def load_stylesheet(filename):
 
     return processed_stylesheet
 
-def get_img(path: str, width: int, height: int, class_name: str = 'image_container',
+def get_img(path: str, width: int, height: int, class_name: str = 'image-container',
             alignment: Qt.AlignmentFlag = None, return_pixmap: bool = False) -> QLabel | QPixmap:
     """
     Creates a QLabel with a scaled pixmap from an image file.
@@ -687,6 +761,7 @@ def make_scrollable(widget: QWidget, always_on: bool = False) -> QScrollArea:
         The configured QScrollArea containing the widget.
     """
     scroll = QScrollArea()
+    scroll.setProperty('class', 'scroll-bar')
     scroll.setWidget(widget)
     scroll.setWidgetResizable(True)
     scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
@@ -695,3 +770,15 @@ def make_scrollable(widget: QWidget, always_on: bool = False) -> QScrollArea:
     else:
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
     return scroll
+
+def svg_to_pixmap(svg_filename: str, width: int, height: int, color: QColor) -> QPixmap:
+    renderer = QSvgRenderer(svg_filename)
+    pixmap = QPixmap(width, height)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    renderer.render(painter) # this is the destination, and only its alpha is used!
+    painter.setCompositionMode(
+        painter.CompositionMode.CompositionMode_SourceIn)
+    painter.fillRect(pixmap.rect(), color)
+    painter.end()
+    return pixmap

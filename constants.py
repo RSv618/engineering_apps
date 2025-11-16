@@ -11,8 +11,8 @@ MARKET_LENGTHS = ['6m', '7.5m', '9m', '10.5m', '12m', '13.5m', '15m']
 
 # --- UI Layout Constants ---
 # It's also good practice to centralize these so UI elements are consistent.
-FOOTING_IMAGE_WIDTH = 450
-RSB_IMAGE_WIDTH = 150
+FOOTING_IMAGE_WIDTH = 350
+RSB_IMAGE_WIDTH = 165
 STIRRUP_ROW_IMAGE_WIDTH = 80
 
 # --- Application Configuration ---

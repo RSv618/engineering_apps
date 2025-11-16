@@ -1,316 +1,410 @@
-/* =================================================================== */
-/* --- THEME & COLOR PALETTE (V3 - Final) --- */
-/* =================================================================== */
-/* --primary-color: #3498db;  (Blue for focus and accents) */
-/* --success-color: #04AA6D;  (Green for positive actions) */
-/* --danger-color:  #e74c3c;  (Red for negative actions) */
-/* --text-primary:  #2c3e50;  (Dark gray for main text) */
-/* --text-secondary:#7f8c8d;  (Lighter gray for labels/units) */
-/* --bg-color:      #f8f9fa;  (Off-white for page backgrounds) */
-/* --border-color:  #ced4da;  (A clear, visible border color) */
-/* --hover-color:   #e9ecef;  (Light gray for hover/alternating rows) */
-/* =================================================================== */
-
-/* 1. Global & Page Styles */
+/* ------------------- */
+/* -- Global Styles -- */
+/* ------------------- */
 QWidget {
-    font-family: "Segoe UI", "Calibri", sans-serif;
-    color: #2c3e50;
+    font-family: Verdana, sans-serif;
+    color: #32302c;
 }
-QWidget.page {
-    background-color: #f8f9fa;
+QFrame {
+    border: none; /* -- Remove border as default -- */
 }
-.header-0 {
-    font-size: 18pt;
-    font-weight: bold;
-    qproperty-alignment: AlignCenter;
-    padding-bottom: 10px;
+.page {
+    background-color: white;
 }
-.image_container {
-    padding: 10px;
+.bottom-nav {
+    border-top: 1px solid #eeeeec;
+    background-color: #f8f8f7;
+    padding: 5 10; /*top-bottom, left-right*/
+    min-height: 30;
+    max-height: 30;
 }
-
-.mm {
-    font-size: 8pt;
-    color: #7f8c8d;
+.separator {
+    border-top: 1px solid #e0e0e0;
 }
-
-.along {
-    qproperty-alignment: AlignLeft;
-    font-size: 8pt;
-    color: #7f8c8d;
+.scroll-content {  /* -- Content inside on the left of vertical scroll (above horizontal scroll) -- */
+    background-color: transparent;
 }
-.scroll-area {
-    background-color: qlineargradient(x1: 0, y1: 0.0, x2: 0, y2: 0.75,
-                                     stop: 0 #f8f9fa, stop: 1 #f3f3f3);
-}
-.scroll-bar-area {
-    border: 1px solid #d7d7d7;
+.scroll-bar {  /* -- Scroll Bar -- */
+    background-color: transparent;
 }
 
-/* 2. GroupBox Container Styling (Key to matching the original image) */
-QGroupBox {
-    font-weight: bold;
-    border: 1px solid #ced4da; /* The main container border */
+/* ------------------- */
+/* -- Header Styles -- */
+/* ------------------- */
+.header-1 {
+    font-optical-sizing: auto;
+    font-size: 14pt;
+    font-weight: 600;
+}
+.header-2 {
+    font-optical-sizing: auto;
+    font-size: 12pt;
+    font-weight: 600;
+}
+
+/* ------------------------------ */
+/* -- Button / CheckBox Styles -- */
+/* ------------------------------ */
+.lock-ratio {
+    max-width: 20px;
+    margin: 0 2px 0 3px;
+}
+.lock-ratio::indicator {
+    background-color: transparent;
+    width: 20px;
+    height: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 7px;
+}
+.lock-ratio::indicator:unchecked {
+    image: url(images/broken_chain_link.svg);
+}
+.lock-ratio::indicator:checked {
+    image: url(images/chain_link.svg);
+    background-color: #009580;
+    border: 1px solid #009580;
+    border-radius: 7px;
+}
+.lock-ratio::indicator:checked:hover,
+.check-box::indicator:checked:hover,
+QGroupBox::indicator:checked:hover {
+    background-color: #00b49c;
+    border: 1px solid #00b49c;
+}
+.lock-ratio::indicator:disabled,
+.check-box::indicator:disabled,
+QGroupBox::indicator:disabled,
+.green-button:disabled,
+.red-button:disabled,
+.yellow-button:disabled {
+    background-color: #E3E3E3;
+    border: 1px solid #E3E3E3;
+}
+.lock-ratio::indicator:checked:pressed,
+.check-box::indicator:checked:pressed,
+QGroupBox::indicator:checked:pressed {
+    background-color: #005548;
+    border: 1px solid #005548;
+}
+.check-box::indicator {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #e0e0e0;
     border-radius: 8px;
-    margin-top: 10px; /* Provides space for the title */
-    padding: 10px;
-    background-color: #F8F9FA;
+    }
+.check-box::indicator:checked {
+    image: url(images/checkmark.svg);
+    background-color: #009580;
+    border: 1px solid #009580;
+    border-radius: 7px;
+}
+QGroupBox::indicator {
+    margin-top: 1px;
+    width: 12px;
+    height: 12px;
+    background-color: transparent;
+    border-radius: 3px;
+}
+QGroupBox::indicator:checked {
+    image: url(images/checkmark.svg);
+    background-color: #009580;
+    border: 1px solid #009580;
+}
+QGroupBox::indicator:unchecked {
+    border: 1px solid #5d5d5d;
+}
+QGroupBox::indicator:unchecked:hover {
+    border: 1px solid #00b49c;
+}
+.remove-button, .add-button, .edit-button, .trash-button {
+    font-family: 'Courier New', 'Verdana', sans-serif;
+    font-weight: bold;
+    font-size: 10pt;
+    height: 20px;
+    width: 20px;
+    border-radius: 10px;
+}
+.edit-button {
+    image: url(images/edit-lightgrey.svg);
+    background-color: transparent;
+}
+.edit-button:hover {
+    image: url(images/edit-yellow.svg);
+}
+.edit-button:pressed {
+    image: url(images/edit-yellow-pressed.svg);
+}
+.trash-button {
+    image: url(images/trash-lightgrey.svg);
+    background-color: transparent;
+}
+.trash-button:hover {
+    image: url(images/trash-red.svg);
+}
+.trash-button:pressed {
+    image: url(images/trash-red-pressed.svg);
+}
+.next-button, .back-button {
+    qproperty-alignment: AlignCenter;
+    border-radius: 12px;
+    padding: 5 20; /*top-bottom, left-right*/
+}
+.green-button { background-color: #009580; color: white; }
+.green-button:hover { background-color: #00b49c; }
+.green-button:pressed { background-color: #005548; }
+
+.yellow-button { background-color: #ffc600; color: white; }
+.yellow-button:hover { background-color: #e7b200; }
+.yellow-button:pressed { background-color: #fff2ca; }
+
+.red-button { background-color: #ff003c; color: white; }
+.red-button:hover { background-color: #ff6a73; }
+.red-button:pressed { background-color: #97001c; }
+
+.blue-button { background-color: #0083f9; color: white; }
+.blue-button:hover { background-color: #36a4ff; }
+.blue-button:pressed { background-color: #004995; }
+
+.purple-button { background-color: #dc00ff; color: white; }
+.purple-button:hover { background-color: #ea66ff; }
+.purple-button:pressed { background-color: #7d0094; }
+
+/* ----------------- */
+/* -- Input Types -- */
+/* ----------------- */
+QGroupBox {
+    border: 1px solid white;
+    border-radius: 10px;
+    margin-top: 8px;
 }
 QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top left;
-    padding: 0 5px;
+    left: 10px; /* Move 10px from the left edge */
 }
-
-/* 3. Input Fields - Flat by Default (CORRECTED) */
 QLineEdit, QTextEdit, QComboBox, QSpinBox, QDoubleSpinBox {
-    font-size: 10pt;
-    padding: 4px 8px;
-    background-color: white;
-    border: 1px solid #ced4da; /* A subtle border to define the field */
-    border-radius: 5px;
+    padding: 2px 2px;
+    border: 1px solid #e0e0e0; /* A subtle border to define the field */
+    border-radius: 7px;
 }
-
 QLineEdit:focus, QTextEdit:focus, QComboBox:focus,
 QSpinBox:focus, QDoubleSpinBox:focus  {
-    border: 1px solid #3498db; /* A clear, blue focus ring */
+    border: 1px solid #36a4ff; /* A clear, blue focus ring */
 }
-
 QLineEdit:disabled, QTextEdit:disabled, QComboBox:disabled,
-QSpinBox:disabled, QDoubleSpinBox:disabled  {
-    background-color: #e9ecef; /* A clear, blue focus ring */
-    color: #7f8c8d;
+QSpinBox:disabled, QDoubleSpinBox:disabled {
+    background-color: #E3E3E3;
+    color: #A7A6A6;
+    border: 1px solid #E3E3E3; /* A subtle border to define the field */
 }
-
-/* Remove Arrows */
 QSpinBox::up-button, QSpinBox::down-button,
 QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
-    image: none;
+    image: none; /* Remove Arrows */
 }
-
-QSpinBox, QDoubleSpinBox  {
-    padding-left: 4px; /* A clear, blue focus ring */
-}
-
-/* --- GUARANTEED ARROW for QComboBox --- */
 QComboBox {
-    /* Padding is still needed, but it can be adjusted. */
-    padding-right: 0px;
+    padding-left: 8px;
 }
-
-/* Style the button that contains the arrow */
 QComboBox::drop-down {
-    subcontrol-origin: padding;
-    subcontrol-position: top right;
-    width: 30px; /* The width of the arrow area */
-    border: none; /* Crucial: removes the "boxy" border */
-    background: transparent; /* Ensures no background color is drawn */
+    background-color: transparent;
+    border: none;
 }
-
-QComboBox QAbstractItemView {
-    background-color: white;
-    border: 1px solid #ced4da;
-    outline: 0px;
-    selection-background-color: #007bff;
-    selection-color: white;
-}
-QComboBox QAbstractItemView::item {
-    padding: 3px; /* Applies 10px padding to all sides */
-}
-
-/* Style the actual arrow image */
 QComboBox::down-arrow {
     image: url(images/down_arrow.svg);
-    width: 20px;  /* Adjust size as needed */
-    height: 20px; /* Adjust size as needed */
+    padding-right: 8px;
+    padding-top: 1px;
 }
-
 QComboBox::down-arrow:on {
-    /* You can slightly move the arrow to give a "pressed" feel */
-    top: 1px;
+    top: 2px;
 }
-
-/* 4. Unified Button Styles */
-QPushButton {
+QComboBox, QComboBox QAbstractItemView {
+    color: #5d5d5d;
+}
+QComboBox QAbstractItemView {
     border: none;
-    padding: 8px 16px;
-    font-size: 10pt;
+    outline: 0px; /* Prevents the highlight due to keyboard */
+}
+QComboBox QAbstractItemView::item {
+    height: 25px;
+    padding-left: 5px;
+    border-left: 1px solid #eeeeec;
+    border-right: 1px solid #eeeeec;
+    border-bottom: 1px solid #eeeeec;
+    background-color: transparent;
+}
+QComboBox QAbstractItemView::item:selected {
+    background-color: #f8f8f7;
+    color: #5d5d5d;
+    border-left: 1px solid #f8f8f7;
+    border-right: 1px solid #f8f8f7;
+    border-bottom: 1px solid #f8f8f7;
+}
+
+/* --------------------- */
+/* -- Foundation Page -- */
+/* --------------------- */
+.panel {
+    background-color: #f8f8f7;
+    padding-left: 10;
+    padding-right: 10;
+    border-right: 1px solid #eeeeec;
+}
+.panel-title-widget {
+    padding: 10 3 10 5;
+    min-height: 25;
+}
+.panel-title-widget QLabel {
+    padding-right: 5; /* space between title and add-button */
+}
+.detail-panel {
+}
+.detail-content {
+    background-color: white;
+    padding: 30 60; /*top-bottom, left-right*/
+}
+.detail-header {
     font-weight: bold;
-    border-radius: 5px;
-    min-height: 18px;
-    qproperty-autoDefault: true;
+    font-size: 11pt;
 }
-QPushButton:disabled { background-color: #E5E5E5; color: #7f8c8d; }
+.detail-form-name {
+    qproperty-alignment: AlignTop;
+    padding-left: 10;
+    color: #5d5d5d;
+}
+.detail-form-value {
+    padding-left: 20;
+    color: #5d5d5d;
+    qproperty-alignment: AlignTop;
+}
+.list-item {
+    border-radius: 15;
+    min-height: 30;
+    padding: 0 10; /*top-bottom, left-right*/
+    margin: 1; /* gap between each item */
+}
+.list-item:hover {
+    background-color: #e4e4e2;
+}
+.list-item-selected {
+    background-color: #e4e4e2;
+}
+.list-item-label {
+    color: #5d5d5d;
+}
 
-/* --- Special styling for small +/- buttons --- */
-/* Use an object name to target them specifically in the .py code */
-.green-button { background-color: #04AA6D; color: white; }
-.green-button:hover { background-color: #059862; }
-.green-button:pressed { background-color: #048258; }
-
-.yellow-button { background-color: #FF9900; color: white; }
-.yellow-button:hover { background-color: #FFCC33; }
-.yellow-button:pressed { background-color: #FFCC00; }
-
-.red-button { background-color: #e74c3c; color: white; }
-.red-button:hover { background-color: #d63031; }
-.red-button:pressed { background-color: #c92829; }
-
-.add-button, .remove-button {
-    font-family: "Courier New", "Verdana", sans-serif;
-    font-size: 10pt;
-    font-weight: bold;
-    padding: 0;
-    margin: 0;
-    width: 20px;
-    height: 20px;
-    border-radius: 10px; /* Make it circular */
+/* ------------------ */
+/* -- Footing Page -- */
+/* ------------------ */
+.footing-content {
+    max-width: 350;
+    padding: 10 0; /*top-bottom, left-right*/
+}
+.footing-content-name {
     qproperty-alignment: AlignCenter;
+    border-radius: 9;
 }
-
-/* 5. Check Boxes */
-QCheckBox::indicator {
-    border: 1px solid #ced4da;
-    border-radius: 5px;
-    width: 20px;
-    height: 20px;
-    background-color: white; /* Explicitly set a background for the unchecked state */
+.footing-title-label {
     qproperty-alignment: AlignCenter;
+    color: #A7A6A6;
+    padding-top: 2px;
 }
-
-/* --- Hover Effects --- */
-
-/* Style for hovering over an UNCHECKED checkbox */
-QCheckBox::indicator:unchecked:hover {
-    border: 1px solid #a8b0b7; /* A slightly darker border color */
+.footing-form-name {
+    /*color: #5d5d5d;*/
 }
-
-/* Style for hovering over a CHECKED checkbox */
-QCheckBox::indicator:checked:hover {
-    background-color: #059862; /* A slightly darker green */
-    border: 1px solid #059862;
+.footing-form-value {
+    color: #5d5d5d;
+    margin: 2px 0; /*top-bottom, left-right*/
 }
-
-/* Underline the text label on hover for better feedback */
-QCheckBox:hover {
-    cursor: pointing-hand;
-}
-
-
-/* --- Checked State --- */
-
-QCheckBox::indicator:checked {
-    background-color: #04AA6D;
-    border: 1px solid #04AA6D;
-    /*
-       Assumes you have a white SVG checkmark icon in a Qt resource file (.qrc)
-       under the alias 'checkmark'.
-       Replace ':/icons/checkmark.svg' with the actual path to your icon.
-    */
-    image: url(images/checkmark.svg);
-}
-
-QCheckBox.lock-ratio::indicator:checked {
-    image: url(images/chain_link.svg);
-}
-
-QCheckBox.lock-ratio::indicator:unchecked {
-    image: url(images/broken_chain_link.svg);
-}
-
-/* --- Disabled State (Optional but Recommended) --- */
-
-QCheckBox::indicator:disabled {
-    background-color: #e9ecef; /* Light gray background */
-    border: 1px solid #ced4da;
-}
-
-QCheckBox::indicator:checked:disabled {
-    background-color: #a3e9d1; /* A muted green */
-    border: 1px solid #a3e9d1;
-    /* You may want a grayed-out version of the checkmark here */
-}
-
-/* 5. Page-Specific Styles */
 .footing-variable {
-    color: #e74c3c; /* Keep red as per original design */
+    color: #ff003c;
+    padding: 0 5; /*top-bottom, left-right*/
     font-weight: bold;
-    qproperty-alignment: AlignCenter;
 }
-.rsb-qty-each-way {
-    max-width: 120px;
-    padding-right: 0;
+
+/* -------------- */
+/* -- RSB Page -- */
+/* -------------- */
+#rsbScrollContent {
+    padding: 20 10 5 20;  /* outer padding */
+    max-width: 400px;
+    background-color: transparent;
+}
+#rsbScrollContent QGroupBox {
+    border: none;
+    color: #32302c;
+    font-optical-sizing: auto;
+    font-size: 10pt;
+    font-weight: 600;
+    padding-top: 15px;
+    margin-top: 20px;
+    margin-bottom: 40px;
+}
+#rsbScrollContent QTextEdit, #rsbScrollContent QLineEdit,
+#rsbScrollContent QSpinBox, #rsbScrollContent QDoubleSpinBox {
+    color: #5d5d5d;
 }
 .rsb-forms-label {
-    qproperty-alignment: 'AlignVCenter | AlignLeft';
     padding-left: 5px;
+    color: #5d5d5d;
 }
-.rsb-layers-label {
-    min-width: 70px;
+#rsbScrollContent .image-container {
+    margin-right: 5px;
 }
-.rsb-spacing-text-edit {
-    max-height: 80px
+.along {
+    color: #A7A6A6;
+    padding-left: 5px;
+    font-size: 8pt;
+    qproperty-alignment: AlignTop;
 }
-.stirrup-header {
-    font-style: italic;
-    color: #7f8c8d;
+.rsb-stirrup-canvas {
+    min-height: 200px;
 }
-.stirrup-row {
-    background-color: white;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    padding: 3px;
-    margin: 0;
-    min-height: 110px;
-}
-.stirrup-canvas {
-    min-height: 150px;
-}
-.separator {
-    color: #ced4da;
+.rsb-stirrup-row-container {
+    background-color: #f8f8f7;
+    border: 1px solid #eeeeec;
+    border-radius: 10px;
     padding: 10px;
 }
-QGroupBox[checkedState="unchecked"] QLabel {
-    color: #b0bec5; /* A muted, light gray color for disabled labels */
-}
-/* General style for the checkbox part of a GroupBox title */
-QGroupBox::indicator {
-    border: 1px solid #ced4da;
-    border-radius: 5px;
-    width: 13px;
-    height: 13px;
+.rsb-stirrup-row {
     background-color: white;
-
+    border: 1px solid #eeeeec;
+    border-radius: 7px;
+    padding: 10px;
+}
+.rsb-stirrup-header {
+    padding-bottom: 10px;
+    font-style: italic;
+    color: #5d5d5d;
+    padding-left: 15px;
+}
+.rsb-stirrup-row-container .rsb-stirrup-header {
+    padding-left: 5px; /* counter-act the accumulated left-padding */
 }
 
-/* When the GroupBox is checked */
-QGroupBox::indicator:checked {
-    background-color: #04AA6D;
-    border: 1px solid #04AA6D;
-    image: url(images/checkmark.svg); /* Use your existing checkmark */
-}
-
-/* Hover effect on the indicator */
-QGroupBox::indicator:hover {
-    border-color: #3498db; /* Blue accent on hover */
-}
-
-/* Optional: Different look for when it's unchecked */
-QGroupBox::indicator:unchecked {
-    background-color: #f8f9fa; /* Light background */
-}
-
-/* --- Market Lengths Page --- */
-.grid-cell {
-    border-right: 1px solid #dfe4ea;
-    border-bottom: 1px solid #dfe4ea;
-    background-color: #ffffff;
+/* ------------------------- */
+/* -- Market Lengths Page -- */
+/* ------------------------- */
+.non-header-cell {
+    background-color: white;
+    padding: 4px;
 }
 .alternate-row-cell {
-    background-color: #f8f9fa; /* --bg-color */
+    background-color: #f8f8f7; /* --bg-color */
+}
+#marketLengthsPage .header-1 {
+    padding-bottom: 5px;
+}
+#marketLengthsPage .market-lengths-container {
+    padding-left: 10px;
+    padding-right: 10px;
 }
 .header-cell {
-    background-color: #e9ecef;
+    background-color: #009580;
+}
+.header-row-cell {
+    border-top: 1px solid #eeeeec;
+}
+.header-column-cell {
+    border-left: 1px solid #eeeeec;
 }
 .clickable-row-header {
     width: 60px;
@@ -318,116 +412,134 @@ QGroupBox::indicator:unchecked {
 .clickable-column-header {
     width: 40px;
 }
+.clickable-header {
+    color: white;
+    border: none;
+    padding: 5 10; /*top-bottom, left-right*/
+}
 .clickable-header:hover {
-    background-color: #dfe4ea;
+    background-color: #00b49c;
+    color: white;
 }
 .clickable-header:pressed {
-    background-color: #ced4da;
-}
-.market-header-label {
-    font-weight: bold;
+    background-color: #005548;
+    color: white;
 }
 
-/* --- POP UP Info --- */
-#infoPopup {
-    background-color: #fff;
+/* -------------------------- */
+/* -- Custom Dialog Styles -- */
+/* -------------------------- */
+
+/* A. Base style for all custom dialogs */
+QDialog#marketLengthInputDialog,
+QDialog#marketLengthRemoveDialog,
+QMessageBox#infoMessageBox,
+QMessageBox#warningMessageBox,
+QMessageBox#criticalMessageBox,
+QMessageBox#warningMessageBoxWithChoices,
+QMessageBox#questionMessageBox {
+    background-color: #f8f8f7;
 }
 
-/* --- Summary Page --- */
-.summary-label {
-    font-weight: bold;
-    color: #2c3e50; /* --text-primary */
-}
-.summary-label-2 {
-    qproperty-alignment: AlignTop;
-    padding-left: 15px; /* Indent sub-labels */
-    margin: 0;
-    font-style: italic;
-    color: #7f8c8d; /* --text-secondary */
-}
-.summary-value {
-    color: #2c3e50; /* --primary-color */
-    font-style: normal;
+/* B. Base style for labels and buttons in dialogs */
+#marketLengthInputDialog QLabel,
+#marketLengthRemoveDialog QLabel,
+#infoMessageBox QLabel,
+#warningMessageBox QLabel,
+#criticalMessageBox QLabel,
+#warningMessageBoxWithChoices QLabel,
+#questionMessageBox QLabel {
+    color: #32302c;
+    font-size: 8pt;
 }
 
-.invalid-input {
-    border: 1px solid red;
-    background-color: #ffe6e6; /* Light red background */
-}
-
-/* 1. This styles the outer QFrame, giving it the nice border */
-.detail-panel {
-    background-color: #FFFFFF; /* The solid white background */
-    border-radius: 8px;
-    border: 1px solid #ced4da; /* The soft grey border from your theme */
-}
-
-/* 2. This styles the QScrollArea to be invisible */
-.detail-scroll-area {
-    background-color: transparent; /* Makes the scroll area itself see-through */
-    border: none;                  /* Removes any default border */
-}
-
-/* 3. This styles the actual content widget INSIDE the scroll area */
-.detail-content {
-    background-color: transparent; /* Also see-through, showing the panel's white */
-}
-
-/* 4. This styles the placeholder text */
-.detail-placeholder {
-    color: #7f8c8d;
-    font-size: 14px;
-}
-
-/* Style for the new section headers in the detail panel */
-.detail-header {
-    font-size: 11pt;
-    font-weight: bold;
-    color: #e74c3c; /* Your theme's primary blue color */
-    padding-bottom: 4px;
-    padding-left: 0;
-    margin-top: 10px; /* Space above the header */
-}
-
-/*
- * ===============================================
- * List Item Styling (THEME-CORRECTED)
- * ===============================================
- */
-
-/* Base style for each foundation item in the list */
-.list-item {
-    min-height: 35px;
-    border-bottom: 1px solid #e9ecef; /* A clean border to create a "cell" */
-}
-
-/* Style for the item when the mouse is hovering over it */
-.list-item:hover {
-    background-color: #e9ecef; /* Use your theme's hover color */
-}
-
-/* Style for the currently selected item */
-.list-item.selected {
-    background-color: #ffffff; /* A very light blue for the background */
-}
-.scroll-area-panel {
-}
-.scroll-bar-area-panel {
-    background-color: transparent
-}
-
-/*
- * ===============================================
- * Icon Button Styling (REFINED)
- * ===============================================
- */
-
-/* This class styles icon-only buttons */
-.icon-button {
-    min-width: 20px;
-    max-width: 20px;
+#marketLengthInputDialog QPushButton,
+#marketLengthRemoveDialog QPushButton,
+#infoMessageBox QPushButton,
+#warningMessageBox QPushButton,
+#criticalMessageBox QPushButton,
+#warningMessageBoxWithChoices QPushButton,
+#questionMessageBox QPushButton {
+    min-width: 40px;
     min-height: 20px;
-    max-height: 20px;
-    padding: 0px;
-    border-radius: 10px; /* Make it circular */
+    border-radius: 12px;
+    font-weight: bold;
+    padding: 5px 16px;
+    margin-top: 10px;
+}
+
+/* C. Specific Input Field Styles */
+#marketLengthInputDialog QDoubleSpinBox,
+#marketLengthRemoveDialog QComboBox {
+    background-color: white;
+    border: 1px solid #cccccc;
+    border-radius: 7px;
+    padding: 5px;
+    font-size: 8pt;
+    margin-top: 5px;
+}
+#marketLengthInputDialog QDoubleSpinBox:focus,
+#marketLengthRemoveDialog QComboBox:focus {
+    border: 1px solid #0083f9;
+}
+
+/* D. Custom Button Styles for Each Dialog Type */
+
+/* OK/Cancel for Input Dialogs */
+#marketLengthInputDialog QPushButton[text="OK"],
+#marketLengthRemoveDialog QPushButton[text="OK"] {
+    background-color: #009580; color: white;
+}
+#marketLengthInputDialog QPushButton[text="OK"]:hover,
+#marketLengthRemoveDialog QPushButton[text="OK"]:hover {
+    background-color: #00b49c;
+}
+
+#marketLengthInputDialog QPushButton[text="Cancel"],
+#marketLengthRemoveDialog QPushButton[text="Cancel"] {
+    background-color: #E1E1E1; color: #2c3e50; border: 1px solid #ADADAD;
+}
+#marketLengthInputDialog QPushButton[text="Cancel"]:hover,
+#marketLengthRemoveDialog QPushButton[text="Cancel"]:hover {
+    background-color: #d1d1d1;
+}
+
+/* Yes/No for WarningWithChoices */
+#warningMessageBoxWithChoices QPushButton[text="&Yes"] {
+    background-color: #ff003c; color: white;
+}
+#warningMessageBoxWithChoices QPushButton[text="&Yes"]:hover {
+    background-color: #ff6a73;
+}
+#warningMessageBoxWithChoices QPushButton[text="&No"] {
+    background-color: #009580; color: white;
+}
+#warningMessageBoxWithChoices QPushButton[text="&No"]:hover {
+    background-color: #00b49c;
+}
+
+/* Custom buttons for QuestionMessageBox */
+#questionMessageBox QPushButton[text="Start Over"] {
+    background-color: #3498db; color: white;
+}
+#questionMessageBox QPushButton[text="Start Over"]:hover {
+    background-color: #5dade2;
+}
+#questionMessageBox QPushButton[text="Close Program"] {
+    background-color: #E1E1E1; color: #2c3e50; border: 1px solid #ADADAD;
+}
+#questionMessageBox QPushButton[text="Close Program"]:hover {
+    background-color: #d1d1d1;
+}
+
+/* Simple OK button for info/warning/error boxes */
+#infoMessageBox QPushButton,
+#warningMessageBox QPushButton,
+#criticalMessageBox QPushButton {
+    background-color: #0083f9; color: white;
+}
+#infoMessageBox QPushButton:hover,
+#warningMessageBox QPushButton:hover,
+#criticalMessageBox QPushButton:hover {
+    background-color: #36a4ff;
 }
