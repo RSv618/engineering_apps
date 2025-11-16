@@ -316,7 +316,8 @@ class FoundationDetailsDialog(QDialog):
     """
     A modal dialog with multiple pages to enter or edit details for a foundation type.
     """
-    def __init__(self, existing_details: dict = None, parent=None):
+    def __init__(self, existing_details: dict = None, parent=None,
+                 existing_names: list[str] = None):
         """Initializes the multi-page dialog."""
         super().__init__(parent)
         self.setWindowTitle('Foundation Details')
@@ -342,6 +343,7 @@ class FoundationDetailsDialog(QDialog):
         self.stirrup_rows_layout = None
         self.remove_stirrup_button = None
         self.info_popup = InfoPopup(self)
+        self.existing_names = existing_names if existing_names is not None else []
 
         # Redraw debounce
         self.debounce_timer = QTimer(self)
@@ -361,6 +363,10 @@ class FoundationDetailsDialog(QDialog):
 
         # Pre-fill fields if editing existing data
         if existing_details:
+            # If editing, remove its own name from the list of names to check against
+            current_name = existing_details.get('name', '')
+            if current_name in self.existing_names:
+                self.existing_names.remove(current_name)
             self.populate_data(existing_details)
             self.update_stirrup_drawing()
         else:
@@ -376,16 +382,16 @@ class FoundationDetailsDialog(QDialog):
         page_layout.setSpacing(0)
 
         content_frame = QFrame()
-        content_frame.setProperty('class', 'footing-content')
+        content_frame.setObjectName('footingPageContent')
         content_layout = QVBoxLayout(content_frame)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
 
         # Name
         label = QLabel('Foundation Type')
-        label.setProperty('class', 'footing-title-label')
+        label.setProperty('class', 'subtitle')
         name = QLineEdit()
-        name.setProperty('class', 'footing-content-name header-1')
+        name.setProperty('class', 'header-1')
         content_layout.addWidget(name)
         content_layout.addWidget(label)
         self.widgets['name'] = name
@@ -403,7 +409,7 @@ class FoundationDetailsDialog(QDialog):
 
         # Pedestal Per Footing
         ped_per_footing = QSpinBox()
-        ped_per_footing.setProperty('class', 'footing-form-value')
+        ped_per_footing.setProperty('class', 'form-value')
         ped_per_footing.setRange(1, 4)
         image_map = {
             '1': resource_path('images/label_1ped.png'),
@@ -412,7 +418,7 @@ class FoundationDetailsDialog(QDialog):
             '4': resource_path('images/label_4ped.png')
         }
         label = QLabel('Pedestal Per Footing:')
-        label.setProperty('class', 'footing-form-name')
+        label.setProperty('class', 'form-label')
         form_layout.addWidget(label, 1, 0, 1, 2)
         form_layout.addWidget(ped_per_footing, 1, 2, 1, 2)
         ped_per_footing.valueChanged.connect(
@@ -422,18 +428,18 @@ class FoundationDetailsDialog(QDialog):
 
         # Total Number of Footing
         n_footing = BlankSpinBox(1, 9_999, 1)
-        n_footing.setProperty('class', 'footing-form-value')
+        n_footing.setProperty('class', 'form-value')
         label = QLabel('Total Number of Footing:')
-        label.setProperty('class', 'footing-form-name')
+        label.setProperty('class', 'form-label')
         form_layout.addWidget(label, 2, 0, 1, 2)
         form_layout.addWidget(n_footing, 2, 2, 1, 2)
         self.widgets['n_footing'] = n_footing
 
         # Concrete Cover
         cc = BlankSpinBox(1, 999, 75, suffix=' mm')
-        cc.setProperty('class', 'footing-form-value')
+        cc.setProperty('class', 'form-value')
         label = QLabel('Concrete Cover:')
-        label.setProperty('class', 'footing-form-name')
+        label.setProperty('class', 'form-label')
         form_layout.addWidget(label, 3, 0, 1, 2)
         form_layout.addWidget(cc, 3, 2, 1, 2)
         self.widgets['cc'] = cc
@@ -441,22 +447,22 @@ class FoundationDetailsDialog(QDialog):
         # Pedestal Width
         ped_width_x = BlankSpinBox(0, 99_999, suffix=' mm')
         ped_width_y = BlankSpinBox(0, 99_999, suffix=' mm')
-        ped_width_x.setProperty('class', 'footing-form-value')
-        ped_width_y.setProperty('class', 'footing-form-value')
+        ped_width_x.setProperty('class', 'form-value')
+        ped_width_y.setProperty('class', 'form-value')
         ped_link_checkbox = LinkSpinboxes(ped_width_x, ped_width_y, 'Keep square')
         label = QLabel('Pedestal Width (Along X)')
-        label.setProperty('class', 'footing-form-name')
+        label.setProperty('class', 'form-label')
         form_layout.addWidget(label, 4, 0)
         variable = QLabel('bx')
-        variable.setProperty('class', 'footing-variable')
+        variable.setProperty('class', 'variable-label')
         form_layout.addWidget(label, 4, 0)
         form_layout.addWidget(variable, 4, 1)
         form_layout.addWidget(ped_width_x, 4, 2, 1, 2)
         label = QLabel('Pedestal Width (Along Y)')
-        label.setProperty('class', 'footing-form-name')
+        label.setProperty('class', 'form-label')
         form_layout.addWidget(label, 5, 0)
         variable = QLabel('by')
-        variable.setProperty('class', 'footing-variable')
+        variable.setProperty('class', 'variable-label')
         form_layout.addWidget(label, 5, 0)
         form_layout.addWidget(variable, 5, 1)
         form_layout.addWidget(ped_width_y, 5, 2)
@@ -466,12 +472,12 @@ class FoundationDetailsDialog(QDialog):
 
         # Pedestal Height
         ped_height = BlankSpinBox(0, 999_999, suffix=' mm')
-        ped_height.setProperty('class', 'footing-form-value')
+        ped_height.setProperty('class', 'form-value')
         label = QLabel('Pedestal Height')
-        label.setProperty('class', 'footing-form-name')
+        label.setProperty('class', 'form-label')
         form_layout.addWidget(label, 6, 0)
         variable = QLabel('h')
-        variable.setProperty('class', 'footing-variable')
+        variable.setProperty('class', 'variable-label')
         form_layout.addWidget(label, 6, 0)
         form_layout.addWidget(variable, 6, 1)
         form_layout.addWidget(ped_height, 6, 2, 1, 2)
@@ -480,22 +486,22 @@ class FoundationDetailsDialog(QDialog):
         # Pad Width
         pad_width_x = BlankSpinBox(0, 999_999, suffix=' mm')
         pad_width_y = BlankSpinBox(0, 999_999, suffix=' mm')
-        pad_width_x.setProperty('class', 'footing-form-value')
-        pad_width_y.setProperty('class', 'footing-form-value')
+        pad_width_x.setProperty('class', 'form-value')
+        pad_width_y.setProperty('class', 'form-value')
         pad_link_checkbox = LinkSpinboxes(pad_width_x, pad_width_y, 'Keep square')
         label = QLabel('Pad Width (Along X)')
-        label.setProperty('class', 'footing-form-name')
+        label.setProperty('class', 'form-label')
         form_layout.addWidget(label, 7, 0)
         variable = QLabel('Bx')
-        variable.setProperty('class', 'footing-variable')
+        variable.setProperty('class', 'variable-label')
         form_layout.addWidget(label, 7, 0)
         form_layout.addWidget(variable, 7, 1)
         form_layout.addWidget(pad_width_x, 7, 2, 1, 2)
         label = QLabel('Pad Width (Along Y)')
-        label.setProperty('class', 'footing-form-name')
+        label.setProperty('class', 'form-label')
         form_layout.addWidget(label, 8, 0)
         variable = QLabel('By')
-        variable.setProperty('class', 'footing-variable')
+        variable.setProperty('class', 'variable-label')
         form_layout.addWidget(label, 8, 0)
         form_layout.addWidget(variable, 8, 1)
         form_layout.addWidget(pad_width_y, 8, 2)
@@ -505,12 +511,12 @@ class FoundationDetailsDialog(QDialog):
 
         # Pad thickness
         pad_thickness = BlankSpinBox(0, 99_999, suffix=' mm')
-        pad_thickness.setProperty('class', 'footing-form-value')
+        pad_thickness.setProperty('class', 'form-value')
         label = QLabel('Pad Thickness')
-        label.setProperty('class', 'footing-form-name')
+        label.setProperty('class', 'form-label')
         form_layout.addWidget(label, 9, 0)
         variable = QLabel('t')
-        variable.setProperty('class', 'footing-variable')
+        variable.setProperty('class', 'variable-label')
         form_layout.addWidget(label, 9, 0)
         form_layout.addWidget(variable, 9, 1)
         form_layout.addWidget(pad_thickness, 9, 2, 1, 2)
@@ -573,9 +579,10 @@ class FoundationDetailsDialog(QDialog):
             row_1.setContentsMargins(0, 0, 0, 0)
             row_1.setSpacing(0)
             label = QLabel('Diameter:')
-            label.setProperty('class', 'rsb-forms-label')
+            label.setProperty('class', 'form-label')
             bar_size = QComboBox()
             bar_size.addItems(BAR_DIAMETERS)
+            bar_size.setProperty('class', 'form-value')
             size_policy = bar_size.sizePolicy()
             size_policy.setHorizontalPolicy(QSizePolicy.Policy.Expanding)
             bar_size.setSizePolicy(size_policy)
@@ -586,7 +593,7 @@ class FoundationDetailsDialog(QDialog):
             # Row 1: ComboBox
             input_type = QComboBox()
             input_type.addItems(['Quantity', 'Spacing'])
-            input_type.setObjectName('rsbInputType')
+            input_type.setProperty('class', 'form-label')
             form_layout.addWidget(input_type)
 
             # Row 2: Inputs
@@ -595,6 +602,8 @@ class FoundationDetailsDialog(QDialog):
             row_3.setSpacing(3)
             value_along_x = BlankSpinBox(0, 99_999, suffix=' pcs')
             value_along_y = BlankSpinBox(0, 99_999, suffix=' pcs')
+            value_along_x.setProperty('class', 'form-value')
+            value_along_y.setProperty('class', 'form-value')
             row_3.addWidget(value_along_x)
             row_3.addWidget(value_along_y)
             form_layout.addLayout(row_3)
@@ -604,11 +613,11 @@ class FoundationDetailsDialog(QDialog):
             row_4.setContentsMargins(0, 0, 0, 0)
             row_4.setSpacing(0)
             along_x_label = QLabel('Along X')
-            along_x_label.setProperty('class', 'along')
+            along_x_label.setProperty('class', 'subtitle')
             left_along_layout = QHBoxLayout()
             left_along_layout.setContentsMargins(0,0,0,0)
             along_y_label = QLabel('Along Y')
-            along_y_label.setProperty('class', 'along')
+            along_y_label.setProperty('class', 'subtitle')
             right_along_layout = QHBoxLayout()
             right_along_layout.setContentsMargins(0,0,0,0)
             right_along_layout.setSpacing(0)
@@ -623,12 +632,8 @@ class FoundationDetailsDialog(QDialog):
             row_4.addLayout(right_along_layout)
             form_layout.addLayout(row_4)
 
-            v_layout = QVBoxLayout()
-            v_layout.setContentsMargins(0,0,0,0)
-            v_layout.setSpacing(3)
-            v_layout.addLayout(form_layout)
-            v_layout.addStretch()
-            section_layout.addLayout(v_layout)
+            # Add to main layout
+            section_layout.addLayout(form_layout)
 
             # --- Store controls for later data retrieval and manipulation ---
             self.widgets[title] = {
@@ -670,32 +675,36 @@ class FoundationDetailsDialog(QDialog):
             # Row 0: Diameter
             bar_size = QComboBox()
             bar_size.addItems(BAR_DIAMETERS)
+            bar_size.setProperty('class', 'form-value')
             size_policy = bar_size.sizePolicy()
             size_policy.setHorizontalPolicy(QSizePolicy.Policy.Expanding)
             bar_size.setSizePolicy(size_policy)
             label = QLabel('Diameter:')
-            label.setProperty('class', 'rsb-forms-label')
+            label.setProperty('class', 'form-label')
             form_layout.addRow(label, bar_size)
 
             # Row 1: Qty
             qty = BlankSpinBox(0, 99_999, suffix=' pcs')
+            qty.setProperty('class', 'form-value')
             label = QLabel('Quantity:')
-            label.setProperty('class', 'rsb-forms-label')
+            label.setProperty('class', 'form-label')
             form_layout.addRow(label, qty)
 
             # Row 2: Hook Calculation
             calculation = QComboBox()
             calculation.addItems(['Automatic', 'Manual'])
+            calculation.setProperty('class', 'form-value')
             label = HoverLabel('Hook Calculation:')
-            label.setProperty('class', 'rsb-forms-label')
+            label.setProperty('class', 'form-label')
             label.mouseEntered.connect(self.show_hook_info)
             label.mouseLeft.connect(self.info_popup.hide)
             form_layout.addRow(label, calculation)
 
             # Row 3: Hook Length (Label)
             hook_length_label = QLabel('Hook Length:')
-            hook_length_label.setProperty('class', 'rsb-forms-label')
+            hook_length_label.setProperty('class', 'form-label')
             hook_length = BlankSpinBox(0, 99_999, suffix=' mm')
+            hook_length.setProperty('class', 'form-value')
             form_layout.addRow(hook_length_label, hook_length)
 
             # Connect the combo box's signal to our new function
@@ -746,24 +755,26 @@ class FoundationDetailsDialog(QDialog):
             # Row 0: Diameter
             bar_size = QComboBox()
             bar_size.addItems(BAR_DIAMETERS)
+            bar_size.setProperty('class', 'form-value')
             diameter_label = QLabel('Diameter:')
-            diameter_label.setProperty('class', 'rsb-forms-label')
+            diameter_label.setProperty('class', 'form-label')
             form_layout.addRow(diameter_label, bar_size)
 
             # Row 1: Layers
             layers = QComboBox()
             layers.addItems(['1', '2', '3', '4', '5'])  # Add None if needed
+            layers.setProperty('class', 'form-value')
             size_policy = layers.sizePolicy()
             size_policy.setHorizontalPolicy(QSizePolicy.Policy.Expanding)
             layers.setSizePolicy(size_policy)
             layers_label = QLabel('Layers:')
-            layers_label.setProperty('class', 'rsb-forms-label rsb-layers-label')
+            layers_label.setProperty('class', 'form-label')
             form_layout.addRow(layers_label, layers)
 
             # --- Add the right side to the main layout ---
             section_layout.addLayout(form_layout)
             self.widgets[title] = {'Diameter': bar_size,
-                                   'Layers': layers, }
+                                   'Layers': layers}
 
             # noinspection PyUnresolvedReferences
             layers.currentTextChanged.connect(
@@ -778,7 +789,7 @@ class FoundationDetailsDialog(QDialog):
             group_box = MemoryGroupBox(title)
             main_layout = QVBoxLayout(group_box)
             main_layout.setContentsMargins(0, 0, 0, 0)
-            main_layout.setSpacing(5)
+            main_layout.setSpacing(0)
 
             # Initialize
             self.widgets[title] = {'Types': []}
@@ -789,18 +800,18 @@ class FoundationDetailsDialog(QDialog):
             spacing_layout.setSpacing(0)
 
             # --- Image (Left side) ---
-            canvas_container = QVBoxLayout()
-            canvas_container.setContentsMargins(0, 0, 0, 0)
-            canvas_container.setSpacing(0)
+            canvas_layout = QVBoxLayout()
+            canvas_layout.setContentsMargins(0, 0, 0, 0)
+            canvas_layout.setSpacing(0)
             label = HoverLabel('Spacing Per Bundle')
-            label.setProperty('class', 'rsb-stirrup-header')
+            label.setObjectName('rsbPageSpacingHeader')
             label.mouseEntered.connect(self.show_spacing_header_info)
             label.mouseLeft.connect(self.info_popup.hide)
-            canvas_container.addWidget(label)
+            canvas_layout.addWidget(label)
             self.stirrup_canvas = DrawStirrup(image_width)
-            self.stirrup_canvas.setProperty('class', 'rsb-stirrup-canvas')
-            canvas_container.addWidget(self.stirrup_canvas)
-            spacing_layout.addLayout(canvas_container)
+            self.stirrup_canvas.setProperty('class', 'drawing-canvas')
+            canvas_layout.addWidget(self.stirrup_canvas)
+            spacing_layout.addLayout(canvas_layout)
 
             # --- Container for the right side controls ---
             form_layout = QFormLayout()
@@ -808,31 +819,26 @@ class FoundationDetailsDialog(QDialog):
             form_layout.setSpacing(3)
 
             # Row 0: Start From
+            extent_label = HoverLabel('Start From:')
+            extent_label.setProperty('class', 'form-label')
             start_from = QComboBox()
             start_from.addItems(['From Face of Pad', 'From Bottom Bar', 'From Top'])
-            extent_label = HoverLabel('Start From:')
-            extent_label.setProperty('class', 'rsb-forms-label')
+            start_from.setProperty('class', 'form-value')
             extent_label.mouseEntered.connect(self.show_spacing_extent_info)
             extent_label.mouseLeft.connect(self.info_popup.hide)
             form_layout.addRow(extent_label, start_from)
 
             # Row 1: Spacing
-            spacing = QTextEdit()
-            spacing.setProperty('class', 'rsb-spacing-text-edit')
-            spacing.setPlaceholderText('Example: 1@50, 5@80, rest@100')
-            spacing.textChanged.connect(self.debounce_timer.start)
             spacing_label = HoverLabel('Spacing:')
-            spacing_label.setProperty('class', 'rsb-forms-label')
+            spacing_label.setProperty('class', 'form-label')
+            spacing = QTextEdit()
+            spacing.setProperty('class', 'form-value')
+            spacing.setPlaceholderText('Example: 1@50, 5@80, rest@100')
             spacing_label.mouseEntered.connect(self.show_spacing_info)
             spacing_label.mouseLeft.connect(self.info_popup.hide)
+            spacing.textChanged.connect(self.debounce_timer.start)
             form_layout.addRow(spacing_label, spacing)
-
-            form_container = QVBoxLayout()
-            form_container.setContentsMargins(0, 0, 0, 0)
-            form_container.setSpacing(0)
-            form_container.addLayout(form_layout)
-            form_container.addStretch()
-            spacing_layout.addLayout(form_container)
+            spacing_layout.addLayout(form_layout)
 
             # Store
             self.widgets[title]['Extent'] = start_from
@@ -844,11 +850,13 @@ class FoundationDetailsDialog(QDialog):
             bundle_layout.setSpacing(0)
 
             # --- Button Layout for adding/removing rows ---
-            add_remove_layout = QHBoxLayout()
-            add_remove_layout.setContentsMargins(0, 0, 0, 10)
-            add_remove_layout.setSpacing(4)
+            title_row_container = QFrame()
+            title_row_container.setProperty('class', 'title-row')
+            title_row_layout = QHBoxLayout(title_row_container)
+            title_row_layout.setContentsMargins(0, 0, 0, 0)
+            title_row_layout.setSpacing(3)
             label = HoverLabel('Stirrup Bundle')
-            label.setProperty('class', 'rsb-stirrup-header')
+            label.setObjectName('rsbPageBundleHeader')
             label.mouseEntered.connect(self.show_bundle_info)
             label.mouseLeft.connect(self.info_popup.hide)
             add_button = HoverButton('+')
@@ -857,22 +865,22 @@ class FoundationDetailsDialog(QDialog):
             self.remove_stirrup_button.setProperty('class', 'red-button remove-button')
             add_button.clicked.connect(self.add_stirrup_row)
             self.remove_stirrup_button.clicked.connect(self.remove_stirrup_row)
-            add_remove_layout.addWidget(label)
-            add_remove_layout.addStretch()
-            add_remove_layout.addWidget(add_button)
-            add_remove_layout.addWidget(self.remove_stirrup_button)
-            # bundle_layout.addLayout(add_remove_layout)
+            title_row_layout.addWidget(label)
+            title_row_layout.addStretch()
+            title_row_layout.addWidget(add_button)
+            title_row_layout.addWidget(self.remove_stirrup_button)
 
             # --- Container for dynamic stirrup rows ---
-            stirrup_rows_container = QFrame()
-            stirrup_rows_container.setProperty('class', 'rsb-stirrup-row-container')
             self.stirrup_rows_layout = QVBoxLayout()
             self.stirrup_rows_layout.setContentsMargins(0, 0, 0, 0)
             self.stirrup_rows_layout.setSpacing(3)
+
+            stirrup_rows_container = QFrame()
+            stirrup_rows_container.setObjectName('rsbPageStirrupRowContainer')
             container = QVBoxLayout(stirrup_rows_container)
             container.setContentsMargins(0, 0, 0, 0)
             container.setSpacing(0)
-            container.addLayout(add_remove_layout)
+            container.addWidget(title_row_container)
             container.addLayout(self.stirrup_rows_layout)
 
             bundle_layout.addWidget(stirrup_rows_container)
@@ -883,7 +891,7 @@ class FoundationDetailsDialog(QDialog):
 
             # --- COMBINE SECTION ---
             main_layout.addLayout(spacing_layout)
-            main_layout.addSpacing(10)
+            main_layout.addSpacing(20)
             main_layout.addLayout(bundle_layout)
 
             self.group_box[title] = group_box
@@ -968,85 +976,208 @@ class FoundationDetailsDialog(QDialog):
             self.stacked_widget.setCurrentIndex(1)
 
     def validate_footing_page(self) -> bool:
-        """Validates all inputs on the footing page. Returns True if valid."""
+        """
+        Validates all inputs on the footing page with stricter rules.
+        Returns True if valid.
+        """
         if DEBUG_MODE:
             return True
 
-        is_globally_valid = True
-        # List of widgets on the first page to check
-        widgets_to_validate = [
-            self.widgets['name'], self.widgets['n_footing'], self.widgets['cc'],
-            self.widgets['bx'], self.widgets['by'], self.widgets['h'],
-            self.widgets['Bx'], self.widgets['By'], self.widgets['t']
+        errors = []
+        widgets_with_errors = []
+
+        # --- Get all widgets ---
+        name_widget = self.widgets['name']
+        n_footing_widget = self.widgets['n_footing']
+        cc_widget = self.widgets['cc']
+        bx_widget = self.widgets['bx']
+        by_widget = self.widgets['by']
+        h_widget = self.widgets['h']
+        Bx_widget = self.widgets['Bx']
+        By_widget = self.widgets['By']
+        t_widget = self.widgets['t']
+
+        # --- List of widgets to check for emptiness and reset styles ---
+        all_widgets = [
+            name_widget, n_footing_widget, cc_widget, bx_widget, by_widget,
+            h_widget, Bx_widget, By_widget, t_widget
         ]
+        for widget in all_widgets:
+            style_invalid_input(widget, True)
 
-        for widget in widgets_to_validate:
-            is_valid = not is_widget_empty(widget)
-            style_invalid_input(widget, is_valid)
-            if not is_valid:
-                is_globally_valid = False
+        # 1. All visible input fields must be filled.
+        is_empty_found = False
+        for widget in all_widgets:
+            if is_widget_empty(widget):
+                widgets_with_errors.append(widget)
+                is_empty_found = True
+        if is_empty_found:
+            errors.append("• All input fields must be filled.")
 
-        if not is_globally_valid:
+        # --- Get numeric values for comparison checks ---
+        name = name_widget.text().strip()
+        cc = cc_widget.value()
+        bx = bx_widget.value()
+        by = by_widget.value()
+        h = h_widget.value()
+        Bx = Bx_widget.value()
+        By = By_widget.value()
+        t = t_widget.value()
+
+        # 2. Name should be unique.
+        if name in self.existing_names:
+            errors.append(f"• Foundation Type name '{name}' already exists.")
+            widgets_with_errors.append(name_widget)
+
+        # 3. Pedestal Width and pad thickness > 2 * concrete cover.
+        if not is_widget_empty(bx_widget) and not is_widget_empty(cc_widget) and bx <= 2 * cc:
+            errors.append(f"• Pedestal Width X ({bx}mm) must be > 2 × Concrete Cover ({2 * cc}mm).")
+            widgets_with_errors.extend([bx_widget, cc_widget])
+        if not is_widget_empty(by_widget) and not is_widget_empty(cc_widget) and by <= 2 * cc:
+            errors.append(f"• Pedestal Width Y ({by}mm) must be > 2 × Concrete Cover ({2 * cc}mm).")
+            widgets_with_errors.extend([by_widget, cc_widget])
+        if not is_widget_empty(t_widget) and not is_widget_empty(cc_widget) and t <= 2 * cc:
+            errors.append(f"• Pad Thickness ({t}mm) must be > 2 × Concrete Cover ({2 * cc}mm).")
+            widgets_with_errors.extend([t_widget, cc_widget])
+
+        # 4. Pedestal Height > concrete cover.
+        if not is_widget_empty(h_widget) and not is_widget_empty(cc_widget) and h <= cc:
+            errors.append(f"• Pedestal Height ({h}mm) must be > Concrete Cover ({cc}mm).")
+            widgets_with_errors.extend([h_widget, cc_widget])
+
+        # 5. Pad Width > (concrete_cover * 2 + ped_width)
+        if not is_widget_empty(Bx_widget) and not is_widget_empty(bx_widget) and not is_widget_empty(cc_widget) and Bx <= (bx + 2 * cc):
+            errors.append(f"• Pad Width X ({Bx}mm) must be > Pedestal Width X + 2 × Cover ({bx + 2 * cc}mm).")
+            widgets_with_errors.extend([Bx_widget, bx_widget, cc_widget])
+        if not is_widget_empty(By_widget) and not is_widget_empty(by_widget) and not is_widget_empty(cc_widget) and By <= (by + 2 * cc):
+            errors.append(f"• Pad Width Y ({By}mm) must be > Pedestal Width Y + 2 × Cover ({by + 2 * cc}mm).")
+            widgets_with_errors.extend([By_widget, by_widget, cc_widget])
+
+        if errors:
+            for widget in set(widgets_with_errors):
+                style_invalid_input(widget, False)
             msg_box = QMessageBox(self)
             msg_box.setObjectName("warningMessageBox")
             msg_box.setIcon(QMessageBox.Icon.Warning)
-            msg_box.setWindowTitle("Invalid Input")
-            msg_box.setText("Please fill in all required fields on this page.")
+            msg_box.setWindowTitle("Invalid Input on Footing Page")
+            msg_box.setText("Please correct the following errors:")
+            msg_box.setInformativeText("\n".join(errors))
             msg_box.exec()
+            return False
 
-        return is_globally_valid
+        return True
 
     def validate_rsb_page(self) -> bool:
-        """Validates all visible inputs on the RSB page. Returns True if valid."""
+        """Validates all visible inputs on the RSB page with stricter rules. Returns True if valid."""
         if DEBUG_MODE:
             return True
 
-        is_globally_valid = True
+        errors = []
+        widgets_with_errors = []
 
-        # Iterate through all group boxes to check only enabled sections
+        # --- Get values from footing page for context ---
+        cc = self.widgets['cc'].value()
+        bx = self.widgets['bx'].value()
+        by = self.widgets['by'].value()
+        Bx = self.widgets['Bx'].value()
+        By = self.widgets['By'].value()
+
+        # --- Reset all styles first ---
+        for section_name in self.group_box:
+            section_widgets = self.widgets.get(section_name, {})
+            if isinstance(section_widgets, dict):
+                for widget in section_widgets.values():
+                    if isinstance(widget, QWidget) and widget.isWidgetType():
+                        style_invalid_input(widget, True)
+            elif isinstance(section_widgets, list): # For stirrup types
+                 for row_dict in section_widgets:
+                     for widget in row_dict.values():
+                         if isinstance(widget, QWidget) and widget.isWidgetType():
+                             style_invalid_input(widget, True)
+
+
+        # --- Iterate through group boxes for validation ---
         for section_name, group_box in self.group_box.items():
-            if group_box.isCheckable() and (not group_box.isChecked()):
-                continue  # Skip disabled/invisible sections
+            if group_box.isCheckable() and not group_box.isChecked():
+                continue  # Skip disabled sections
 
+            # --- A. Check for general emptiness in visible fields ---
+            is_empty_found_in_section = False
             widgets_in_section = self.widgets.get(section_name, {})
             # This handles both flat dicts (Vertical Bar) and nested dicts (Top Bar)
-            widgets_to_check = widgets_in_section.values() if isinstance(widgets_in_section, dict) else []
+            widgets_to_check = list(widgets_in_section.values()) if isinstance(widgets_in_section, dict) else []
 
             for widget in widgets_to_check:
                 if isinstance(widget, QWidget) and widget.isWidgetType() and widget.isVisible():
-                    is_valid = not is_widget_empty(widget)
-                    style_invalid_input(widget, is_valid)
-                    if not is_valid:
-                        is_globally_valid = False
+                    if is_widget_empty(widget):
+                        widgets_with_errors.append(widget)
+                        is_empty_found_in_section = True
+            if is_empty_found_in_section:
+                 errors.append(f"• A required field in the '{section_name}' section is empty.")
 
-            # Special validation for Stirrups Spacing
-            if section_name == 'Stirrups':
+
+            # --- B. Specific validation rules ---
+            # 1. Top/Bottom Bar Validation
+            if section_name in ['Top Bar', 'Bottom Bar']:
+                bar_widgets = self.widgets[section_name]
+                val_x_widget = bar_widgets['Value Along X']
+                val_y_widget = bar_widgets['Value Along Y']
+                clear_width_x = Bx - 2 * cc
+                clear_width_y = By - 2 * cc
+                # Bars along Y are spaced across Bx
+                if not is_widget_empty(val_x_widget) and val_x_widget.value() >= clear_width_x:
+                    errors.append(f"• {section_name} (Along Y): Spacing ({val_x_widget.value()}mm) must be less than clear pad width X ({clear_width_x}mm).")
+                    widgets_with_errors.extend([val_x_widget, self.widgets['Bx'], self.widgets['cc']])
+                # Bars along X are spaced across By
+                if not is_widget_empty(val_y_widget) and val_y_widget.value() >= clear_width_y:
+                    errors.append(f"• {section_name} (Along X): Spacing ({val_y_widget.value()}mm) must be less than clear pad width Y ({clear_width_y}mm).")
+                    widgets_with_errors.extend([val_y_widget, self.widgets['By'], self.widgets['cc']])
+
+            # 2. Vertical Bar Validation
+            elif section_name == 'Vertical Bar':
+                vert_widgets = self.widgets[section_name]
+                qty_widget = vert_widgets['Quantity']
+                hook_calc = vert_widgets['Hook Calculation'].currentText()
+                hook_len_widget = vert_widgets['Hook Length']
+
+                pedestal_core_perimeter = (bx - 2 * cc) * 2 + (by - 2 * cc) * 2
+                if not is_widget_empty(qty_widget) and qty_widget.value() >= pedestal_core_perimeter:
+                    errors.append(f"• Vertical Bar quantity ({qty_widget.value()}) is high; it must be less than the pedestal core perimeter ({pedestal_core_perimeter:.0f}mm).")
+                    widgets_with_errors.extend([qty_widget, self.widgets['bx'], self.widgets['by'], self.widgets['cc']])
+
+                if hook_calc == 'Manual':
+                    clear_pad_width_min = min(Bx, By) - 2 * cc
+                    if not is_widget_empty(hook_len_widget) and hook_len_widget.value() >= clear_pad_width_min / 2:
+                        errors.append(f"• Manual Hook Length ({hook_len_widget.value()}mm) must be less than half the clear pad width ({clear_pad_width_min / 2:.0f}mm).")
+                        widgets_with_errors.extend([hook_len_widget, self.widgets['Bx'], self.widgets['By'], self.widgets['cc']])
+
+            # 3. Stirrups Validation
+            elif section_name == 'Stirrups':
                 spacing_widget = self.widgets['Stirrups']['Spacing']
-                spacing_text = spacing_widget.toPlainText()
-                is_spacing_valid = False
-                if not spacing_text.strip():  # if it's empty, it's invalid
-                    is_spacing_valid = False
+                spacing_text = spacing_widget.toPlainText().strip()
+                if not spacing_text:
+                     errors.append("• Stirrup 'Spacing' field cannot be empty.")
+                     widgets_with_errors.append(spacing_widget)
                 else:
                     try:
                         parse_spacing_string(spacing_text)
-                        is_spacing_valid = True
-                    except (ValueError, TypeError):
-                        is_spacing_valid = False
+                    except (ValueError, TypeError) as e:
+                        errors.append(f"• Invalid Stirrup Spacing format: {e}")
+                        widgets_with_errors.append(spacing_widget)
 
-                style_invalid_input(spacing_widget, is_spacing_valid)
-                if not is_spacing_valid:
-                    is_globally_valid = False
-
-        if not is_globally_valid:
+        if errors:
+            for widget in set(widgets_with_errors):
+                style_invalid_input(widget, False)
             msg_box = QMessageBox(self)
             msg_box.setObjectName("warningMessageBox")
             msg_box.setIcon(QMessageBox.Icon.Warning)
-            msg_box.setWindowTitle("Invalid Input")
-            msg_box.setText("Please fill in all visible fields correctly.")
-            msg_box.setInformativeText("Check for empty inputs or invalid spacing format.")
+            msg_box.setWindowTitle("Invalid Input on Reinforcement Page")
+            msg_box.setText("Please correct the following errors:")
+            msg_box.setInformativeText("\n".join(errors))
             msg_box.exec()
+            return False
 
-        return is_globally_valid
+        return True
 
     def save_and_accept(self):
         """Runs validation before accepting the dialog."""
@@ -1356,7 +1487,7 @@ Defines stirrup locations relative to your chosen 'Start From' point.
         """Creates and adds a new UI row for defining a stirrup type."""
         # --- Main container for the row ---
         row_widget = QFrame()
-        row_widget.setProperty('class', 'rsb-stirrup-row')
+        row_widget.setProperty('class', 'stirrup-row')
         row_layout = QHBoxLayout(row_widget)
         row_layout.setContentsMargins(0, 0, 0, 0)
         row_layout.setSpacing(0)
@@ -1381,22 +1512,25 @@ Defines stirrup locations relative to your chosen 'Start From' point.
         form_layout.setSpacing(3)
         type_combo = QComboBox()
         type_combo.addItems(image_map.keys())
+        type_combo.setProperty('class', 'form-value')
         size_policy = type_combo.sizePolicy()
         size_policy.setHorizontalPolicy(QSizePolicy.Policy.Expanding)
         type_combo.setSizePolicy(size_policy)
 
         dia_combo = QComboBox()
         dia_combo.addItems(BAR_DIAMETERS_FOR_STIRRUPS)
+        dia_combo.setProperty('class', 'form-value')
 
         a_label = QLabel('a:')
-        a_label.setProperty('class', 'rsb-forms-label')
+        a_label.setProperty('class', 'form-label')
         a_input = BlankSpinBox(0, 99_999, suffix=' mm')
+        a_input.setProperty('class', 'form-value')
 
         label = QLabel('Type:')
-        label.setProperty('class', 'rsb-forms-label')
+        label.setProperty('class', 'form-label')
         form_layout.addRow(label, type_combo)
         label = QLabel('Diameter:')
-        label.setProperty('class', 'rsb-forms-label')
+        label.setProperty('class', 'form-label')
         form_layout.addRow(label, dia_combo)
         form_layout.addRow(a_label, a_input)
         row_layout.addLayout(form_layout)
@@ -1485,7 +1619,6 @@ class FoundationItem(QFrame):
         layout.setSpacing(0)
 
         self.label = QLabel(self.data.get('name', 'Unnamed'))
-        self.label.setProperty('class', 'list-item-label')
         layout.addWidget(self.label)
         layout.addStretch(1)
 
@@ -1601,20 +1734,20 @@ class MultiPageApp(QMainWindow):
         panel_layout.setContentsMargins(0, 0, 0, 0)
         panel_layout.setSpacing(0)
 
-        panel_title_widget = QFrame()
-        panel_title_widget.setProperty('class', 'panel-title-widget')
-        panel_title_layout = QHBoxLayout(panel_title_widget)
-        panel_title_layout.setContentsMargins(0, 0, 0, 0)
-        panel_title_layout.setSpacing(0)
+        title_row_container = QFrame()
+        title_row_container.setProperty('class', 'title-row')
+        title_row_layout = QHBoxLayout(title_row_container)
+        title_row_layout.setContentsMargins(0, 0, 0, 0)
+        title_row_layout.setSpacing(0)
         label = QLabel('Foundation Types')
         label.setProperty('class', 'header-2')
-        panel_title_layout.addWidget(label)
-        panel_title_layout.addStretch()
+        title_row_layout.addWidget(label)
+        title_row_layout.addStretch()
         add_button = HoverButton('+')
         add_button.setProperty('class', 'green-button add-button')
         add_button.clicked.connect(self.add_foundation_item)
-        panel_title_layout.addWidget(add_button)
-        panel_layout.addWidget(panel_title_widget)
+        title_row_layout.addWidget(add_button)
+        panel_layout.addWidget(title_row_container)
 
         scroll_content = QWidget()
         scroll_content.setProperty('class', 'scroll-content')
@@ -1626,29 +1759,21 @@ class MultiPageApp(QMainWindow):
         panel_layout.addWidget(scroll_area)
 
         # --- Right Panel (Detail View - The Summary) ---
-        right_panel = QFrame()
-        right_panel.setProperty('class', 'detail-panel')
-        right_panel_layout = QVBoxLayout(right_panel)
-        right_panel_layout.setContentsMargins(0, 0, 0, 0)
-        right_panel_layout.setSpacing(0)
-
         self.detail_area_stack = QStackedWidget()  # Use a stack to show/hide content
 
         # Page 0: Placeholder when nothing is selected
         placeholder = QLabel('Add a foundation type by clicking the plus button on the upper left corner.')
         placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        placeholder.setProperty('class', 'detail-placeholder')
 
         # Page 1: The actual detail view
         detail_view_widget = self.create_detail_panel()
 
         self.detail_area_stack.addWidget(placeholder)
         self.detail_area_stack.addWidget(detail_view_widget)
-        right_panel_layout.addWidget(self.detail_area_stack)
 
         # --- Add panels to main layout ---
         main_horizontal_layout.addWidget(panel, 2)  # 1 stretch factor
-        main_horizontal_layout.addWidget(right_panel, 6)  # 2 stretch factor (wider)
+        main_horizontal_layout.addWidget(self.detail_area_stack, 6)  # 2 stretch factor (wider)
         page_layout.addLayout(main_horizontal_layout)
 
         # --- Bottom Navigation ---
@@ -1683,9 +1808,11 @@ class MultiPageApp(QMainWindow):
         content_layout.setSpacing(0)
 
         # --- 1. Create the Title and Buttons Row ---
-        title_and_buttons_layout = QHBoxLayout()
-        title_and_buttons_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(4)
+        title_row_container = QFrame()
+        title_row_container.setProperty('class', 'title-row')
+        title_row_layout = QHBoxLayout(title_row_container)
+        title_row_layout.setContentsMargins(0, 0, 0, 0)
+        title_row_layout.setSpacing(3)
         title_label = QLabel('Rebar Market Lengths')
         title_label.setProperty('class', 'header-1')
         add_button = HoverButton('+')
@@ -1694,10 +1821,10 @@ class MultiPageApp(QMainWindow):
         remove_button = HoverButton('-')
         remove_button.setProperty('class', 'remove-button red-button')
         remove_button.clicked.connect(self.remove_market_length)
-        title_and_buttons_layout.addWidget(title_label)
-        title_and_buttons_layout.addStretch()
-        title_and_buttons_layout.addWidget(add_button)
-        title_and_buttons_layout.addWidget(remove_button)
+        title_row_layout.addWidget(title_label)
+        title_row_layout.addStretch()
+        title_row_layout.addWidget(add_button)
+        title_row_layout.addWidget(remove_button)
 
         # --- 2. Create the Grid Container ---
         grid_frame = QFrame()
@@ -1708,7 +1835,7 @@ class MultiPageApp(QMainWindow):
         self.redraw_market_lengths_grid({})
 
         # --- 3. Add Title Row and Grid to the Content Layout ---
-        content_layout.addLayout(title_and_buttons_layout)  # Add the combined layout
+        content_layout.addWidget(title_row_container)
         content_layout.addWidget(grid_frame)
 
         # --- 4. Center the entire content block on the page ---
@@ -1743,21 +1870,11 @@ class MultiPageApp(QMainWindow):
 
     def add_foundation_item(self) -> None:
         """Opens a dialog to add a new foundation item."""
-        dialog = FoundationDetailsDialog(parent=self)
+        existing_names = [item.data['name'] for item in self.findChildren(FoundationItem)]
+        dialog = FoundationDetailsDialog(parent=self, existing_names=existing_names)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             data = dialog.get_data()
             if data['name'].strip():
-                if not DEBUG_MODE:
-                    existing_names = [item.data['name'] for item in self.findChildren(FoundationItem)]
-                    if data['name'] in existing_names:
-                        msg_box = QMessageBox(self)
-                        msg_box.setObjectName("warningMessageBox")  # Use a generic name for all warnings
-                        msg_box.setIcon(QMessageBox.Icon.Warning)
-                        msg_box.setWindowTitle("Duplicate Name")
-                        msg_box.setText(f'A foundation type with the name {data["name"]} already exists.')
-                        msg_box.setInformativeText('Please choose a unique name.')
-                        msg_box.exec()
-                        return  # Stop the add process
                 new_item = FoundationItem(data)
                 new_item.edit_requested.connect(self.edit_foundation_item)
                 new_item.remove_requested.connect(self.remove_foundation_item)
@@ -1769,7 +1886,7 @@ class MultiPageApp(QMainWindow):
         """Creates a comprehensive, scrollable widget to display all foundation details."""
         # The main container for the entire right panel's content
         scroll_content = QFrame()
-        scroll_content.setProperty('class', 'detail-content')
+        scroll_content.setProperty('class', 'foundation-page-detail-content')
         layout = QVBoxLayout(scroll_content)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -1780,16 +1897,16 @@ class MultiPageApp(QMainWindow):
         self.detail_widgets['name_header'].setProperty('class', 'header-1')  # Big, bold title
         layout.addWidget(self.detail_widgets['name_header'])
 
-        layout.addSpacing(14)
+        layout.addSpacing(16)
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.HLine)
         separator.setProperty('class', 'separator')
         layout.addWidget(separator)
-        layout.addSpacing(21)
+        layout.addSpacing(24)
 
         # --- General & Dimensions Section ---
         gen_info_label = QLabel('General Information')
-        gen_info_label.setProperty('class', 'detail-header')
+        gen_info_label.setProperty('class', 'header-3')
         layout.addWidget(gen_info_label, 0, Qt.AlignmentFlag.AlignLeft)
         layout.addSpacing(14)
 
@@ -1804,9 +1921,9 @@ class MultiPageApp(QMainWindow):
 
         def add_row(form_layout: Any, label: str, widget_name: str):
             form_label = QLabel(label)
-            form_label.setProperty('class', 'detail-form-name')
+            form_label.setProperty('class', 'form-label')
             form_value = self.detail_widgets[widget_name]
-            form_value.setProperty('class', 'detail-form-value')
+            form_value.setProperty('class', 'form-value')
             form_layout.addRow(form_label, form_value)
 
         add_row(form_layout_general, 'Total Number of Footings:', 'n_footing')
@@ -1820,7 +1937,7 @@ class MultiPageApp(QMainWindow):
 
         # --- Reinforcement Section ---
         reinf_detail_label = QLabel('Steel Reinforcements')
-        reinf_detail_label.setProperty('class', 'detail-header')
+        reinf_detail_label.setProperty('class', 'header-3')
         layout.addWidget(reinf_detail_label, 0, Qt.AlignmentFlag.AlignLeft)
         layout.addSpacing(14)
 
@@ -1856,7 +1973,6 @@ class MultiPageApp(QMainWindow):
 
         # --- Make the entire panel scrollable ---
         scroll_area = make_scrollable(scroll_content)
-        scroll_area.setProperty('class', 'detail-scroll-area')  # For styling
         return scroll_area
 
     def get_current_checkbox_states(self) -> dict:
@@ -2184,7 +2300,7 @@ class MultiPageApp(QMainWindow):
                     type_text += f' (a: {stirrup_type['a_input']} mm)'
 
                 type_label = QLabel(type_text)
-                type_label.setProperty('class', 'detail-form-value')
+                type_label.setProperty('class', 'form-value')
                 type_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
                 self.detail_stirrup_types_layout.addWidget(type_label)
         else:
@@ -2195,7 +2311,8 @@ class MultiPageApp(QMainWindow):
 
     def edit_foundation_item(self, item: FoundationItem) -> None:
         """Opens a dialog to edit an existing foundation item."""
-        dialog = FoundationDetailsDialog(existing_details=item.data, parent=self)
+        existing_names = [i.data['name'] for i in self.findChildren(FoundationItem)]
+        dialog = FoundationDetailsDialog(existing_details=item.data, parent=self, existing_names=existing_names)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             new_data = dialog.get_data()
             if new_data['name'].strip():
