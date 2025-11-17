@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QStackedWidget, QLabel, QComboBox,
     QGroupBox, QGridLayout, QFrame, QSizePolicy,
-    QCheckBox, QScrollArea, QMessageBox, QFileDialog, QSpinBox, QDoubleSpinBox, QInputDialog, QPushButton
+    QCheckBox, QScrollArea, QMessageBox, QFileDialog, QSpinBox, QDoubleSpinBox, QInputDialog, QPushButton, QDialog
 )
 from PyQt6.QtGui import QCursor, QIcon
 from PyQt6.QtCore import Qt, QEvent, QPoint
@@ -52,157 +52,165 @@ class MultiPageApp(QMainWindow):
         if DEBUG_MODE:
             self.prefill_for_debug()
         self.stacked_widget.setCurrentIndex(0)
+        self.setFocus()
 
     def create_cutting_length_page(self) -> None:
         """Builds the UI for the first page (Cutting Lengths input)."""
         page = QWidget()
         page.setProperty('class', 'page')
-        main_layout = QVBoxLayout(page)
+        page.setObjectName('cuttingLengthPage')
+        page_layout = QVBoxLayout(page)
+        page_layout.setContentsMargins(0, 0, 0, 0)
+        page_layout.setSpacing(0)
 
-        header_layout = QHBoxLayout()
-
-        # --- Main Header ---
-        header = QLabel('Required Rebars')
-        header.setProperty('class', 'header-0')
-
-        # --- Add/Remove Buttons ---
+        # Title
+        title_row = QFrame()
+        title_row.setProperty('class', 'title-row')
+        title_row_layout = QHBoxLayout(title_row)
+        title_row_layout.setContentsMargins(0, 0, 0, 0)
+        title_row_layout.setSpacing(3)
+        title = QLabel('Required Rebars')
+        title.setProperty('class', 'header-1')
         add_button = HoverButton('+')
         add_button.setProperty('class', 'green-button add-button')
         add_button.clicked.connect(self.add_cutting_row)
-
         self.remove_cutting_button = HoverButton('-')
         self.remove_cutting_button.setProperty('class', 'red-button remove-button')
         self.remove_cutting_button.clicked.connect(self.remove_cutting_row)
-
-        header_layout.addWidget(header)
-        header_layout.addStretch()
-        header_layout.addWidget(add_button)
-        header_layout.addWidget(self.remove_cutting_button)
-        header_layout.setContentsMargins(10, 0, 10, 0)
-        main_layout.addLayout(header_layout)
+        title_row_layout.addWidget(title)
+        title_row_layout.addStretch()
+        title_row_layout.addWidget(add_button)
+        title_row_layout.addWidget(self.remove_cutting_button)
+        page_layout.addWidget(title_row)
 
         # --- Header Row for Inputs ---
-        header_row_layout = QHBoxLayout()
-
-        # Create labels and set their alignment
+        header_row = QFrame()
+        header_row.setProperty('class', 'header-row')
+        header_row_layout = QHBoxLayout(header_row)
+        header_row_layout.setContentsMargins(0, 0, 0, 0)
+        header_row_layout.setSpacing(0)
         dia_header = QLabel('Diameter')
-        dia_header.setProperty('class', 'market-header-label')
+        dia_header.setProperty('class', 'header-4')
         dia_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cl_header = HoverLabel('Cutting Length')  # Use the new HoverLabel
-        cl_header.setProperty('class', 'market-header-label')
+        cl_header.setProperty('class', 'header-4')
         cl_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # Connect the hover signals to handler methods
         cl_header.mouseEntered.connect(self.show_cutting_length_info)
         cl_header.mouseLeft.connect(self.info_popup.hide)
-
         qty_header = QLabel('Quantity')
         qty_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        qty_header.setProperty('class', 'market-header-label')
-
-        # Add headers with stretch factors to define column widths
+        qty_header.setProperty('class', 'header-4')
         header_row_layout.addWidget(dia_header, 1)
         header_row_layout.addWidget(cl_header, 2)
         header_row_layout.addWidget(qty_header, 1)
-        main_layout.addLayout(header_row_layout)
+        page_layout.addWidget(header_row)
 
         # --- Scroll Area for Dynamic Rows ---
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
-        scroll_area.setProperty('class', 'scroll-area')
+        scroll_area.setProperty('class', 'scroll-bar')
 
         # Container widget and layout for the rows inside the scroll area
         rows_container = QWidget()
+        rows_container.setProperty('class', 'list-container')
         self.cutting_rows_layout = QVBoxLayout(rows_container)
-        scroll_area.setWidget(rows_container)
-        main_layout.addWidget(scroll_area) # Add the scroll area to the main layout
+        self.cutting_rows_layout.setContentsMargins(0, 0, 0, 0)
+        self.cutting_rows_layout.setSpacing(0)
         self.cutting_rows_layout.addStretch()
+        self.add_cutting_row()  # Add the initial row
+        scroll_area.setWidget(rows_container)
+        page_layout.addWidget(scroll_area) # Add the scroll area to the main layout
 
-        # --- Navigation ---
-        button_layout = QHBoxLayout()
-        next_button = HoverButton('Next')
-        next_button.setProperty('class', 'green-button')
-        next_button.clicked.connect(self.go_to_market_lengths_page)
+        # --- Bottom Navigation ---
+        bottom_nav = QFrame()
+        bottom_nav.setProperty('class', 'bottom-nav')
+        button_layout = QHBoxLayout(bottom_nav)
+        button_layout.setContentsMargins(0, 0, 0, 0)
+        button_layout.setSpacing(0)
         button_layout.addStretch()
+        next_button = HoverButton('Next')
+        next_button.setProperty('class', 'green-button next-button')
+        next_button.clicked.connect(self.go_to_market_length_page)
         button_layout.addWidget(next_button)
-        main_layout.addLayout(button_layout)
+        page_layout.addWidget(bottom_nav)
 
         self.stacked_widget.addWidget(page)
-
-        # --- Add the initial row ---
-        self.add_cutting_row()
 
     def create_market_lengths_page(self) -> None:
         """Builds the UI for the third page (Rebar Market Lengths) with improved layout."""
         page = QWidget()
+        page.setObjectName('marketLengthsPage')
         page.setProperty('class', 'page')
-        main_layout = QVBoxLayout(page)
+        page_layout = QVBoxLayout(page)
+        page_layout.setContentsMargins(0, 0, 0, 0)
+        page_layout.setSpacing(0)
 
         # --- This will be the main container for the title and the grid ---
-        content_container = QWidget()
+        content_container = QFrame()
+        content_container.setProperty('class', 'market-lengths-container')
         content_layout = QVBoxLayout(content_container)
         content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
 
         # --- 1. Create the Title and Buttons Row ---
-        title_and_buttons_layout = QHBoxLayout()
-
+        title_row_container = QFrame()
+        title_row_container.setProperty('class', 'title-row')
+        title_row_layout = QHBoxLayout(title_row_container)
+        title_row_layout.setContentsMargins(0, 0, 0, 0)
+        title_row_layout.setSpacing(3)
         title_label = QLabel('Rebar Market Lengths')
-        title_label.setProperty('class', 'header-0')
-        # Override the QSS center-alignment to make it align left
-        title_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-
+        title_label.setProperty('class', 'header-1')
         add_button = HoverButton('+')
         add_button.setProperty('class', 'add-button green-button')
         add_button.clicked.connect(self.add_market_length)
         remove_button = HoverButton('-')
         remove_button.setProperty('class', 'remove-button red-button')
         remove_button.clicked.connect(self.remove_market_length)
-
-        # CORRECTED LAYOUT: Add title and buttons to the SAME horizontal layout
-        title_and_buttons_layout.addWidget(title_label)
-        title_and_buttons_layout.addStretch()
-        title_and_buttons_layout.addWidget(add_button)
-        title_and_buttons_layout.addWidget(remove_button)
-        title_and_buttons_layout.setContentsMargins(15, 0, 15, 0)
+        title_row_layout.addWidget(title_label)
+        title_row_layout.addStretch()
+        title_row_layout.addWidget(add_button)
+        title_row_layout.addWidget(remove_button)
 
         # --- 2. Create the Grid Container ---
         grid_frame = QFrame()
         self.market_lengths_grid = QGridLayout(grid_frame)
+        self.market_lengths_grid.setContentsMargins(0, 0, 0, 0)
         self.market_lengths_grid.setSpacing(0)
         # Initial drawing of the grid with a default empty state
         self.redraw_market_lengths_grid({})
 
         # --- 3. Add Title Row and Grid to the Content Layout ---
-        content_layout.addLayout(title_and_buttons_layout)  # Add the combined layout
+        content_layout.addWidget(title_row_container)
         content_layout.addWidget(grid_frame)
 
         # --- 4. Center the entire content block on the page ---
         centering_layout = QHBoxLayout()
-        centering_layout.addStretch(1)
+        centering_layout.setContentsMargins(0, 0, 0, 0)
+        centering_layout.setSpacing(0)
+        centering_layout.addStretch()
         centering_layout.addWidget(content_container)
-        centering_layout.addStretch(1)
+        centering_layout.addStretch()
 
-        main_layout.addStretch(1)
-        main_layout.addLayout(centering_layout)
-        main_layout.addStretch(1)
+        page_layout.addStretch()
+        page_layout.addLayout(centering_layout)
+        page_layout.addStretch()
 
         # --- 5. Navigation Buttons (at the bottom of the page) ---
-        button_layout = QHBoxLayout()
+        bottom_nav = QFrame()
+        bottom_nav.setProperty('class', 'bottom-nav')
+        button_layout = QHBoxLayout(bottom_nav)
+        button_layout.setContentsMargins(0, 0, 0, 0)
+        button_layout.setSpacing(0)
         back_button = HoverButton('Back')
-        back_button.setAutoDefault(True)
-        back_button.setProperty('class', 'red-button')
+        back_button.setProperty('class', 'red-button back-button')
         back_button.clicked.connect(self.go_to_cutting_length_page)
-
-        next_button = HoverButton('Generate')
-        next_button.setAutoDefault(True)
-        next_button.setProperty('class', 'green-button')
+        next_button = HoverButton('Next')
+        next_button.setProperty('class', 'green-button next-button')
         next_button.clicked.connect(self.go_to_summary_page)
-
         button_layout.addWidget(back_button)
-        button_layout.addStretch()
+        button_layout.addStretch(0)
         button_layout.addWidget(next_button)
-
-        main_layout.addLayout(button_layout)
+        page_layout.addWidget(bottom_nav)
         self.stacked_widget.addWidget(page)
 
     def create_summary_page(self):
@@ -275,7 +283,7 @@ class MultiPageApp(QMainWindow):
         button_layout = QHBoxLayout()
         back_button = HoverButton('Back')
         back_button.setProperty('class', 'red-button')
-        back_button.clicked.connect(self.go_to_market_lengths_page)
+        back_button.clicked.connect(self.go_to_market_length_page)
 
         generate_button = HoverButton('Generate Excel')
         generate_button.setProperty('class', 'green-button')
@@ -291,8 +299,9 @@ class MultiPageApp(QMainWindow):
     def go_to_cutting_length_page(self) -> None:
         """Navigates to the Cutting Lengths page (index 0)."""
         self.stacked_widget.setCurrentIndex(0)
+        self.setFocus()
 
-    def go_to_market_lengths_page(self):
+    def go_to_market_length_page(self):
         """Navigates to the Market Lengths page (index 1)."""
         if not DEBUG_MODE:
             errors = self.validate_cutting_length_page()
@@ -301,6 +310,7 @@ class MultiPageApp(QMainWindow):
                 return  # Stop navigation if errors are found
 
         self.stacked_widget.setCurrentIndex(1)
+        self.setFocus()
 
     def go_to_summary_page(self):
         """Navigates to the Summary page (index 2) after populating it with data."""
@@ -354,8 +364,8 @@ class MultiPageApp(QMainWindow):
         self.market_lengths_checkboxes = {}
 
         # Helper to create styled cells (this is unchanged)
-        def create_cell(widget, is_header=False, is_alternate=False):
-            cell = QWidget()
+        def create_cell(widget, is_header=False, is_alternate=False, x=0, y=0):
+            cell = QFrame()
             cell.setAutoFillBackground(True)
             cell_layout = QHBoxLayout(cell)
             cell_layout.setContentsMargins(0, 0, 0, 0)
@@ -363,28 +373,36 @@ class MultiPageApp(QMainWindow):
             if isinstance(widget, QPushButton):
                 cell_layout.addWidget(widget)
             else:
-                cell_layout.addStretch(1);
-                cell_layout.addWidget(widget);
-                cell_layout.addStretch(1)
+                cell_layout.addStretch()
+                cell_layout.addWidget(widget)
+                cell_layout.addStretch()
             style_class = 'grid-cell'
             if is_header: style_class += ' header-cell'
             if is_alternate: style_class += ' alternate-row-cell'
+            if x == 0 and y > 0:
+                style_class += ' header-column-cell'
+            elif y == 0 and x > 0:
+                style_class += ' header-row-cell'
+            elif x == 0 and y == 0:
+                style_class += ' header-corner-cell'
+            else:
+                style_class += ' non-header-cell'
             cell.setProperty('class', style_class)
             return cell
 
-        # Re-create Top-Left Header as a "Toggle All" button
+        # Re-create Top-Left Header as a 'Toggle All' button
         toggle_all_btn = HoverButton('Diameter')
-        toggle_all_btn.setToolTip("Toggle All Checkboxes")  # Helpful tooltip
+        toggle_all_btn.setToolTip('Toggle All Checkboxes')  # Helpful tooltip
         toggle_all_btn.setProperty('class', 'clickable-header')
         toggle_all_btn.clicked.connect(self.toggle_all_market_checkboxes)
-        self.market_lengths_grid.addWidget(create_cell(toggle_all_btn, is_header=True), 0, 0)
+        self.market_lengths_grid.addWidget(create_cell(toggle_all_btn, is_header=True, x=0, y=0), 0, 0)
 
         # Re-create Column Headers
         for col, length in enumerate(self.current_market_lengths):
             btn = HoverButton(length)
             btn.setProperty('class', 'clickable-header clickable-column-header')
             btn.clicked.connect(lambda checked, l=length: self.toggle_market_column(l))
-            self.market_lengths_grid.addWidget(create_cell(btn, is_header=True), 0, col + 1)
+            self.market_lengths_grid.addWidget(create_cell(btn, is_header=True, x=0, y=col + 1), 0, col + 1)
 
         # Re-create Rows
         for row, dia in enumerate(BAR_DIAMETERS):
@@ -395,39 +413,24 @@ class MultiPageApp(QMainWindow):
             btn = HoverButton(dia)
             btn.setProperty('class', 'clickable-header clickable-row-header')
             btn.clicked.connect(lambda checked, d=dia: self.toggle_market_row(d))
-            self.market_lengths_grid.addWidget(create_cell(btn, is_header=True, is_alternate=is_alternate_row),
-                                               row + 1,
-                                               0)
+            self.market_lengths_grid.addWidget(
+                create_cell(btn, is_header=True, is_alternate=is_alternate_row, x=row + 1, y=0),
+                row + 1,
+                0)
 
             # Checkboxes for each length
             for col, length in enumerate(self.current_market_lengths):
                 cb = QCheckBox()
+                cb.setProperty('class', 'check-box')
 
-                # --- THIS IS THE KEY CHANGE ---
                 # Restore the state if it exists, otherwise default to True for new lengths
                 is_checked = previous_states.get(dia, {}).get(length, False)
                 cb.setChecked(is_checked)
                 # -----------------------------
 
                 self.market_lengths_checkboxes[dia][length] = cb
-                self.market_lengths_grid.addWidget(create_cell(cb, is_alternate=is_alternate_row), row + 1, col + 1)
-
-    def add_market_length(self):
-        """Prompts the user for a new market length and redraws the grid."""
-        new_length, ok = QInputDialog.getDouble(self, "Add Market Length", "Enter new length (in meters):",
-                                                value=1.0, min=1.0, max=50.0, decimals=1)
-        if ok and new_length > 0:
-            new_length_str = f"{new_length:.0f}m" if int(new_length) == new_length else f"{new_length:.1f}m"
-
-            if new_length_str not in self.current_market_lengths:
-                # --- SAVE STATE BEFORE REDRAWING ---
-                saved_states = self.get_current_checkbox_states()
-                self.current_market_lengths.append(new_length_str)
-                self.current_market_lengths.sort(key=lambda s: float(s.replace('m', '')))
-                # --- PASS SAVED STATE TO REDRAW METHOD ---
-                self.redraw_market_lengths_grid(saved_states)
-            else:
-                QMessageBox.warning(self, "Duplicate Length", "That market length already exists.")
+                self.market_lengths_grid.addWidget(create_cell(cb, is_alternate=is_alternate_row, x=row + 1, y=col + 1),
+                                                   row + 1, col + 1)
 
     def toggle_all_market_checkboxes(self):
         """Toggles the state of every checkbox in the market lengths grid."""
@@ -450,22 +453,74 @@ class MultiPageApp(QMainWindow):
             for checkbox in dia_dict.values():
                 checkbox.setChecked(new_state)
 
+    def add_market_length(self):
+        """Prompts the user for a new market length and redraws the grid."""
+        # --- Create an instance of the dialog ---
+        dialog = QInputDialog(self)
+
+        # --- Set an objectName for QSS styling ---
+        dialog.setObjectName('marketLengthInputDialog')
+
+        # --- Configure the dialog's properties ---
+        dialog.setWindowTitle('Add Market Length')
+        dialog.setLabelText('Enter new length (in meters):')
+        dialog.setInputMode(QInputDialog.InputMode.DoubleInput)
+        dialog.setDoubleRange(1.0, 50.0)
+        dialog.setDoubleDecimals(1)
+        dialog.setDoubleValue(1.0)
+
+        # --- Execute the dialog and check the result ---
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            new_length = dialog.doubleValue()
+            # The rest of your logic remains the same
+            if new_length > 0:
+                new_length_str = f'{new_length:.0f}m' if int(new_length) == new_length else f'{new_length:.1f}m'
+
+                if new_length_str not in self.current_market_lengths:
+                    saved_states = self.get_current_checkbox_states()
+                    self.current_market_lengths.append(new_length_str)
+                    self.current_market_lengths.sort(key=lambda s: float(s.replace('m', '')))
+                    self.redraw_market_lengths_grid(saved_states)
+                else:
+                    # You can apply the same principle to QMessageBox
+                    msg_box = QMessageBox(self)
+                    msg_box.setObjectName('warningMessageBox')  # Style this in QSS
+                    msg_box.setIcon(QMessageBox.Icon.Warning)
+                    msg_box.setWindowTitle('Duplicate Length')
+                    msg_box.setText('That market length already exists.')
+                    msg_box.exec()
+
     def remove_market_length(self):
         """Prompts the user to select a market length to remove and redraws the grid."""
         if not self.current_market_lengths:
-            QMessageBox.information(self, "No Lengths", "There are no market lengths to remove.")
+            # You can style this info box as well
+            msg_box = QMessageBox(self)
+            msg_box.setObjectName('infoMessageBox')
+            msg_box.setIcon(QMessageBox.Icon.Information)
+            msg_box.setWindowTitle('No Lengths')
+            msg_box.setText('There are no market lengths to remove.')
+            msg_box.exec()
             return
 
-        length_to_remove, ok = QInputDialog.getItem(self, "Remove Market Length",
-                                                    "Select a length to remove:", self.current_market_lengths, 0,
-                                                    False)
+        # --- Instantiate the dialog ---
+        dialog = QInputDialog(self)
+        dialog.setObjectName('marketLengthRemoveDialog')  # For QSS styling
+        dialog.setWindowTitle('Remove Market Length')
+        dialog.setLabelText('Select a length to remove:')
 
-        if ok and length_to_remove:
-            # --- SAVE STATE BEFORE REDRAWING ---
-            saved_states = self.get_current_checkbox_states()
-            self.current_market_lengths.remove(length_to_remove)
-            # --- PASS SAVED STATE TO REDRAW METHOD ---
-            self.redraw_market_lengths_grid(saved_states)
+        # --- Configure for item selection ---
+        dialog.setInputMode(QInputDialog.InputMode.TextInput)  # Necessary for combo box mode
+        dialog.setComboBoxItems(self.current_market_lengths)
+        dialog.setComboBoxEditable(False)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            length_to_remove = dialog.textValue()
+            if length_to_remove:
+                # --- SAVE STATE BEFORE REDRAWING ---
+                saved_states = self.get_current_checkbox_states()
+                self.current_market_lengths.remove(length_to_remove)
+                # --- PASS SAVED STATE TO REDRAW METHOD ---
+                self.redraw_market_lengths_grid(saved_states)
 
     def toggle_market_row(self, dia: str) -> None:
         """Toggles all checkboxes in a given market length row."""
@@ -498,9 +553,11 @@ class MultiPageApp(QMainWindow):
     # --- Row Management Methods ---
     def add_cutting_row(self) -> None:
         """Adds a new UI row for inputting a rebar diameter, length, and quantity."""
-        container_widget = QWidget()
-        row = QHBoxLayout(container_widget)
+        container = QFrame()
+        container.setProperty('class', 'cutting-length-page-cutting-row')
+        row = QHBoxLayout(container)
         row.setContentsMargins(0, 0, 0, 0)  # Add some minimal vertical margin
+        row.setSpacing(3)  # Add some minimal vertical margin
 
         dia_input = QComboBox()
         dia_input.addItems(BAR_DIAMETERS)
@@ -518,10 +575,10 @@ class MultiPageApp(QMainWindow):
         self.cutting_lengths['Diameter'].append(dia_input)
         self.cutting_lengths['Cutting Length'].append(cutting_length_input)
         self.cutting_lengths['Quantity'].append(qty_input)
-        self.cutting_lengths['Rows'].append(container_widget)
+        self.cutting_lengths['Rows'].append(container)
 
         index = self.cutting_rows_layout.count() - 1
-        self.cutting_rows_layout.insertWidget(index, container_widget)
+        self.cutting_rows_layout.insertWidget(index, container)
         self.update_remove_button_state()
 
     def remove_cutting_row(self) -> None:

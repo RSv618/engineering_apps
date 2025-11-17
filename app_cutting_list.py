@@ -876,7 +876,7 @@ class FoundationDetailsDialog(QDialog):
             self.stirrup_rows_layout.setSpacing(3)
 
             stirrup_rows_container = QFrame()
-            stirrup_rows_container.setObjectName('rsbPageStirrupRowContainer')
+            stirrup_rows_container.setProperty('class', 'list-container')
             container = QVBoxLayout(stirrup_rows_container)
             container.setContentsMargins(0, 0, 0, 0)
             container.setSpacing(0)
