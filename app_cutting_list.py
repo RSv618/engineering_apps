@@ -1657,7 +1657,7 @@ class FoundationItem(QFrame):
         painter = QPainter(self)
         self.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, opt, painter, self)
 
-    def enterEvent(self, event: QEvent) -> None:
+    def enterEvent(self, event: QEvent | None) -> None:
         """Show buttons when the mouse enters the widget."""
         self.edit_button.show()
         self.remove_button.show()
@@ -1882,7 +1882,10 @@ class MultiPageApp(QMainWindow):
 
     def add_foundation_item(self) -> None:
         """Opens a dialog to add a new foundation item."""
-        existing_names = [item.data['name'] for item in self.findChildren(FoundationItem)]
+        existing_names = []
+        for item in self.findChildren(FoundationItem):
+            if isinstance(item, FoundationItem):
+                existing_names.append(item.data['name'])
         dialog = FoundationDetailsDialog(parent=self, existing_names=existing_names)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             data = dialog.get_data()
@@ -2326,7 +2329,10 @@ class MultiPageApp(QMainWindow):
 
     def edit_foundation_item(self, item: FoundationItem) -> None:
         """Opens a dialog to edit an existing foundation item."""
-        existing_names = [i.data['name'] for i in self.findChildren(FoundationItem)]
+        existing_names = []
+        for item in self.findChildren(FoundationItem):
+            if isinstance(item, FoundationItem):
+                existing_names.append(item.data['name'])
         dialog = FoundationDetailsDialog(existing_details=item.data, parent=self, existing_names=existing_names)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             new_data = dialog.get_data()

@@ -4,11 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Fixed optimal purchase">
+    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Updated excel generation for optimal_purchase">
+      <change afterPath="$PROJECT_DIR$/app_concrete_mix.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_cutting_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_cutting_list.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app_optimal_purchase.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_optimal_purchase.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/constants.py" beforeDir="false" afterPath="$PROJECT_DIR$/constants.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,6 +47,7 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.app_concrete_mix.executor": "Run",
     "Python.app_cutting_list.executor": "Run",
     "Python.app_optimal_purchase.executor": "Run",
     "Python.app_refactored.executor": "Run",
@@ -262,7 +262,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763349214797</updated>
     </task>
-    <option name="localTasksCounter" value="23" />
+    <task id="LOCAL-00023" summary="Updated excel generation for optimal_purchase">
+      <option name="closed" value="true" />
+      <created>1763369753202</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1763369753202</updated>
+    </task>
+    <option name="localTasksCounter" value="24" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -297,6 +305,7 @@
     <MESSAGE value="Minor code cleaning" />
     <MESSAGE value="Remove focus on" />
     <MESSAGE value="Fixed optimal purchase" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fixed optimal purchase" />
+    <MESSAGE value="Updated excel generation for optimal_purchase" />
+    <option name="LAST_COMMIT_MESSAGE" value="Updated excel generation for optimal_purchase" />
   </component>
 </project>
