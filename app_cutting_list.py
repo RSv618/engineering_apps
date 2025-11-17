@@ -969,11 +969,13 @@ class FoundationDetailsDialog(QDialog):
     def go_to_footing_page(self):
         """Switches the stacked widget to the previous page."""
         self.stacked_widget.setCurrentIndex(0)
+        self.setFocus()  # Remove focus
 
     def go_to_rsb_page(self):
         """Switches the stacked widget to the next page."""
         if self.validate_footing_page():
             self.stacked_widget.setCurrentIndex(1)
+        self.setFocus()  # Remove focus
 
     def validate_footing_page(self) -> bool:
         """
@@ -1712,6 +1714,8 @@ class MultiPageApp(QMainWindow):
 
         if DEBUG_MODE:
             self.prefill_debug_data()
+
+        self.setFocus()  # Remove focus on first open
 
     def create_foundation_entry_page(self) -> None:
         """Builds the UI with a master-detail layout."""
@@ -2495,9 +2499,11 @@ class MultiPageApp(QMainWindow):
 
     def go_to_foundation_page(self):
         self.stacked_widget.setCurrentIndex(0)
+        self.setFocus()  # Remove focus
 
     def go_to_market_length_page(self):
         self.stacked_widget.setCurrentIndex(1)
+        self.setFocus()  # Remove focus
 
     def generate_excel(self):
         all_data = self.get_all_foundation_data()
