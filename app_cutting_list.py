@@ -349,6 +349,7 @@ class FoundationDetailsDialog(QDialog):
         self.debounce_timer = QTimer(self)
         self.debounce_timer.setInterval(300)  # 300ms delay
         self.debounce_timer.setSingleShot(True)
+        # noinspection PyUnresolvedReferences
         self.debounce_timer.timeout.connect(self.update_stirrup_drawing)
 
         # Create pages and add them to the stacked widget
@@ -421,6 +422,7 @@ class FoundationDetailsDialog(QDialog):
         label.setProperty('class', 'form-label')
         form_layout.addWidget(label, 1, 0, 1, 2)
         form_layout.addWidget(ped_per_footing, 1, 2, 1, 2)
+        # noinspection PyUnresolvedReferences
         ped_per_footing.valueChanged.connect(
             lambda value: update_image(str(value), image_map, footing_img,
                                                fallback=resource_path('images/label_0ped.png')))
@@ -651,7 +653,9 @@ class FoundationDetailsDialog(QDialog):
                 else:
                     value_along_x.setSuffix(' mm')
                     value_along_y.setSuffix(' mm')
+            # noinspection PyUnresolvedReferences
             input_type.currentTextChanged.connect(update_spinbox_suffix)
+            # noinspection PyUnresolvedReferences
             group_box.toggled.connect(lambda checked: update_image(str(checked), image_map, image_label, image_width,
                                                                    fallback=resource_path('images/no_top_bar.png')))
             self.group_box[title] = group_box
@@ -836,6 +840,7 @@ class FoundationDetailsDialog(QDialog):
             spacing.setPlaceholderText('Example: 1@50, 5@80, rest@100')
             spacing_label.mouseEntered.connect(self.show_spacing_info)
             spacing_label.mouseLeft.connect(self.info_popup.hide)
+            # noinspection PyUnresolvedReferences
             spacing.textChanged.connect(self.debounce_timer.start)
             form_layout.addRow(spacing_label, spacing)
             spacing_layout.addLayout(form_layout)
@@ -1628,11 +1633,13 @@ class FoundationItem(QFrame):
         self.edit_button = HoverButton('')
         self.edit_button.setProperty('class', 'edit-button') # Use your yellow class
         self.edit_button.setToolTip('Edit Foundation')
+        # noinspection PyUnresolvedReferences
         self.edit_button.clicked.connect(lambda: self.edit_requested.emit(self))
         layout.addWidget(self.edit_button)
 
         self.remove_button = HoverButton('')
         self.remove_button.setProperty('class', 'trash-button')
+        # noinspection PyUnresolvedReferences
         self.remove_button.clicked.connect(lambda: self.remove_requested.emit(self))
         layout.addWidget(self.remove_button)
 
@@ -1665,6 +1672,7 @@ class FoundationItem(QFrame):
     def mousePressEvent(self, event) -> None:
         """Emit a signal when the item is clicked."""
         if not self._is_selected:
+            # noinspection PyUnresolvedReferences
             self.selected.emit(self)
         super().mousePressEvent(event)
 
@@ -1880,8 +1888,11 @@ class MultiPageApp(QMainWindow):
             data = dialog.get_data()
             if data['name'].strip():
                 new_item = FoundationItem(data)
+                # noinspection PyUnresolvedReferences
                 new_item.edit_requested.connect(self.edit_foundation_item)
+                # noinspection PyUnresolvedReferences
                 new_item.remove_requested.connect(self.remove_foundation_item)
+                # noinspection PyUnresolvedReferences
                 new_item.selected.connect(self.update_detail_view)
                 self.scroll_layout.insertWidget(self.scroll_layout.count() - 1, new_item)
                 self.update_detail_view(new_item)
@@ -2108,7 +2119,7 @@ class MultiPageApp(QMainWindow):
         dialog.setWindowTitle('Add Market Length')
         dialog.setLabelText('Enter new length (in meters):')
         dialog.setInputMode(QInputDialog.InputMode.DoubleInput)
-        dialog.setDoubleRange(1.0, 50.0)
+        dialog.setDoubleRange(0.01, 999.9)
         dialog.setDoubleDecimals(1)
         dialog.setDoubleValue(1.0)
 
@@ -2357,7 +2368,7 @@ class MultiPageApp(QMainWindow):
                 self.detail_area_stack.setCurrentIndex(0)
 
     @staticmethod
-    def _get_used_diameters(all_foundation_data: list[dict]) -> set[str]:
+    def get_used_diameters(all_foundation_data: list[dict]) -> set[str]:
         """
         Parses all foundation data and returns a set of unique diameter codes (#10, #12, etc.) that are enabled and used.
         """
@@ -2451,9 +2462,11 @@ class MultiPageApp(QMainWindow):
             # 5. Clean up the temporary dialog (optional, but good practice)
             temp_dialog.deleteLater()
 
-            # --- Original logic continues below ---
+            # noinspection PyUnresolvedReferences
             new_item.edit_requested.connect(self.edit_foundation_item)
+            # noinspection PyUnresolvedReferences
             new_item.remove_requested.connect(self.remove_foundation_item)
+            # noinspection PyUnresolvedReferences
             new_item.selected.connect(self.update_detail_view)
             self.scroll_layout.insertWidget(self.scroll_layout.count() - 1, new_item)
             if not first_item:
@@ -2516,7 +2529,7 @@ class MultiPageApp(QMainWindow):
             msg_box.exec()
             return
 
-        required_diameters = self._get_used_diameters(all_data)
+        required_diameters = self.get_used_diameters(all_data)
         market_lengths = {}
         for dia_code, lengths in self.market_lengths_checkboxes.items():
             available_lengths = [float(l.replace('m', '')) for l, cb in lengths.items() if cb.isChecked()]
@@ -2607,7 +2620,7 @@ class MultiPageApp(QMainWindow):
         except Exception as e:
             print(f'Could not open file automatically: {e}')
 
-            # Refactor the final prompt
+        # Refactor the final prompt
         msg_box = QMessageBox(self)
         msg_box.setObjectName('questionMessageBox')  # Style for questions
         msg_box.setWindowTitle('Generation Complete')

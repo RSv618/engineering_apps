@@ -3,19 +3,23 @@ import os
 import subprocess
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QStackedWidget, QLabel, QComboBox,
-    QGroupBox, QGridLayout, QFrame, QSizePolicy,
-    QCheckBox, QScrollArea, QMessageBox, QFileDialog, QSpinBox, QDoubleSpinBox, QInputDialog, QPushButton, QDialog
+    QStackedWidget, QLabel, QComboBox, QGridLayout, QFrame,
+    QCheckBox, QScrollArea, QMessageBox, QFileDialog, QInputDialog, QPushButton, QDialog
 )
 from PyQt6.QtGui import QCursor, QIcon
-from PyQt6.QtCore import Qt, QEvent, QPoint
+from PyQt6.QtCore import Qt, QPoint
 from openpyxl import Workbook
 from utils import (load_stylesheet, parse_nested_dict, global_exception_hook,
                    InfoPopup, HoverLabel, BlankSpinBox, HoverButton, resource_path,
-                   style_invalid_input)
+                   style_invalid_input, GlobalWheelEventFilter)
 from rebar_optimizer import find_optimized_cutting_plan
 from constants import BAR_DIAMETERS, MARKET_LENGTHS, DEBUG_MODE
-from excel_writer import add_shet_purchase_plan, add_sheet_cutting_plan
+from excel_writer import add_shet_purchase_plan, add_sheet_cutting_plan, delete_blank_worksheets
+
+r"""
+TO BUILD:
+pyinstaller --name 'OptimalPurchase' --onefile --windowed --icon='images/logo.png' --add-data 'images:images' --add-data 'style.qss:.' --add-binary 'C:\Users\rober\PycharmProjects\engineering_apps\.venv\Lib\site-packages\pulp\solverdir\cbc\win\i64\cbc.exe;.' app_optimal_purchase.py
+"""
 
 class MultiPageApp(QMainWindow):
     def __init__(self):
@@ -35,6 +39,7 @@ class MultiPageApp(QMainWindow):
         self.remove_cutting_button = None
         self.summary_labels = {}
         self.summary_cutting_list_layout = None
+        self.market_lengths_grid = None
         self.parsed_cutting_lengths = {}
 
         self.info_popup = InfoPopup(self)
@@ -42,12 +47,8 @@ class MultiPageApp(QMainWindow):
         self.stacked_widget = QStackedWidget()
         self.setCentralWidget(self.stacked_widget)
 
-        # Mousewheel protection
-        QApplication.instance().installEventFilter(self)
-
         self.create_cutting_length_page()
         self.create_market_lengths_page()
-        self.create_summary_page()
 
         if DEBUG_MODE:
             self.prefill_for_debug()
@@ -204,96 +205,13 @@ class MultiPageApp(QMainWindow):
         back_button = HoverButton('Back')
         back_button.setProperty('class', 'red-button back-button')
         back_button.clicked.connect(self.go_to_cutting_length_page)
-        next_button = HoverButton('Next')
+        next_button = HoverButton('Generate Excel')
         next_button.setProperty('class', 'green-button next-button')
-        next_button.clicked.connect(self.go_to_summary_page)
+        next_button.clicked.connect(self.generate_excel)
         button_layout.addWidget(back_button)
         button_layout.addStretch(0)
         button_layout.addWidget(next_button)
         page_layout.addWidget(bottom_nav)
-        self.stacked_widget.addWidget(page)
-
-    def create_summary_page(self):
-        """Creates the final page to summarize all user inputs with improved formatting."""
-        page = QWidget()
-        page.setProperty('class', 'page')
-        main_layout = QVBoxLayout(page)
-
-        # --- Helper to create a styled section ---
-        def create_summary_section(title):
-            group_box = QGroupBox(title)
-            layout = QVBoxLayout(group_box)
-            return group_box, layout
-
-        # Create the main sections
-        cutting_list_box, cutting_list_layout = create_summary_section('Rebars Cuts')
-        market_box, market_layout = create_summary_section('Available Market Lengths')
-
-        # --- Populate Cutting List Section ---
-        # Header Row
-        header_layout = QHBoxLayout()
-        dia_header = QLabel('Diameter')
-        dia_header.setProperty('class', 'summary-label')
-        cl_header = QLabel('Cutting Length')
-        cl_header.setProperty('class', 'summary-label')
-        qty_header = QLabel('Quantity')
-        qty_header.setProperty('class', 'summary-label')
-        dia_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        cl_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        qty_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        header_layout.addWidget(dia_header)
-        header_layout.addWidget(cl_header)
-        header_layout.addWidget(qty_header)
-        cutting_list_layout.addLayout(header_layout)
-
-        # Scroll Area for the dynamic list of cuts
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_container = QWidget()
-        self.summary_cutting_list_layout = QVBoxLayout(scroll_container)
-        self.summary_cutting_list_layout.addStretch()  # Pushes items to the top
-        scroll_area.setWidget(scroll_container)
-        cutting_list_layout.addWidget(scroll_area)
-        cutting_list_layout.setContentsMargins(0, 0, 0, 0)
-
-        # --- Populate Market Lengths Section ---
-        market_label = QLabel('...')
-        market_label.setProperty('class', 'summary-value')
-        market_label.setWordWrap(True)
-        self.summary_labels['market_lengths'] = market_label
-        market_layout.addWidget(market_label)
-
-        # --- Arrange sections ---
-        label = QLabel('Summary')
-        label.setProperty('class', 'header-0')
-        main_layout.addWidget(label)
-
-        # 1. Set the size policy of the top box to be vertically expanding
-        size_policy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
-        cutting_list_box.setSizePolicy(size_policy)
-
-        # 2. Add widgets directly to the main layout with stretch factors
-        #    This tells the layout how to distribute any extra vertical space.
-        #    The cutting_list_box will get 2/3 of the extra space, and market_box will get 1/3.
-        main_layout.addWidget(cutting_list_box, 2)
-        main_layout.addWidget(market_box, 1)
-
-        # --- Navigation Buttons ---
-        button_layout = QHBoxLayout()
-        back_button = HoverButton('Back')
-        back_button.setProperty('class', 'red-button')
-        back_button.clicked.connect(self.go_to_market_length_page)
-
-        generate_button = HoverButton('Generate Excel')
-        generate_button.setProperty('class', 'green-button')
-        generate_button.clicked.connect(self.generate_purchase_list)  # Connects to your existing method
-
-        button_layout.addWidget(back_button)
-        button_layout.addStretch()
-        button_layout.addWidget(generate_button)
-        main_layout.addLayout(button_layout)
-
         self.stacked_widget.addWidget(page)
 
     def go_to_cutting_length_page(self) -> None:
@@ -311,11 +229,6 @@ class MultiPageApp(QMainWindow):
 
         self.stacked_widget.setCurrentIndex(1)
         self.setFocus()
-
-    def go_to_summary_page(self):
-        """Navigates to the Summary page (index 2) after populating it with data."""
-        self.populate_summary_page() # Call the population method here
-        self.stacked_widget.setCurrentIndex(2)
 
     def show_cutting_length_info(self) -> None:
         """Displays an informational popup explaining 'Cutting Length' near the cursor."""
@@ -465,7 +378,7 @@ class MultiPageApp(QMainWindow):
         dialog.setWindowTitle('Add Market Length')
         dialog.setLabelText('Enter new length (in meters):')
         dialog.setInputMode(QInputDialog.InputMode.DoubleInput)
-        dialog.setDoubleRange(1.0, 50.0)
+        dialog.setDoubleRange(0.01, 999.9)
         dialog.setDoubleDecimals(1)
         dialog.setDoubleValue(1.0)
 
@@ -602,162 +515,54 @@ class MultiPageApp(QMainWindow):
         if self.remove_cutting_button:
             self.remove_cutting_button.setEnabled(is_enabled)
 
-    def populate_summary_page(self):
-        """Reads all input data and populates the labels on the summary page."""
-        # --- Clear previous summary cutting list widgets ---
-        # This is important for when the user goes back and forth
-        while self.summary_cutting_list_layout.count() > 1:  # Keep the stretch
-            item = self.summary_cutting_list_layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
-
-        # --- Populate Cutting List ---
-        parsed_cutting_lengths = parse_nested_dict(self.cutting_lengths)
-        self.parsed_cutting_lengths = parsed_cutting_lengths
-        num_rows = len(parsed_cutting_lengths['Rows'])
-        for i in range(num_rows):
-            dia = parsed_cutting_lengths['Diameter'][i]
-            c_len = parsed_cutting_lengths['Cutting Length'][i]
-            qty = parsed_cutting_lengths['Quantity'][i]
-
-            # Create a new row widget for the summary display
-            row_widget = QWidget()
-            row_layout = QHBoxLayout(row_widget)
-            row_layout.setContentsMargins(0,0,0,0)
-
-            dia_lbl = QLabel(dia)
-            dia_lbl.setProperty('class', 'summary-value')
-            c_len_lbl = QLabel(f'{c_len:,.1f} mm')
-            c_len_lbl.setProperty('class', 'summary-value')
-            qty_lbl = QLabel(f'{qty:,} pc{"s" if qty>1 else ""}')
-            qty_lbl.setProperty('class', 'summary-value')
-            dia_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            c_len_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            qty_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-            row_layout.addWidget(dia_lbl)
-            row_layout.addWidget(c_len_lbl)
-            row_layout.addWidget(qty_lbl)
-
-            # Insert the new row before the stretch
-            index = self.summary_cutting_list_layout.count() - 1
-            self.summary_cutting_list_layout.insertWidget(index, row_widget)
-
-        # --- Populate Market Lengths ---
-        market_text_lines = []
-        for dia, lengths in self.market_lengths_checkboxes.items():
-            available = [l for l, cb in lengths.items() if cb.isChecked()]
-            if available:
-                market_text_lines.append(f'<b>{dia}:</b> {', '.join(available)}')
-
-        if market_text_lines:
-            self.summary_labels['market_lengths'].setText('<br>'.join(market_text_lines))
-        else:
-            self.summary_labels['market_lengths'].setText('No market lengths selected.')
-
-    def generate_purchase_list(self) -> None:
+    def get_used_diameters(self) -> set[str]:
         """
-        Gathers all input, runs the optimization, generates the Excel file, and
-        handles post-generation actions.
+        Returns a set of unique diameter codes (#10, #12, etc.) that are enabled and used.
         """
-        # Market Length
-        cuts_by_diameter = {}
-        diameters = self.parsed_cutting_lengths['Diameter']
-        quantities = self.parsed_cutting_lengths['Quantity']
-        lengths = self.parsed_cutting_lengths['Cutting Length']
-        for dia, quantity, length in zip(diameters, quantities, lengths):
-            if dia not in cuts_by_diameter:
-                cuts_by_diameter[dia] = {}
+        return set(self.parsed_cutting_lengths['Diameter'])
 
-            if length in cuts_by_diameter[dia]:
-                cuts_by_diameter[dia][length] += quantity
-            else:
-                cuts_by_diameter[dia][length] = quantity
-        for key, value in cuts_by_diameter.items():
-            cuts_by_diameter[key] = [(q, l/1000) for l, q in value.items()]
-
+    def validate_market_length_page(self):
+        required_diameters = self.get_used_diameters()
         market_lengths = {}
         for dia_code, lengths in self.market_lengths_checkboxes.items():
-            if dia_code in cuts_by_diameter:
-                # Market lengths are already whole numbers, so they are fine.
-                available_lengths = [float(l.replace('m', '')) for l, cb in lengths.items() if cb.isChecked()]
-                if not available_lengths:
-                    continue
+            available_lengths = [float(l.replace('m', '')) for l, cb in lengths.items() if cb.isChecked()]
+            if available_lengths:
                 market_lengths[dia_code] = available_lengths
 
-        # --- Prompt user for save location ---
-        save_path, _ = QFileDialog.getSaveFileName(
-            self,
-            'Save Purchase/Cutting Plan As',
-            'rebar_purchase_cutting_plan.xlsx',
-            'Excel Files (*.xlsx);;All Files (*)'
-        )
+        missing_market_lengths = sorted([dia for dia in required_diameters if dia not in market_lengths])
+        if missing_market_lengths:
+            missing_list_str = '\n'.join([f'•  {d}' for d in missing_market_lengths])
+            msg_box = QMessageBox(self)
+            msg_box.setObjectName('warningMessageBox')
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle('Missing Market Lengths')
+            msg_box.setText('Please select available market lengths for the following required diameters:')
+            msg_box.setInformativeText(missing_list_str)
+            msg_box.exec()
+            return False
 
-        if not save_path:
-            print('File save cancelled by user.')
-            return
-
-        # --- Try to save the file and handle potential errors ---
-        try:
-            # Pass optimization_results to the Excel function
-            create_excel_cutting_plan(cuts_by_diameter, market_lengths, output_filename=save_path)
-        except PermissionError:
-            QMessageBox.warning(
-                self,
-                'Save Error',
-                f"Could not save the file to '{os.path.basename(save_path)}'.\n\n"
-                'Please ensure the file is not already open in another program and that you have permission to write to this location.'
-            )
-            return  # Stop execution if save fails
-
-        # --- Open the saved file ---
-        try:
-            if sys.platform == 'win32':
-                os.startfile(save_path)
-            elif sys.platform == 'darwin':
-                subprocess.call(['open', save_path])
-            else:
-                subprocess.call(['xdg-open', save_path])
-        except Exception as e:
-            print(f'Could not open file automatically: {e}')
-
-        # --- Ask the user what to do next, with reliable button styling ---
-        msg_box = QMessageBox(self)
-        msg_box.setWindowTitle('Generation Complete')
-        msg_box.setText('The cutting list has been generated and saved.')
-        msg_box.setInformativeText('What would you like to do next?')
-        msg_box.setIcon(QMessageBox.Icon.Question)
-
-        msg_box.setStandardButtons(QMessageBox.StandardButton.Reset | QMessageBox.StandardButton.Close)
-
-        start_over_btn = msg_box.button(QMessageBox.StandardButton.Reset)
-        start_over_btn.setText('Start Over')
-        start_over_btn.setStyleSheet("""background-color: #3498db; 
-        color: white; 
-        border: 1px solid #2980b9;
-        min-width: 90px; 
-        font-weight: bold; 
-        padding: 8px 16px; 
-        border-radius: 5px;""")
-
-        close_btn = msg_box.button(QMessageBox.StandardButton.Close)
-        close_btn.setText('Close Program')
-        close_btn.setStyleSheet("""background-color: #E1E1E1; 
-        color: #2c3e50; 
-        border: 1px solid #ADADAD;
-        min-width: 90px; 
-        font-weight: bold; 
-        padding: 8px 16px; 
-        border-radius: 5px;""")
-
-        msg_box.setDefaultButton(start_over_btn)
-        reply = msg_box.exec()
-
-        if reply == QMessageBox.StandardButton.Reset:
-            self.reset_application()
-        else:
-            self.close()
+        # Check splicing
+        diameters = self.parsed_cutting_lengths['Diameter']
+        cut_lengths = self.parsed_cutting_lengths['Cutting Length']
+        splicing_list = []
+        for dia, c_len in zip(diameters, cut_lengths):
+            max_available = max(market_lengths[dia])
+            if c_len / 1000 > max_available:
+                splicing_list.append((dia, c_len / 1000, max_available))
+        if splicing_list:
+            missing_list_str = '\n'.join(
+                [f'•  {dia}: Required cut of {c_len:.1f}m exceeds the maximum available length of {max_available:.1f}m.'
+                 for dia, c_len, max_available in splicing_list])
+            msg_box = QMessageBox(self)
+            msg_box.setObjectName('warningMessageBox')
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle('Do not splice')
+            msg_box.setText('The following rebars require splicing, which should be avoided.')
+            msg_box.setInformativeText(
+                f'Please select or add longer market lengths to accommodate these cuts:\n\n{missing_list_str}')
+            msg_box.exec()
+            return False
+        return True
 
     def prefill_for_debug(self):
         """Pre-fills all input fields with sample data for faster testing."""
@@ -823,6 +628,7 @@ class MultiPageApp(QMainWindow):
     def show_error_message(self, title, message):
         """Displays a standardized error message box."""
         msg_box = QMessageBox(self)
+        msg_box.setObjectName('warningMessageBox')
         msg_box.setIcon(QMessageBox.Icon.Warning)
         msg_box.setWindowTitle(title)
         msg_box.setText('Please correct the following errors before proceeding:')
@@ -865,71 +671,103 @@ class MultiPageApp(QMainWindow):
 
         return sorted(list(set(errors)))
 
-    def eventFilter(self, obj, event):
+    def keyPressEvent(self, event):
         """
-        Filters out mouse wheel events on all QComboBoxes to prevent
-        accidental value changes while scrolling the page.
+        Handles key press events for the main window.
         """
-        # Check if the event is a wheel event and the object is a QComboBox.
-        if event.type() == QEvent.Type.Wheel and isinstance(obj, (QComboBox, QSpinBox, QDoubleSpinBox)):
-            # Return True to indicate the event has been handled and should be ignored.
-            return True
+        # If the Escape key is pressed, set focus to the main window.
+        if event.key() == Qt.Key.Key_Escape:
+            self.setFocus()
+        else:
+            # Otherwise, let the default event handling proceed
+            super().keyPressEvent(event)
 
-        # For all other events, pass them to the default implementation.
-        return super().eventFilter(obj, event)
+    def generate_excel(self):
+        self.parsed_cutting_lengths = parse_nested_dict(self.cutting_lengths)
+        if not DEBUG_MODE and (not self.validate_market_length_page()):
+            return
 
+        market_lengths = {}
+        for dia_code, lengths in self.market_lengths_checkboxes.items():
+            available_lengths = [float(l.replace('m', '')) for l, cb in lengths.items() if cb.isChecked()]
+            if available_lengths:
+                market_lengths[dia_code] = available_lengths
 
-    def toggle_market_row(self, dia):
-        """Toggles all checkboxes in a row based on the state of the first one."""
-        row_cbs = self.market_lengths_checkboxes[dia]
-        if not row_cbs: return
+        wb = Workbook()
+        cuts_by_diameter = {}
+        for dia, length, quantity in zip(self.parsed_cutting_lengths['Diameter'],
+                                         self.parsed_cutting_lengths['Cutting Length'],
+                                         self.parsed_cutting_lengths['Quantity']):
+            if dia not in cuts_by_diameter:
+                cuts_by_diameter[dia] = {length: quantity}
+            elif length in cuts_by_diameter[dia]:
+                cuts_by_diameter[dia][length] += quantity
+            else:
+                cuts_by_diameter[dia][length] = quantity
+        for key, value in cuts_by_diameter.items():
+            cuts_by_diameter[key] = [(q, l / 1000) for l, q in value.items()]
 
-        # Determine target state based on the opposite of the first checkbox
-        first_len = MARKET_LENGTHS[0]
-        new_state = not row_cbs[first_len].isChecked()
+        purchase_list, cutting_plan = find_optimized_cutting_plan(cuts_by_diameter, market_lengths)
+        wb = add_shet_purchase_plan(wb, purchase_list)
+        wb = add_sheet_cutting_plan(wb, cutting_plan)
 
-        for cb in row_cbs.values():
-            cb.setChecked(new_state)
+        # --- 4. Save and Open the Excel File ---
+        wb = delete_blank_worksheets(wb)
+        save_path, _ = QFileDialog.getSaveFileName(
+            self, 'Save Cutting List As', 'rebar_purchase_plan.xlsx',
+            'Excel Files (*.xlsx);;All Files (*)'
+        )
+        if not save_path:
+            return
 
-    def toggle_market_column(self, length):
-        """Toggles all checkboxes in a column based on the state of the first one."""
-        if not BAR_DIAMETERS: return
+        try:
+            wb.save(save_path)
+        except PermissionError:
+            err_box = QMessageBox(self)
+            err_box.setObjectName('criticalMessageBox')  # Style for critical errors
+            err_box.setIcon(QMessageBox.Icon.Critical)
+            err_box.setWindowTitle('Save Error')
+            err_box.setText(f'Could not save the file to {os.path.basename(save_path)}.')
+            err_box.setInformativeText('Please ensure the file is not already open in another program.')
+            err_box.exec()
+            return
 
-        # Determine target state based on the opposite of the first row's checkbox in this column
-        first_dia = BAR_DIAMETERS[0]
-        new_state = not self.market_lengths_checkboxes[first_dia][length].isChecked()
+        try:
+            if sys.platform == 'win32':
+                os.startfile(save_path)
+            elif sys.platform == 'darwin':
+                subprocess.call(['open', save_path])
+            else:
+                subprocess.call(['xdg-open', save_path])
+        except Exception as e:
+            print(f'Could not open file automatically: {e}')
 
-        for dia in BAR_DIAMETERS:
-            self.market_lengths_checkboxes[dia][length].setChecked(new_state)
+        # Refactor the final prompt
+        msg_box = QMessageBox(self)
+        msg_box.setObjectName('questionMessageBox')  # Style for questions
+        msg_box.setWindowTitle('Generation Complete')
+        msg_box.setText('The purchase plan has been generated and saved.')
+        msg_box.setInformativeText('What would you like to do next?')
+        msg_box.setIcon(QMessageBox.Icon.Question)
 
-def create_excel_cutting_plan(cuts_by_diameter: dict[str, list[tuple]],
-                              market_lengths: dict[str, list],
-                              output_filename: str = 'rebar_cutting_schedule.xlsx') -> None:
-    """
-    Generates a formatted Excel file with purchase and cutting plan sheets.
+        # Keep the existing button setup, we will style them via QSS
+        start_over_btn = msg_box.addButton('Start Over', QMessageBox.ButtonRole.ResetRole)
+        msg_box.addButton('Close Program', QMessageBox.ButtonRole.RejectRole)
+        msg_box.setDefaultButton(start_over_btn)
 
-    Args:
-        cuts_by_diameter: A dictionary of required cuts, keyed by diameter.
-        market_lengths: A dictionary of available stock lengths, keyed by diameter.
-        output_filename: The path to save the output .xlsx file.
-    """
-    purchase_list, cutting_plan = find_optimized_cutting_plan(cuts_by_diameter, market_lengths)
+        msg_box.exec()
 
-    proceed_cutting_plan = True
-    for plan in cutting_plan:
-        if 'Error' in plan:
-            raise ValueError('Cannot proceed. Double check if a length exceed the available market length.')
-    wb = Workbook()
-    if proceed_cutting_plan:
-        add_shet_purchase_plan(wb, purchase_list)
-        add_sheet_cutting_plan(wb, cutting_plan)
-    wb.remove(wb.active)
-    wb.save(output_filename)
-    print(f"Excel sheet '{output_filename}' has been created successfully.")
+        if msg_box.clickedButton() == start_over_btn:
+            self.reset_application()
+        else:
+            self.close()
+        return
 
 if __name__ == '__main__':
     sys.excepthook = global_exception_hook
     app = QApplication(sys.argv)
+    wheel_event_filter = GlobalWheelEventFilter()
+    app.installEventFilter(wheel_event_filter)
     app.setStyleSheet(load_stylesheet('style.qss'))
     window = MultiPageApp()
     window.show()

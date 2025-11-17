@@ -6,7 +6,6 @@ application data, such as rebar sizes, market lengths, and UI dimensions.
 # --- Rebar Domain Data ---
 BAR_DIAMETERS = ['#10', '#12', '#16', '#20', '#25', '#28', '#32', '#36', '#40', '#50']
 BAR_DIAMETERS_FOR_STIRRUPS = ['#10', '#12', '#16', '#20', '#25']
-STIRRUP_SHAPES = ['Outer', 'Tall', 'Wide', 'Octagon', 'Diamond']
 MARKET_LENGTHS = ['6m', '7.5m', '9m', '10.5m', '12m', '13.5m', '15m']
 
 # --- UI Layout Constants ---
