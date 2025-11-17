@@ -33,7 +33,7 @@ from openpyxl import Workbook
 
 r"""
 TO BUILD:
-pyinstaller --name "CuttingList" --onefile --windowed --icon="images/logo.png" --add-data "images:images" --add-data "style.qss:." --add-binary "C:\Users\rober\PycharmProjects\engineering_apps\.venv\Lib\site-packages\pulp\solverdir\cbc\win\i64\cbc.exe;." app_cutting_list.py
+pyinstaller --name 'CuttingList' --onefile --windowed --icon='images/logo.png' --add-data 'images:images' --add-data 'style.qss:.' --add-binary 'C:\Users\rober\PycharmProjects\engineering_apps\.venv\Lib\site-packages\pulp\solverdir\cbc\win\i64\cbc.exe;.' app_cutting_list.py
 """
 
 class DrawStirrup(QWidget):
@@ -1012,7 +1012,7 @@ class FoundationDetailsDialog(QDialog):
                 widgets_with_errors.append(widget)
                 is_empty_found = True
         if is_empty_found:
-            errors.append("• All input fields must be filled.")
+            errors.append('• All input fields must be filled.')
 
         # --- Get numeric values for comparison checks ---
         name = name_widget.text().strip()
@@ -1026,42 +1026,42 @@ class FoundationDetailsDialog(QDialog):
 
         # 2. Name should be unique.
         if name in self.existing_names:
-            errors.append(f"• Foundation Type name '{name}' already exists.")
+            errors.append(f'• Foundation Type name {name} already exists.')
             widgets_with_errors.append(name_widget)
 
         # 3. Pedestal Width and pad thickness > 2 * concrete cover.
         if not is_widget_empty(bx_widget) and not is_widget_empty(cc_widget) and bx <= 2 * cc:
-            errors.append(f"• Pedestal Width X ({bx}mm) must be > 2 × Concrete Cover ({2 * cc}mm).")
+            errors.append(f'• Pedestal Width X ({bx}mm) must be > 2 × Concrete Cover ({2 * cc}mm).')
             widgets_with_errors.extend([bx_widget, cc_widget])
         if not is_widget_empty(by_widget) and not is_widget_empty(cc_widget) and by <= 2 * cc:
-            errors.append(f"• Pedestal Width Y ({by}mm) must be > 2 × Concrete Cover ({2 * cc}mm).")
+            errors.append(f'• Pedestal Width Y ({by}mm) must be > 2 × Concrete Cover ({2 * cc}mm).')
             widgets_with_errors.extend([by_widget, cc_widget])
         if not is_widget_empty(t_widget) and not is_widget_empty(cc_widget) and t <= 2 * cc:
-            errors.append(f"• Pad Thickness ({t}mm) must be > 2 × Concrete Cover ({2 * cc}mm).")
+            errors.append(f'• Pad Thickness ({t}mm) must be > 2 × Concrete Cover ({2 * cc}mm).')
             widgets_with_errors.extend([t_widget, cc_widget])
 
         # 4. Pedestal Height > concrete cover.
         if not is_widget_empty(h_widget) and not is_widget_empty(cc_widget) and h <= cc:
-            errors.append(f"• Pedestal Height ({h}mm) must be > Concrete Cover ({cc}mm).")
+            errors.append(f'• Pedestal Height ({h}mm) must be > Concrete Cover ({cc}mm).')
             widgets_with_errors.extend([h_widget, cc_widget])
 
         # 5. Pad Width > (concrete_cover * 2 + ped_width)
         if not is_widget_empty(Bx_widget) and not is_widget_empty(bx_widget) and not is_widget_empty(cc_widget) and Bx <= (bx + 2 * cc):
-            errors.append(f"• Pad Width X ({Bx}mm) must be > Pedestal Width X + 2 × Cover ({bx + 2 * cc}mm).")
+            errors.append(f'• Pad Width X ({Bx}mm) must be > Pedestal Width X + 2 × Cover ({bx + 2 * cc}mm).')
             widgets_with_errors.extend([Bx_widget, bx_widget, cc_widget])
         if not is_widget_empty(By_widget) and not is_widget_empty(by_widget) and not is_widget_empty(cc_widget) and By <= (by + 2 * cc):
-            errors.append(f"• Pad Width Y ({By}mm) must be > Pedestal Width Y + 2 × Cover ({by + 2 * cc}mm).")
+            errors.append(f'• Pad Width Y ({By}mm) must be > Pedestal Width Y + 2 × Cover ({by + 2 * cc}mm).')
             widgets_with_errors.extend([By_widget, by_widget, cc_widget])
 
         if errors:
             for widget in set(widgets_with_errors):
                 style_invalid_input(widget, False)
             msg_box = QMessageBox(self)
-            msg_box.setObjectName("warningMessageBox")
+            msg_box.setObjectName('warningMessageBox')
             msg_box.setIcon(QMessageBox.Icon.Warning)
-            msg_box.setWindowTitle("Invalid Input on Footing Page")
-            msg_box.setText("Please correct the following errors:")
-            msg_box.setInformativeText("\n".join(errors))
+            msg_box.setWindowTitle('Invalid Input on Footing Page')
+            msg_box.setText('Please correct the following errors:')
+            msg_box.setInformativeText('\n'.join(errors))
             msg_box.exec()
             return False
 
@@ -1113,7 +1113,7 @@ class FoundationDetailsDialog(QDialog):
                         widgets_with_errors.append(widget)
                         is_empty_found_in_section = True
             if is_empty_found_in_section:
-                 errors.append(f"• A required field in the '{section_name}' section is empty.")
+                 errors.append(f'• A required field in the {section_name} section is empty.')
 
 
             # --- B. Specific validation rules ---
@@ -1126,11 +1126,11 @@ class FoundationDetailsDialog(QDialog):
                 clear_width_y = By - 2 * cc
                 # Bars along Y are spaced across Bx
                 if not is_widget_empty(val_x_widget) and val_x_widget.value() >= clear_width_x:
-                    errors.append(f"• {section_name} (Along Y): Spacing ({val_x_widget.value()}mm) must be less than clear pad width X ({clear_width_x}mm).")
+                    errors.append(f'• {section_name} (Along Y): Spacing ({val_x_widget.value()}mm) must be less than clear pad width X ({clear_width_x}mm).')
                     widgets_with_errors.extend([val_x_widget, self.widgets['Bx'], self.widgets['cc']])
                 # Bars along X are spaced across By
                 if not is_widget_empty(val_y_widget) and val_y_widget.value() >= clear_width_y:
-                    errors.append(f"• {section_name} (Along X): Spacing ({val_y_widget.value()}mm) must be less than clear pad width Y ({clear_width_y}mm).")
+                    errors.append(f'• {section_name} (Along X): Spacing ({val_y_widget.value()}mm) must be less than clear pad width Y ({clear_width_y}mm).')
                     widgets_with_errors.extend([val_y_widget, self.widgets['By'], self.widgets['cc']])
 
             # 2. Vertical Bar Validation
@@ -1142,13 +1142,13 @@ class FoundationDetailsDialog(QDialog):
 
                 pedestal_core_perimeter = (bx - 2 * cc) * 2 + (by - 2 * cc) * 2
                 if not is_widget_empty(qty_widget) and qty_widget.value() >= pedestal_core_perimeter:
-                    errors.append(f"• Vertical Bar quantity ({qty_widget.value()}) is high; it must be less than the pedestal core perimeter ({pedestal_core_perimeter:.0f}mm).")
+                    errors.append(f'• Vertical Bar quantity ({qty_widget.value()}) is high; it must be less than the pedestal core perimeter ({pedestal_core_perimeter:.0f}mm).')
                     widgets_with_errors.extend([qty_widget, self.widgets['bx'], self.widgets['by'], self.widgets['cc']])
 
                 if hook_calc == 'Manual':
                     clear_pad_width_min = min(Bx, By) - 2 * cc
                     if not is_widget_empty(hook_len_widget) and hook_len_widget.value() >= clear_pad_width_min / 2:
-                        errors.append(f"• Manual Hook Length ({hook_len_widget.value()}mm) must be less than half the clear pad width ({clear_pad_width_min / 2:.0f}mm).")
+                        errors.append(f'• Manual Hook Length ({hook_len_widget.value()}mm) must be less than half the clear pad width ({clear_pad_width_min / 2:.0f}mm).')
                         widgets_with_errors.extend([hook_len_widget, self.widgets['Bx'], self.widgets['By'], self.widgets['cc']])
 
             # 3. Stirrups Validation
@@ -1156,24 +1156,24 @@ class FoundationDetailsDialog(QDialog):
                 spacing_widget = self.widgets['Stirrups']['Spacing']
                 spacing_text = spacing_widget.toPlainText().strip()
                 if not spacing_text:
-                     errors.append("• Stirrup 'Spacing' field cannot be empty.")
+                     errors.append('• Stirrup Spacing field cannot be empty.')
                      widgets_with_errors.append(spacing_widget)
                 else:
                     try:
                         parse_spacing_string(spacing_text)
                     except (ValueError, TypeError) as e:
-                        errors.append(f"• Invalid Stirrup Spacing format: {e}")
+                        errors.append(f'• Invalid Stirrup Spacing format: {e}')
                         widgets_with_errors.append(spacing_widget)
 
         if errors:
             for widget in set(widgets_with_errors):
                 style_invalid_input(widget, False)
             msg_box = QMessageBox(self)
-            msg_box.setObjectName("warningMessageBox")
+            msg_box.setObjectName('warningMessageBox')
             msg_box.setIcon(QMessageBox.Icon.Warning)
-            msg_box.setWindowTitle("Invalid Input on Reinforcement Page")
-            msg_box.setText("Please correct the following errors:")
-            msg_box.setInformativeText("\n".join(errors))
+            msg_box.setWindowTitle('Invalid Input on Reinforcement Page')
+            msg_box.setText('Please correct the following errors:')
+            msg_box.setInformativeText('\n'.join(errors))
             msg_box.exec()
             return False
 
@@ -1690,7 +1690,7 @@ class MultiPageApp(QMainWindow):
 
         self.setWindowTitle('Cutting List')
         self.setWindowIcon(QIcon(resource_path('images/logo.png')))
-        self.setGeometry(50, 50, 750, 700)
+        self.setGeometry(50, 50, 750, 550)
         self.setMinimumWidth(750)
         self.setMinimumHeight(500)
 
@@ -2031,7 +2031,7 @@ class MultiPageApp(QMainWindow):
             cell.setProperty('class', style_class)
             return cell
 
-        # Re-create Top-Left Header as a "Toggle All" button
+        # Re-create Top-Left Header as a 'Toggle All' button
         toggle_all_btn = HoverButton('Diameter')
         toggle_all_btn.setToolTip('Toggle All Checkboxes')  # Helpful tooltip
         toggle_all_btn.setProperty('class', 'clickable-header')
@@ -2098,11 +2098,11 @@ class MultiPageApp(QMainWindow):
         dialog = QInputDialog(self)
 
         # --- Set an objectName for QSS styling ---
-        dialog.setObjectName("marketLengthInputDialog")
+        dialog.setObjectName('marketLengthInputDialog')
 
         # --- Configure the dialog's properties ---
-        dialog.setWindowTitle("Add Market Length")
-        dialog.setLabelText("Enter new length (in meters):")
+        dialog.setWindowTitle('Add Market Length')
+        dialog.setLabelText('Enter new length (in meters):')
         dialog.setInputMode(QInputDialog.InputMode.DoubleInput)
         dialog.setDoubleRange(1.0, 50.0)
         dialog.setDoubleDecimals(1)
@@ -2123,10 +2123,10 @@ class MultiPageApp(QMainWindow):
                 else:
                     # You can apply the same principle to QMessageBox
                     msg_box = QMessageBox(self)
-                    msg_box.setObjectName("warningMessageBox")  # Style this in QSS
+                    msg_box.setObjectName('warningMessageBox')  # Style this in QSS
                     msg_box.setIcon(QMessageBox.Icon.Warning)
-                    msg_box.setWindowTitle("Duplicate Length")
-                    msg_box.setText("That market length already exists.")
+                    msg_box.setWindowTitle('Duplicate Length')
+                    msg_box.setText('That market length already exists.')
                     msg_box.exec()
 
     def remove_market_length(self):
@@ -2134,18 +2134,18 @@ class MultiPageApp(QMainWindow):
         if not self.current_market_lengths:
             # You can style this info box as well
             msg_box = QMessageBox(self)
-            msg_box.setObjectName("infoMessageBox")
+            msg_box.setObjectName('infoMessageBox')
             msg_box.setIcon(QMessageBox.Icon.Information)
-            msg_box.setWindowTitle("No Lengths")
-            msg_box.setText("There are no market lengths to remove.")
+            msg_box.setWindowTitle('No Lengths')
+            msg_box.setText('There are no market lengths to remove.')
             msg_box.exec()
             return
 
         # --- Instantiate the dialog ---
         dialog = QInputDialog(self)
-        dialog.setObjectName("marketLengthRemoveDialog")  # For QSS styling
-        dialog.setWindowTitle("Remove Market Length")
-        dialog.setLabelText("Select a length to remove:")
+        dialog.setObjectName('marketLengthRemoveDialog')  # For QSS styling
+        dialog.setWindowTitle('Remove Market Length')
+        dialog.setLabelText('Select a length to remove:')
 
         # --- Configure for item selection ---
         dialog.setInputMode(QInputDialog.InputMode.TextInput)  # Necessary for combo box mode
@@ -2236,7 +2236,7 @@ class MultiPageApp(QMainWindow):
 
         # --- Helper function for styling disabled text ---
         def format_disabled(text):
-            return f'<i><font color="#A7A6A6">{text}</font></i>'
+            return f"<i><font color='#A7A6A6'>{text}</font></i>"
 
         # --- Populate Top Bar ---
         top_bar_data = data['Top Bar']
@@ -2366,9 +2366,9 @@ class MultiPageApp(QMainWindow):
             # or if it doesn't have an 'Enabled' key (like Bottom Bar, which is always enabled).
             is_enabled = section_data.get('Enabled', True)
             if is_enabled:
-                dia_text = section_data.get('Diameter', '')
-                if dia_text:
-                    used_diameters.add(dia_text)
+                diameter_str = section_data.get('Diameter', '')
+                if diameter_str:
+                    used_diameters.add(diameter_str)
 
         for data in all_foundation_data:
             process_section(data.get('Top Bar', {}))
@@ -2503,10 +2503,10 @@ class MultiPageApp(QMainWindow):
         all_data = self.get_all_foundation_data()
         if not all_data:
             msg_box = QMessageBox(self)
-            msg_box.setObjectName("infoMessageBox")
+            msg_box.setObjectName('infoMessageBox')
             msg_box.setIcon(QMessageBox.Icon.Information)
-            msg_box.setWindowTitle("No Data")
-            msg_box.setText("Please add at least one foundation type before generating the Excel file.")
+            msg_box.setWindowTitle('No Data')
+            msg_box.setText('Please add at least one foundation type before generating the Excel file.')
             msg_box.exec()
             return
 
@@ -2521,17 +2521,17 @@ class MultiPageApp(QMainWindow):
         proceed_with_optimization = True
 
         if missing_market_lengths:
-            missing_list_str = "\n".join([f"•  {d}" for d in missing_market_lengths])
+            missing_list_str = '\n'.join([f'•  {d}' for d in missing_market_lengths])
             msg_box = QMessageBox(self)
             # Give this a specific name for more detailed styling
-            msg_box.setObjectName("warningMessageBoxWithChoices")
+            msg_box.setObjectName('warningMessageBoxWithChoices')
             msg_box.setIcon(QMessageBox.Icon.Warning)
-            msg_box.setWindowTitle("Missing Market Lengths")
-            msg_box.setText("The following required rebar diameters have no market lengths selected:")
+            msg_box.setWindowTitle('Missing Market Lengths')
+            msg_box.setText('The following required rebar diameters have no market lengths selected:')
             msg_box.setInformativeText(
-                f"{missing_list_str}\n\n"
-                "This will prevent the generation of the Purchase and Cutting Plan sheets.\n\n"
-                "Do you want to proceed with generating only the Cutting Lists?"
+                f'{missing_list_str}\n\n'
+                'This will prevent the generation of the Purchase and Cutting Plan sheets.\n\n'
+                'Do you want to proceed with generating only the Cutting Lists?'
             )
             msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             msg_box.setDefaultButton(QMessageBox.StandardButton.No)
@@ -2583,9 +2583,9 @@ class MultiPageApp(QMainWindow):
             wb.save(save_path)
         except PermissionError:
             err_box = QMessageBox(self)
-            err_box.setObjectName("criticalMessageBox")  # Style for critical errors
+            err_box.setObjectName('criticalMessageBox')  # Style for critical errors
             err_box.setIcon(QMessageBox.Icon.Critical)
-            err_box.setWindowTitle("Save Error")
+            err_box.setWindowTitle('Save Error')
             err_box.setText(f'Could not save the file to {os.path.basename(save_path)}.')
             err_box.setInformativeText('Please ensure the file is not already open in another program.')
             err_box.exec()
@@ -2603,7 +2603,7 @@ class MultiPageApp(QMainWindow):
 
             # Refactor the final prompt
         msg_box = QMessageBox(self)
-        msg_box.setObjectName("questionMessageBox")  # Style for questions
+        msg_box.setObjectName('questionMessageBox')  # Style for questions
         msg_box.setWindowTitle('Generation Complete')
         msg_box.setText('The cutting list has been generated and saved.')
         msg_box.setInformativeText('What would you like to do next?')
@@ -2611,7 +2611,7 @@ class MultiPageApp(QMainWindow):
 
         # Keep the existing button setup, we will style them via QSS
         start_over_btn = msg_box.addButton('Start Over', QMessageBox.ButtonRole.ResetRole)
-        close_btn = msg_box.addButton('Close Program', QMessageBox.ButtonRole.RejectRole)
+        msg_box.addButton('Close Program', QMessageBox.ButtonRole.RejectRole)
         msg_box.setDefaultButton(start_over_btn)
 
         msg_box.exec()

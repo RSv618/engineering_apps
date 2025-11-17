@@ -79,13 +79,13 @@ class AnimatedStackedWidget(QStackedWidget):
         next_widget.show()
         next_widget.raise_()
 
-        anim_now = QPropertyAnimation(current_widget, b"pos")
+        anim_now = QPropertyAnimation(current_widget, b'pos')
         anim_now.setStartValue(self._p_now)
         anim_now.setEndValue(-self._p_next)
         anim_now.setDuration(self._animation_duration)
         anim_now.setEasingCurve(self._easing_curve)
 
-        anim_next = QPropertyAnimation(next_widget, b"pos")
+        anim_next = QPropertyAnimation(next_widget, b'pos')
         anim_next.setStartValue(self._p_next)
         anim_next.setEndValue(self._p_now)
         anim_next.setDuration(self._animation_duration)
@@ -642,7 +642,7 @@ def get_bar_dia(code: int | str, system: Literal['ph', 'soft_metric', 'imperial'
         }
     else:
         raise ValueError(
-            f"Invalid bar sizing scheme {system}. Valid choices are 'ph', 'soft_metric', and 'imperial'.")
+            f'Invalid bar sizing scheme {system}. Valid choices are ph, soft_metric, and imperial.')
     return bar_sizes[code]
 
 def get_dia_code(mm: int | float, system: Literal['ph', 'soft_metric', 'imperial'] = 'ph') -> str:
@@ -657,7 +657,7 @@ def get_dia_code(mm: int | float, system: Literal['ph', 'soft_metric', 'imperial
                      28.65: '#28', 32.26: '#32', 35.81: '#36', 38.7: '#40', 50.8: '#50'}
     else:
         raise ValueError(
-            f"Invalid bar sizing scheme {system}. Valid choices are 'ph', 'soft_metric', and 'imperial'.")
+            f'Invalid bar sizing scheme {system}. Valid choices are ph, soft_metric, and imperial.')
 
     # tolerance-based lookup
     for dia, code in rebar_code.items():

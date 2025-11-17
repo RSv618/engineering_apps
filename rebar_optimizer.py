@@ -211,7 +211,7 @@ def find_optimized_cutting_plan(demands: dict[str, list[tuple]], stocks: dict[st
 
         for res in result['purchases']:
             # Use a robust way to format the stock length key
-            market_length_key = f"{res['stock_length_m']:.1f}m"
+            market_length_key = f'{res['stock_length_m']:.1f}m'
             quantity = res['quantity']
             if market_length_key in row:
                 row[market_length_key] += quantity
@@ -229,7 +229,7 @@ def find_optimized_cutting_plan(demands: dict[str, list[tuple]], stocks: dict[st
 
 if __name__ == '__main__':
     # --- Example Test Case ---
-    print("--- Running Rebar Optimizer Test ---")
+    print('--- Running Rebar Optimizer Test ---')
 
     # Define a sample problem
     sample_demands = {
@@ -243,10 +243,10 @@ if __name__ == '__main__':
     purchase_list_result, cutting_plan_result = find_optimized_cutting_plan(sample_demands, sample_stocks, verbose=True)
 
     # Print the results
-    print("\n--- PURCHASE LIST ---")
+    print('\n--- PURCHASE LIST ---')
     for this in purchase_list_result:
         print(this)
 
-    print("\n--- CUTTING PLAN ---")
+    print('\n--- CUTTING PLAN ---')
     for this in cutting_plan_result:
         print(this)

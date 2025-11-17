@@ -117,7 +117,7 @@ def top_bottom_bar_calculation(bar_diameter: float,
     Calculates rebar for the top and bottom mat of a pad footing.
     """
     if (spacing_x is None or (spacing_y is None)) and (quantity_x is None or (quantity_y is None)):
-        raise ValueError("Either 'spacing' or 'quantity' must be provided.")
+        raise ValueError('Either spacing or quantity must be provided.')
 
     vertical_length = pad_thickness - concrete_cover * 2
     main_span_x = pad_width_x - concrete_cover * 2
@@ -184,7 +184,7 @@ def stirrups_calculation(bar_diameter: float,
                          config: Literal['outer', 'tall', 'wide', 'diamond', 'octagon', 'vertical', 'horizontal'] = 'outer',
                          a: float | None = None) -> dict:
     if config in ['tall', 'wide', 'octagon'] and a is None:
-        raise ValueError(f"Parameter 'a' must be provided for '{config}' stirrups.")
+        raise ValueError(f'Parameter a must be provided for {config} stirrups.')
 
     hook_length = get_hook_length(135, bar_diameter, 'stirrup')
     if config == 'outer':
@@ -262,7 +262,7 @@ def stirrups_calculation(bar_diameter: float,
         cut_length = sum(shape_dim.values()) - total_deduction
 
     else:
-        raise ValueError(f"Stirrup Type '{config}' not supported.")
+        raise ValueError(f'Stirrup Type {config} not supported.')
 
     return {
         'shape': shape,
