@@ -360,12 +360,12 @@ def create_excel_cutting_list(rebar_config: dict[str, Any],
         current_row += 1
 
     if proceed_cutting_plan:
-        add_shet_purchase_plan(wb, purchase_list)
+        add_sheet_purchase_plan(wb, purchase_list)
         add_sheet_cutting_plan(wb, cutting_plan)
     wb.save(output_filename)
     print(f'Excel sheet {output_filename} has been created successfully.')
 
-def add_shet_purchase_plan(wb, purchase_list) -> Workbook:
+def add_sheet_purchase_plan(wb, purchase_list) -> Workbook:
     ws = wb.create_sheet('Purchase Qty')
 
     # --- Styles ---

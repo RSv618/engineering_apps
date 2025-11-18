@@ -14,7 +14,7 @@ from utils import (load_stylesheet, parse_nested_dict, global_exception_hook,
                    style_invalid_input, GlobalWheelEventFilter)
 from rebar_optimizer import find_optimized_cutting_plan
 from constants import BAR_DIAMETERS, MARKET_LENGTHS, DEBUG_MODE
-from excel_writer import add_shet_purchase_plan, add_sheet_cutting_plan, delete_blank_worksheets
+from excel_writer import add_sheet_purchase_plan, add_sheet_cutting_plan, delete_blank_worksheets
 
 r"""
 TO BUILD:
@@ -708,7 +708,7 @@ class MultiPageApp(QMainWindow):
             cuts_by_diameter[key] = [(q, l / 1000) for l, q in value.items()]
 
         purchase_list, cutting_plan = find_optimized_cutting_plan(cuts_by_diameter, market_lengths)
-        wb = add_shet_purchase_plan(wb, purchase_list)
+        wb = add_sheet_purchase_plan(wb, purchase_list)
         wb = add_sheet_cutting_plan(wb, cutting_plan)
 
         # --- 4. Save and Open the Excel File ---
