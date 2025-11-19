@@ -376,7 +376,7 @@ QDoubleSpinBox.invalid-input {
 #rsbScrollContent .title-row {
     padding-bottom: 7px;
 }
-#rsbPageStirrupRowContainer .stirrup-row {
+.list-container .stirrup-row {
     background-color: white;
     border: 1px solid #eeeeec;
     border-radius: 7px;
@@ -452,6 +452,33 @@ QDoubleSpinBox.invalid-input {
     padding: 10px;
 }
 
+/* ------------------- */
+/* -- Launcher Styles -- */
+/* ------------------- */
+
+.app-card {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 15px;
+}
+
+.app-card:hover {
+    background-color: #f8f8f7;
+    border: 1px solid #009580; /* Highlight color */
+}
+
+.card-title {
+    font-size: 12pt;
+    font-weight: bold;
+    color: #32302c;
+    margin-top: 10px;
+}
+
+.card-desc {
+    font-size: 9pt;
+    color: #5d5d5d;
+    margin-bottom: 15px;
+}
 /* -------------------------- */
 /* -- Custom Dialog Styles -- */
 /* -------------------------- */

@@ -1693,7 +1693,7 @@ class FoundationItem(QFrame):
         self.data = new_details
         self.label.setText(self.data.get('name', 'Unnamed'))
 
-class MultiPageApp(QMainWindow):
+class CuttingListWindow(QMainWindow):
     def __init__(self) -> None:
         """Initializes the main application window and its components."""
         super().__init__()
@@ -1716,6 +1716,7 @@ class MultiPageApp(QMainWindow):
         self.market_lengths_checkboxes = None
         self.market_lengths_grid = None
         self.current_market_lengths = list(MARKET_LENGTHS)
+        self.active_diameters = set(BAR_DIAMETERS) # Default to all
 
         self.create_foundation_entry_page()
         self.create_market_lengths_page()
@@ -2006,10 +2007,7 @@ class MultiPageApp(QMainWindow):
 
     def redraw_market_lengths_grid(self, previous_states: dict):
         """
-        Clears and redraws the grid, applying states from the provided dictionary.
-
-        Args:
-            previous_states: A dict of {'dia': {'length': is_checked}} to restore.
+        Clears and redraws the grid, showing only ACTIVE diameters.
         """
         if self.market_lengths_grid is None:
             return
@@ -2022,7 +2020,6 @@ class MultiPageApp(QMainWindow):
 
         self.market_lengths_checkboxes = {}
 
-        # Helper to create styled cells (this is unchanged)
         def create_cell(widget, is_header=False, is_alternate=False, x=0, y=0):
             cell = QFrame()
             cell.setAutoFillBackground(True)
@@ -2038,20 +2035,20 @@ class MultiPageApp(QMainWindow):
             style_class = 'grid-cell'
             if is_header: style_class += ' header-cell'
             if is_alternate: style_class += ' alternate-row-cell'
-            if x==0 and y > 0:
+            if x == 0 and y > 0:
                 style_class += ' header-column-cell'
-            elif y==0 and x > 0:
+            elif y == 0 and x > 0:
                 style_class += ' header-row-cell'
-            elif x==0 and y==0:
+            elif x == 0 and y == 0:
                 style_class += ' header-corner-cell'
             else:
                 style_class += ' non-header-cell'
             cell.setProperty('class', style_class)
             return cell
 
-        # Re-create Top-Left Header as a 'Toggle All' button
+        # Re-create Top-Left Header
         toggle_all_btn = HoverButton('Diameter')
-        toggle_all_btn.setToolTip('Toggle All Checkboxes')  # Helpful tooltip
+        toggle_all_btn.setToolTip('Toggle All Checkboxes')
         toggle_all_btn.setProperty('class', 'clickable-header')
         toggle_all_btn.clicked.connect(self.toggle_all_market_checkboxes)
         self.market_lengths_grid.addWidget(create_cell(toggle_all_btn, is_header=True, x=0, y=0), 0, 0)
@@ -2063,31 +2060,40 @@ class MultiPageApp(QMainWindow):
             btn.clicked.connect(lambda checked, l=length: self.toggle_market_column(l))
             self.market_lengths_grid.addWidget(create_cell(btn, is_header=True, x=0, y=col + 1), 0, col + 1)
 
-        # Re-create Rows
-        for row, dia in enumerate(BAR_DIAMETERS):
-            is_alternate_row = row % 2 == 1
+        # Re-create Rows (FILTERED)
+        visual_row_index = 0
+        for dia in BAR_DIAMETERS:
+            # FILTER LOGIC: Skip if not in active set
+            if dia not in self.active_diameters:
+                continue
+
+            visual_row_index += 1
+            is_alternate_row = visual_row_index % 2 == 1
             self.market_lengths_checkboxes[dia] = {}
 
             # Row Header
             btn = HoverButton(dia)
             btn.setProperty('class', 'clickable-header clickable-row-header')
             btn.clicked.connect(lambda checked, d=dia: self.toggle_market_row(d))
-            self.market_lengths_grid.addWidget(create_cell(btn, is_header=True, is_alternate=is_alternate_row, x=row + 1, y=0),
-                                               row + 1,
-                                               0)
+            self.market_lengths_grid.addWidget(
+                create_cell(btn, is_header=True, is_alternate=is_alternate_row, x=visual_row_index, y=0),
+                visual_row_index, 0)
 
-            # Checkboxes for each length
+            # Checkboxes
             for col, length in enumerate(self.current_market_lengths):
                 cb = QCheckBox()
                 cb.setProperty('class', 'check-box')
-
-                # Restore the state if it exists, otherwise default to True for new lengths
                 is_checked = previous_states.get(dia, {}).get(length, False)
                 cb.setChecked(is_checked)
-                # -----------------------------
-
                 self.market_lengths_checkboxes[dia][length] = cb
-                self.market_lengths_grid.addWidget(create_cell(cb, is_alternate=is_alternate_row, x=row+1, y=col+1), row + 1, col + 1)
+                self.market_lengths_grid.addWidget(
+                    create_cell(cb, is_alternate=is_alternate_row, x=visual_row_index, y=col + 1),
+                    visual_row_index, col + 1)
+
+        # If no diameters are active, show a placeholder message in grid
+        if visual_row_index == 0:
+            lbl = QLabel("No diameters required based on current inputs.")
+            self.market_lengths_grid.addWidget(lbl, 1, 0, 1, len(self.current_market_lengths) + 1)
 
     def toggle_all_market_checkboxes(self):
         """Toggles the state of every checkbox in the market lengths grid."""
@@ -2192,20 +2198,17 @@ class MultiPageApp(QMainWindow):
             cb.setChecked(new_state)
 
     def toggle_market_column(self, length: str) -> None:
-        """
-        Toggles all checkboxes in a given market length column.
+        """Toggles active checkboxes in a column."""
+        if not self.active_diameters: return
+        # Find the first visible diameter to determine state
+        first_visible = next((d for d in BAR_DIAMETERS if d in self.active_diameters), None)
+        if not first_visible: return
 
-        Args:
-            length: The market length string (e.g., '6m') identifying the column.
-        """
-        if not BAR_DIAMETERS: return
+        new_state = not self.market_lengths_checkboxes[first_visible][length].isChecked()
 
-        # Determine target state based on the opposite of the first row's checkbox in this column
-        first_dia = BAR_DIAMETERS[0]
-        new_state = not self.market_lengths_checkboxes[first_dia][length].isChecked()
-
-        for dia in BAR_DIAMETERS:
-            self.market_lengths_checkboxes[dia][length].setChecked(new_state)
+        for dia in self.active_diameters:
+            if dia in self.market_lengths_checkboxes:
+                self.market_lengths_checkboxes[dia][length].setChecked(new_state)
 
     def get_all_foundation_data(self) -> list[dict]:
         """
@@ -2521,8 +2524,19 @@ class MultiPageApp(QMainWindow):
         self.setFocus()  # Remove focus
 
     def go_to_market_length_page(self):
+        """Switches to market length page and filters rows."""
+        # 1. Get all data
+        all_data = self.get_all_foundation_data()
+
+        # 2. Determine used diameters
+        self.active_diameters = self.get_used_diameters(all_data)
+
+        # 3. Save current states, then redraw with filter
+        current_states = self.get_current_checkbox_states()
+        self.redraw_market_lengths_grid(current_states)
+
         self.stacked_widget.setCurrentIndex(1)
-        self.setFocus()  # Remove focus
+        self.setFocus()
 
     def generate_excel(self):
         all_data = self.get_all_foundation_data()
@@ -2667,6 +2681,6 @@ if __name__ == '__main__':
     wheel_event_filter = GlobalWheelEventFilter()
     app.installEventFilter(wheel_event_filter)
     app.setStyleSheet(load_stylesheet('style.qss'))
-    window = MultiPageApp()
+    window = CuttingListWindow()
     window.show()
     sys.exit(app.exec())
