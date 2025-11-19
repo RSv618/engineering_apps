@@ -2573,6 +2573,21 @@ class MultiPageApp(QMainWindow):
             wb, proceed = add_sheet_cutting_list(data['name'], grouped_rebars_per_fdn_type, market_lengths, wb)
             if not proceed:
                 splicing_ok = False
+                msg_box = QMessageBox(self)
+                # Give this a specific name for more detailed styling
+                msg_box.setObjectName('warningMessageBox')
+                msg_box.setIcon(QMessageBox.Icon.Warning)
+                msg_box.setWindowTitle('Do not splice')
+                msg_box.setText('The calculated rebars require splicing, which should be avoided.')
+                msg_box.setInformativeText(f'This will prevent the generation of the Purchase and Cutting Plan sheets.\n'
+                'To generate Purchase and Cutting Plan sheets, please select or add longer market lengths to accommodate longer cuts.\n\n'
+                'Do you want to proceed with generating only the Cutting Lists?'
+                )
+                msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                msg_box.setDefaultButton(QMessageBox.StandardButton.No)
+
+                if msg_box.exec() == QMessageBox.StandardButton.No:
+                    return
 
         if proceed_with_optimization and splicing_ok:
             cuts_by_diameter = {}
