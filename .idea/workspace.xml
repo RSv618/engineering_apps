@@ -4,14 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Added warning when splicing is required.">
-      <change afterPath="$PROJECT_DIR$/concrete_strenth_calculator.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/launcher.py" afterDir="false" />
+    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Added launcher.&#10;Improved market lengths page by showing only selected bar sizes.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_concrete_mix.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_concrete_mix.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app_cutting_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_cutting_list.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app_optimal_purchase.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_optimal_purchase.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/style.qss" beforeDir="false" afterPath="$PROJECT_DIR$/style.qss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/launcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_launcher.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,29 +45,31 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python.app_concrete_mix.executor": "Run",
-    "Python.app_cutting_list.executor": "Run",
-    "Python.app_optimal_purchase.executor": "Run",
-    "Python.app_refactored.executor": "Run",
-    "Python.concrete_strenth_calculator.executor": "Run",
-    "Python.constants.executor": "Run",
-    "Python.launcher.executor": "Run",
-    "Python.rebar_calculations.executor": "Run",
-    "Python.rebar_optimizer.executor": "Run",
-    "Python.test.executor": "Run",
-    "Python.test2.executor": "Run",
-    "Python.utils.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "full.screen.before.presentation.mode": "false",
-    "git-widget-placeholder": "master",
-    "last_opened_file_path": "C:/Users/rober/PycharmProjects/engineering_apps"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.app_concrete_mix.executor&quot;: &quot;Run&quot;,
+    &quot;Python.app_cutting_list.executor&quot;: &quot;Run&quot;,
+    &quot;Python.app_launcher.executor&quot;: &quot;Run&quot;,
+    &quot;Python.app_optimal_purchase.executor&quot;: &quot;Run&quot;,
+    &quot;Python.app_refactored.executor&quot;: &quot;Run&quot;,
+    &quot;Python.concrete_aci.executor&quot;: &quot;Run&quot;,
+    &quot;Python.concrete_strenth_calculator.executor&quot;: &quot;Run&quot;,
+    &quot;Python.constants.executor&quot;: &quot;Run&quot;,
+    &quot;Python.launcher.executor&quot;: &quot;Run&quot;,
+    &quot;Python.rebar_calculations.executor&quot;: &quot;Run&quot;,
+    &quot;Python.rebar_optimizer.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test2.executor&quot;: &quot;Run&quot;,
+    &quot;Python.utils.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;full.screen.before.presentation.mode&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/rober/PycharmProjects/engineering_apps&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\rober\PycharmProjects\engineering_apps" />
@@ -300,7 +299,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763529801115</updated>
     </task>
-    <option name="localTasksCounter" value="27" />
+    <task id="LOCAL-00027" summary="Added launcher.&#10;Improved market lengths page by showing only selected bar sizes.">
+      <option name="closed" value="true" />
+      <created>1763532148644</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1763532148644</updated>
+    </task>
+    <option name="localTasksCounter" value="28" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -337,6 +344,7 @@
     <MESSAGE value="Fixed optimal purchase" />
     <MESSAGE value="Updated excel generation for optimal_purchase" />
     <MESSAGE value="Added warning when splicing is required." />
-    <option name="LAST_COMMIT_MESSAGE" value="Added warning when splicing is required." />
+    <MESSAGE value="Added launcher.&#10;Improved market lengths page by showing only selected bar sizes." />
+    <option name="LAST_COMMIT_MESSAGE" value="Added launcher.&#10;Improved market lengths page by showing only selected bar sizes." />
   </component>
 </project>

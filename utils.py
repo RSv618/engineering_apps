@@ -751,6 +751,13 @@ def resource_path(relative_path: str) -> str:
 
     return os.path.join(base_path, relative_path)
 
+
+def interpolate_linear(x, x1, y1, x2, y2):
+    """Basic linear interpolation formula"""
+    if x2 - x1 == 0: return y1
+    return y1 + (x - x1) * (y2 - y1) / (x2 - x1)
+
+
 def make_scrollable(widget: QWidget, always_on: bool = False) -> QScrollArea:
     """
     Wraps a widget in a QScrollArea.

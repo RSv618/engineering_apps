@@ -1,11 +1,9 @@
 import sys
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
-                             QGridLayout, QLabel, QFrame, QPushButton)
-from PyQt6.QtCore import Qt, QSize
+                             QGridLayout, QLabel, QFrame)
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QPixmap
 
-# Import the specific application windows
-# Note: Ensure the class names in the other files are updated as per above!
 from app_cutting_list import CuttingListWindow
 from app_optimal_purchase import OptimalPurchaseWindow
 from utils import load_stylesheet, resource_path, GlobalWheelEventFilter, HoverButton
@@ -122,8 +120,8 @@ class LauncherWindow(QMainWindow):
         footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(footer)
 
-    def do_nothing(self):
-        ...
+    # def do_nothing(self):
+    #     ...
 
     def launch_cutting_list(self):
         self.window = CuttingListWindow()
