@@ -391,6 +391,7 @@ if __name__ == "__main__":
     aci_mix.fc = 2500
     aci_mix.standard_deviation = None
     aci_mix.slump_target = 3.5
+    aci_mix.cement_sg = 3.2
 
     aci_mix.nmas = 1.5
     aci_mix.is_air_entrained = False
@@ -407,4 +408,4 @@ if __name__ == "__main__":
     aci_mix.fa_absorption = 0.7
     aci_mix.fa_moisture = 6.0
 
-    aci_mix.run_design()
+    aci_mix.calculate_mix()

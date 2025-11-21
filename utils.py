@@ -249,20 +249,19 @@ class BlankSpinBox(QSpinBox):
 
 class BlankDoubleSpinBox(QDoubleSpinBox):
     """Float spinbox with configurable decimals, and blank special value."""
-    def __init__(
-        self,
-        minimum: float,
-        maximum: float,
-        decimals: int = 2,
-        suffix: str | None = None,
-        parent: QWidget | None = None
-    ):
+    def __init__(self, minimum: float, maximum: float, decimals: int | None = None, initial: float | None = None, suffix: str | None = None,
+                 parent: QWidget | None = None):
         super().__init__(parent)
         self.setRange(minimum, maximum)
-        self.setDecimals(decimals)
-        self.setSpecialValueText(' ')
+        if initial:
+            self.setValue(initial)
+        else:
+            self.setSpecialValueText(' ')
         if suffix:
             self.setSuffix(suffix)
+        if decimals:
+            self.setDecimals(decimals)
+        self.setGroupSeparatorShown(True)
 
 class InfoPopup(QWidget):
     """

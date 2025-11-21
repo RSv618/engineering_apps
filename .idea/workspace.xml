@@ -4,10 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Added launcher.&#10;Improved market lengths page by showing only selected bar sizes.">
+    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Added app_concrete_mix for design mix">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_concrete_mix.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_concrete_mix.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/launcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_launcher.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/concrete_aci.py" beforeDir="false" afterPath="$PROJECT_DIR$/concrete_aci.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/style.qss" beforeDir="false" afterPath="$PROJECT_DIR$/style.qss" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -49,6 +50,7 @@
   &quot;keyToString&quot;: {
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;Python.app_concrete_mix.executor&quot;: &quot;Run&quot;,
+    &quot;Python.app_concrete_mix2.executor&quot;: &quot;Run&quot;,
     &quot;Python.app_cutting_list.executor&quot;: &quot;Run&quot;,
     &quot;Python.app_launcher.executor&quot;: &quot;Run&quot;,
     &quot;Python.app_optimal_purchase.executor&quot;: &quot;Run&quot;,
@@ -307,7 +309,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763532148644</updated>
     </task>
-    <option name="localTasksCounter" value="28" />
+    <task id="LOCAL-00028" summary="Added app_concrete_mix for design mix">
+      <option name="closed" value="true" />
+      <created>1763634115865</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1763634115865</updated>
+    </task>
+    <option name="localTasksCounter" value="29" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -345,6 +355,7 @@
     <MESSAGE value="Updated excel generation for optimal_purchase" />
     <MESSAGE value="Added warning when splicing is required." />
     <MESSAGE value="Added launcher.&#10;Improved market lengths page by showing only selected bar sizes." />
-    <option name="LAST_COMMIT_MESSAGE" value="Added launcher.&#10;Improved market lengths page by showing only selected bar sizes." />
+    <MESSAGE value="Added app_concrete_mix for design mix" />
+    <option name="LAST_COMMIT_MESSAGE" value="Added app_concrete_mix for design mix" />
   </component>
 </project>
