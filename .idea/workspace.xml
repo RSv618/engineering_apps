@@ -4,9 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Added app_concrete_mix for design mix">
+    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Updated launcher">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app_launcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_launcher.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_concrete_mix.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_concrete_mix.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -322,7 +322,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763722871801</updated>
     </task>
-    <option name="localTasksCounter" value="30" />
+    <task id="LOCAL-00030" summary="Updated launcher">
+      <option name="closed" value="true" />
+      <created>1763723334067</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1763723334067</updated>
+    </task>
+    <option name="localTasksCounter" value="31" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -361,6 +369,7 @@
     <MESSAGE value="Added warning when splicing is required." />
     <MESSAGE value="Added launcher.&#10;Improved market lengths page by showing only selected bar sizes." />
     <MESSAGE value="Added app_concrete_mix for design mix" />
-    <option name="LAST_COMMIT_MESSAGE" value="Added app_concrete_mix for design mix" />
+    <MESSAGE value="Updated launcher" />
+    <option name="LAST_COMMIT_MESSAGE" value="Updated launcher" />
   </component>
 </project>

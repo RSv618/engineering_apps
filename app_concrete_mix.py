@@ -252,7 +252,7 @@ class ConcreteDesignPage(QFrame):
         section_layout.setContentsMargins(0, 0, 0, 0)
         section_layout.setSpacing(0)
 
-        section_title = QLabel('Concrete & Cement')
+        section_title = QLabel('Concrete Material')
         section_title.setProperty('class', 'header-4')
         section_layout.addWidget(section_title)
 
@@ -260,30 +260,23 @@ class ConcreteDesignPage(QFrame):
         form_layout.setContentsMargins(3, 0, 0, 0)
         form_layout.setSpacing(3)
 
-        # --- CEMENT SECTION (NEW) ---
+        # --- 1. CEMENT SECTION ---
         self.inputs['cement_type'] = QComboBox()
-
-        # Map Name -> Specific Gravity
         self.cement_map = {
             "Portland (Type I, II, III, V)": 3.15,
             "Blended (Type IS, IP, IT)": 2.95,
-            "Custom": 3.15  # Default value for custom, will be editable
+            "Custom": 3.15
         }
-
         self.inputs['cement_type'].addItems(self.cement_map.keys())
-
-        # Specific Gravity Input
-        # We start as Disabled because "Portland" is the default selection
-        self.inputs['cement_sg'] = BlankDoubleSpinBox(1.0, 5.0, initial=3.15, decimals=2)
-        self.inputs['cement_sg'].setEnabled(False)
-
-        # Connect Dropdown to Logic
         self.inputs['cement_type'].currentTextChanged.connect(self.update_cement_sg)
+
+        self.inputs['cement_sg'] = BlankDoubleSpinBox(1.0, 5.0, initial=3.15, decimals=2)
+        self.inputs['cement_sg'].setEnabled(False)  # Disabled by default
 
         form_layout.addRow("Cement Type:", self.inputs['cement_type'])
         form_layout.addRow("Cement S.G.:", self.inputs['cement_sg'])
 
-        # --- EXISTING STRENGTH INPUTS ---
+        # --- 2. STRENGTH SECTION ---
         # Strength (MPa)
         self.inputs['fc'] = BlankDoubleSpinBox(0.01, 999.99, initial=20.68, decimals=2)
         self.inputs['fc'].setSuffix(" MPa")
@@ -296,7 +289,31 @@ class ConcreteDesignPage(QFrame):
         fc_layout.addWidget(self.inputs['fc'])
         fc_layout.addWidget(self.equiv_labels['fc'])
 
-        # Slump (mm)
+        form_layout.addRow("Target Strength (f'c):", fc_layout)
+
+        # --- 3. STANDARD DEVIATION SECTION ---
+        self.inputs['use_std_dev'] = QCheckBox("Standard Deviation")
+        self.inputs['use_std_dev'].setProperty('class', 'check-box')
+        self.inputs['use_std_dev'].toggled.connect(self.toggle_std_dev_input)
+
+        # Std Dev Input (Hidden/Disabled initially)
+        self.inputs['std_dev'] = BlankDoubleSpinBox(0.00, 50.00, initial=2.00, decimals=2)
+        self.inputs['std_dev'].setSuffix(" MPa")
+        self.inputs['std_dev'].setEnabled(False)  # Locked until checkbox is ticked
+
+        self.equiv_labels['std_dev'] = QLabel("(- psi)")
+        self.equiv_labels['std_dev'].setProperty('class', 'unit-convert')
+
+        sd_layout = QHBoxLayout()
+        sd_layout.setContentsMargins(0, 0, 0, 0)
+        sd_layout.setSpacing(3)
+        sd_layout.addWidget(self.inputs['std_dev'])
+        sd_layout.addWidget(self.equiv_labels['std_dev'])
+
+        # Add logic row for Std Dev
+        form_layout.addRow(self.inputs['use_std_dev'], sd_layout)
+
+        # --- 4. SLUMP SECTION ---
         self.inputs['slump'] = BlankDoubleSpinBox(0.1, 999, initial=127, decimals=1)
         self.inputs['slump'].setSuffix(" mm")
         self.equiv_labels['slump'] = QLabel("(- in)")
@@ -308,21 +325,23 @@ class ConcreteDesignPage(QFrame):
         slump_layout.addWidget(self.inputs['slump'])
         slump_layout.addWidget(self.equiv_labels['slump'])
 
-        self.inputs['air'] = QCheckBox("Air Entrained Concrete")
-        self.inputs['air'].setProperty('class', 'check-box')
-        self.inputs['air'].setChecked(False)
-
-        form_layout.addRow("Target Strength (f'c):", fc_layout)
         form_layout.addRow("Target Slump:", slump_layout)
 
         section_layout.addLayout(form_layout)
         section_layout.addSpacing(5)
+
+        # Air Checkbox
+        self.inputs['air'] = QCheckBox("Air Entrained Concrete")
+        self.inputs['air'].setProperty('class', 'check-box')
+        self.inputs['air'].setChecked(False)
         section_layout.addWidget(self.inputs['air'])
+
         self.form_layout.addLayout(section_layout)
 
         # Connect labels for updates
         self.inputs['fc'].valueChanged.connect(self.update_equiv_labels)
         self.inputs['slump'].valueChanged.connect(self.update_equiv_labels)
+        self.inputs['std_dev'].valueChanged.connect(self.update_equiv_labels)
 
     def create_coarse_agg_inputs(self):
         section_layout = QVBoxLayout()
@@ -418,6 +437,12 @@ class ConcreteDesignPage(QFrame):
     def get_calculation_trigger_widgets(self):
         return list(self.inputs.values())
 
+    def toggle_std_dev_input(self, checked):
+        self.inputs['std_dev'].setEnabled(checked)
+        if checked:
+            self.inputs['std_dev'].setFocus()
+        self.run_design_calculation()
+
     def update_cement_sg(self, text):
         """
         Updates the SG spinbox based on selection.
@@ -439,6 +464,11 @@ class ConcreteDesignPage(QFrame):
         val_fc = self.inputs['fc'].value()
         equiv_psi = val_fc * MPA_TO_PSI
         self.equiv_labels['fc'].setText(f"({equiv_psi:,.0f} psi)")
+
+        # Std Dev: MPa -> psi (NEW)
+        val_sd = self.inputs['std_dev'].value()
+        equiv_sd_psi = val_sd * MPA_TO_PSI
+        self.equiv_labels['std_dev'].setText(f"({equiv_sd_psi:,.0f} psi)")
 
         # Slump: mm -> inch
         val_slump = self.inputs['slump'].value()
@@ -506,12 +536,18 @@ class ConcreteDesignPage(QFrame):
             # 2. Configure ACI Object
             aci = ACIMixDesign()
             aci.fc = fc_psi
+
+            # --- STANDARD DEVIATION LOGIC ---
+            if self.inputs['use_std_dev'].isChecked():
+                # Pass the value in PSI
+                aci.standard_deviation = self.inputs['std_dev'].value() * MPA_TO_PSI
+            else:
+                # Pass None to trigger ACI "No Data" default logic
+                aci.standard_deviation = None
+            # --------------------------------------
+
             aci.slump_target = slump_inch
-
-            # --- CEMENT SG ---
-            aci.cement_sg = self.inputs['cement_sg'].value()
-            # -----------------
-
+            aci.cement_sg = self.inputs['cement_sg'].value()  # From previous step
             aci.nmas = self.nmas_map[self.inputs['nmas'].currentText()]
             aci.is_air_entrained = self.inputs['air'].isChecked()
 
