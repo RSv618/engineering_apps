@@ -52,6 +52,7 @@ class ConcreteMixWindow(QMainWindow):
         self.calc_timer = QTimer()
         self.calc_timer.setSingleShot(True)
         self.calc_timer.setInterval(200)
+        # noinspection PyUnresolvedReferences
         self.calc_timer.timeout.connect(self.design_page.run_design_calculation)
 
         self.connect_inputs()
@@ -61,10 +62,12 @@ class ConcreteMixWindow(QMainWindow):
         inputs = self.design_page.get_calculation_trigger_widgets()
         for widget in inputs:
             if isinstance(widget, (QComboBox, QCheckBox)):
+                # noinspection PyUnresolvedReferences
                 widget.currentIndexChanged.connect(self.start_debounce) if isinstance(widget,
                                                                                       QComboBox) else widget.toggled.connect(
                     self.start_debounce)
             elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
+                # noinspection PyUnresolvedReferences
                 widget.valueChanged.connect(self.start_debounce)
 
     def start_debounce(self):
@@ -138,6 +141,7 @@ class ConcreteDesignPage(QFrame):
         self.combo_display_mode = QComboBox()
         self.combo_display_mode.addItems(['By Volume', 'By Weight'])
         self.combo_display_mode.setCurrentIndex(0)
+        # noinspection PyUnresolvedReferences
         self.combo_display_mode.currentIndexChanged.connect(self.update_output_display)
 
         controls_layout.addStretch()

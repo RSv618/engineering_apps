@@ -1,4 +1,3 @@
-import math
 from utils import interpolate_linear
 
 class ACIMixDesign:
@@ -33,10 +32,10 @@ class ACIMixDesign:
     def _init_tables(self):
         # Table 5.3.3: Approximate Mixing Water (lb/yd3)
         # REVISED STRATEGY: Keys are the MIDPOINTS of the slump ranges.
-        # 1-2' -> 1.5
-        # 3-4' -> 3.5
-        # 5-6' -> 5.5
-        # 6-7' -> 6.5
+        # 1-2inch -> 1.5
+        # 3-4inch -> 3.5
+        # 5-6inch -> 5.5
+        # 6-7inch -> 6.5
         self.TABLE_5_3_3_WATER = {
             'Non-Air-Entrained': [
                 # (Slump Midpoint, {NMAS: Water})
