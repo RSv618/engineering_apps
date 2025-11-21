@@ -13,22 +13,7 @@ from utils import (
     BlankDoubleSpinBox, make_scrollable,
     resource_path, GlobalWheelEventFilter
 )
-from constants import DEBUG_MODE
-
-# --- Constants for Conversion ---
-PSI_TO_MPA = 0.00689476
-MPA_TO_PSI = 145.038
-KG_M3_TO_LB_FT3 = 0.062428
-LB_FT3_TO_KG_M3 = 16.0185
-MM_TO_INCH = 0.0393701
-INCH_TO_MM = 25.4
-M3_TO_FT3 = 35.3147
-FT3_TO_M3 = 0.0283168
-KG_TO_LB = 2.20462
-LB_TO_KG = 0.453592
-LB_YD3_TO_KG_M3 = 0.593276
-YD3_TO_M3 = 0.764555
-M3_TO_YD3 = 1.307951
+from constants import DEBUG_MODE, MPA_TO_PSI, MM_TO_INCH, KG_M3_TO_LB_FT3, M3_TO_YD3, KG_TO_LB, LB_YD3_TO_KG_M3
 
 
 class ConcreteMixWindow(QMainWindow):

@@ -14,6 +14,21 @@ FOOTING_IMAGE_WIDTH = 350
 RSB_IMAGE_WIDTH = 165
 STIRRUP_ROW_IMAGE_WIDTH = 80
 
+# --- Constants for Conversion ---
+PSI_TO_MPA = 0.00689476
+MPA_TO_PSI = 145.038
+KG_M3_TO_LB_FT3 = 0.062428
+LB_FT3_TO_KG_M3 = 16.0185
+MM_TO_INCH = 0.0393701
+INCH_TO_MM = 25.4
+M3_TO_FT3 = 35.3147
+FT3_TO_M3 = 0.0283168
+KG_TO_LB = 2.20462
+LB_TO_KG = 0.453592
+LB_YD3_TO_KG_M3 = 0.593276
+YD3_TO_M3 = 0.764555
+M3_TO_YD3 = 1.307951
+
 # --- Application Configuration ---
 # This is the perfect place for the debug flag.
 DEBUG_MODE = False
