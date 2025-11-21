@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QPixmap
 
+from app_concrete_mix import ConcreteMixWindow
 from app_cutting_list import CuttingListWindow
 from app_optimal_purchase import OptimalPurchaseWindow
 from utils import load_stylesheet, resource_path, GlobalWheelEventFilter, HoverButton
@@ -48,7 +49,7 @@ class AppCard(QFrame):
 
         # Button (Visual cue)
         self.btn = HoverButton("Launch")
-        self.btn.setProperty('class', 'green-button')
+        self.btn.setProperty('class', 'green-button next-button')
         self.btn.clicked.connect(self.on_click)
         layout.addWidget(self.btn)
 
@@ -101,16 +102,21 @@ class LauncherWindow(QMainWindow):
 
         # App 2: Optimal Purchase
         card2 = AppCard(
-            "Optimal Purchase Plan",
+            "Rebar Optimal Purchase",
             "Input raw rebar requirements to optimize stock lengths, minimize waste (1D Cutting Stock), and generate purchase orders.",
             "images/logo.png",
             self.launch_optimal_purchase
         )
         grid.addWidget(card2, 0, 1)
 
-        # Placeholder for future app
-        # card3 = AppCard("Future App", "Description...", "images/logo.png", self.do_nothing)
-        # grid.addWidget(card3, 0, 2)
+        # App 3: Optimal Purchase
+        card3 = AppCard(
+            "Concrete Mix Design",
+            "Implements the ACI 211.11 concrete mix design standard to find mix proportions. Estimates concrete strength based on given proportions.",
+            "images/logo.png",
+            self.launch_concrete_mix_design
+        )
+        grid.addWidget(card3, 0, 2)
 
         layout.addStretch()
 
@@ -120,8 +126,16 @@ class LauncherWindow(QMainWindow):
         footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(footer)
 
+        # Remove focus
+        self.setFocus()
     # def do_nothing(self):
     #     ...
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape:
+            self.setFocus()
+        else:
+            super().keyPressEvent(event)
 
     def launch_cutting_list(self):
         self.window = CuttingListWindow()
@@ -130,6 +144,11 @@ class LauncherWindow(QMainWindow):
 
     def launch_optimal_purchase(self):
         self.window = OptimalPurchaseWindow()
+        self.window.show()
+        self.close()
+
+    def launch_concrete_mix_design(self):
+        self.window = ConcreteMixWindow()
         self.window.show()
         self.close()
 
