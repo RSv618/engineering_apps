@@ -20,7 +20,7 @@ class ACIMixDesign:
         self.ca_absorption = 0.0  # Coarse Agg Absorption (%)
         self.ca_druw = 0.0  # Coarse Agg Dry-Rodded Unit Weight (lb/ft3)
         self.ca_moisture = 0.0  # Coarse Agg Moisture Content (%)
-        self.ca_shape = "Angular"  # "Angular" or "Rounded"
+        self.ca_shape = 'Angular'  # 'Angular' or 'Rounded'
 
         self.fa_sg_ssd = 0.0  # Fine Agg Specific Gravity (SSD)
         self.fa_absorption = 0.0  # Fine Agg Absorption (%)
@@ -33,10 +33,10 @@ class ACIMixDesign:
     def _init_tables(self):
         # Table 5.3.3: Approximate Mixing Water (lb/yd3)
         # REVISED STRATEGY: Keys are the MIDPOINTS of the slump ranges.
-        # 1-2" -> 1.5
-        # 3-4" -> 3.5
-        # 5-6" -> 5.5
-        # 6-7" -> 6.5
+        # 1-2' -> 1.5
+        # 3-4' -> 3.5
+        # 5-6' -> 5.5
+        # 6-7' -> 6.5
         self.TABLE_5_3_3_WATER = {
             'Non-Air-Entrained': [
                 # (Slump Midpoint, {NMAS: Water})
@@ -100,46 +100,46 @@ class ACIMixDesign:
         }
 
     def calculate_mix(self):
-        print("\n--- STARTING ACI 211.1-22 MIX DESIGN ---")
+        print('\n--- STARTING ACI 211.1-22 MIX DESIGN ---')
 
         # --- Step 1: Required Strength ---
         f_cr = self._calculate_f_cr()
-        print(f"1. Specified f'c: {self.fc} psi")
-        print(f"   Required f'cr: {f_cr} psi")
+        print(f'1. Specified fc: {self.fc} psi')
+        print(f'   Required fcr: {f_cr} psi')
 
         # --- Step 2: Verify NMAS ---
         # Just verifying it exists in our lookup
         test_dict = self.TABLE_5_3_3_WATER['Non-Air-Entrained'][0][1]
         if self.nmas not in test_dict:
-            raise ValueError(f"NMAS {self.nmas} not supported (must be 0.375, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0)")
-        print(f"2. Nominal Max Aggregate Size: {self.nmas} inches")
+            raise ValueError(f'NMAS {self.nmas} not supported (must be 0.375, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0)')
+        print(f'2. Nominal Max Aggregate Size: {self.nmas} inches')
 
         # --- Step 3: Water and Air ---
         water_weight, air_percent = self._estimate_water_and_air()
 
         # Adjustment for Rounded Aggregate (Table 5.3.3.1)
-        if self.ca_shape == "Rounded":
+        if self.ca_shape == 'Rounded':
             # Reducing water based on Table 5.3.3.1 percentage adjustment
-            # "Rounded aggregate: -8%" (approx 25-30 lbs)
+            # 'Rounded aggregate: -8%' (approx 25-30 lbs)
             reduction = water_weight * 0.08
             water_weight -= reduction
-            print(f"   * Rounded Aggregate Adjustment: -{reduction:.1f} lb")
+            print(f'   * Rounded Aggregate Adjustment: -{reduction:.1f} lb')
 
-        print(f"3. Target Slump: {self.slump_target} inches")
-        print(f"   Estimated Mixing Water: {water_weight:.1f} lb/yd3")
-        print(f"   Target Air Content: {air_percent}%")
+        print(f'3. Target Slump: {self.slump_target} inches')
+        print(f'   Estimated Mixing Water: {water_weight:.1f} lb/yd3')
+        print(f'   Target Air Content: {air_percent}%')
 
         # --- Step 4: w/cm Ratio ---
         wcm = self._select_wcm(f_cr)
-        print(f"4. Selected w/cm Ratio: {wcm:.3f}")
+        print(f'4. Selected w/cm Ratio: {wcm:.3f}')
 
         # --- Step 5: Cement Content ---
         cement_weight = water_weight / wcm
-        print(f"5. Calculated Cement Content: {cement_weight:.1f} lb/yd3")
+        print(f'5. Calculated Cement Content: {cement_weight:.1f} lb/yd3')
 
         # --- Step 6: Coarse Agg Content ---
         ca_dry_weight = self._estimate_coarse_aggregate()
-        print(f"6. Estimated Coarse Aggregate (Dry): {ca_dry_weight:.1f} lb/yd3")
+        print(f'6. Estimated Coarse Aggregate (Dry): {ca_dry_weight:.1f} lb/yd3')
 
         # --- Step 7: Fine Agg Content (Absolute Volume) ---
         # 7a. Volume calculations
@@ -160,10 +160,10 @@ class ACIMixDesign:
         # 7c. Convert Sand Volume to Weight (SSD)
         fa_ssd_weight = vol_sand * self.fa_sg_ssd * self.WATER_UNIT_WEIGHT
 
-        print(f"7. Absolute Volumes (ft3):")
-        print(f"   Water: {vol_water:.2f}, Cement: {vol_cement:.2f}, Air: {vol_air:.2f}, CA: {vol_ca_ssd:.2f}")
-        print(f"   Required Sand Volume: {vol_sand:.2f} ft3")
-        print(f"   Fine Aggregate (SSD): {fa_ssd_weight:.1f} lb/yd3")
+        print(f'7. Absolute Volumes (ft3):')
+        print(f'   Water: {vol_water:.2f}, Cement: {vol_cement:.2f}, Air: {vol_air:.2f}, CA: {vol_ca_ssd:.2f}')
+        print(f'   Required Sand Volume: {vol_sand:.2f} ft3')
+        print(f'   Fine Aggregate (SSD): {fa_ssd_weight:.1f} lb/yd3')
 
         # --- Step 8: Moisture Adjustments (Field Weights) ---
         # Adjusting for water ON the aggregates vs ABSORBED by aggregates
@@ -273,7 +273,7 @@ class ACIMixDesign:
             else:
                 # If air entrained is requested but no specific F-class is listed,
                 # standard practice is to default to Moderate (F1) table values
-                # or just use the table provided in 5.3.3 for "Air-Entrained"
+                # or just use the table provided in 5.3.3 for 'Air-Entrained'
                 air = self.TABLE_5_3_3_AIR['F1'][self.nmas]
         else:
             air = self.TABLE_5_3_3_AIR['Entrapped'][self.nmas]
@@ -292,7 +292,7 @@ class ACIMixDesign:
             # Standard ACI 211 doesn't cover high-strength concrete (ACI 211.4R does).
             # We clamp to the lowest available w/cm in the table.
             strength_wcm = table[0][idx_wcm]
-            print(f"   WARNING: Required f'cr ({f_cr}) exceeds table data. Using min w/cm.")
+            print(f'   WARNING: Required fcr ({f_cr}) exceeds table data. Using min w/cm.')
         elif f_cr < table[-1][0]:
             # Strength lower than table min (2000). Use max w/cm.
             strength_wcm = table[-1][idx_wcm]
@@ -306,15 +306,15 @@ class ACIMixDesign:
                     strength_wcm = interpolate_linear(f_cr, s_low, w_low, s_high, w_high)
                     break
 
-        print(f"   - w/cm for Strength ({f_cr:.0f} psi): {strength_wcm:.3f}")
+        print(f'   - w/cm for Strength ({f_cr:.0f} psi): {strength_wcm:.3f}')
 
         # --- 2. CALCULATE DURABILITY-BASED w/cm (The Edit) ---
 
         # Default to no restriction (1.0 w/cm) and 0 psi requirement
         most_restrictive_wcm = 1.0
         highest_req_fc = 0
-        governing_class_wcm = "None"
-        governing_class_fc = "None"
+        governing_class_wcm = 'None'
+        governing_class_fc = 'None'
 
         # Iterate over the list of exposure classes (e.g., ['F2', 'S1'])
         if self.exposure_classes:
@@ -331,33 +331,33 @@ class ACIMixDesign:
                     highest_req_fc = min_fc
                     governing_class_fc = exp
 
-            print(f"   - Durability Check: Governing Class {governing_class_wcm} "
-                  f"(Max w/cm: {most_restrictive_wcm})")
-            print(f"   - Durability Check: Governing Class {governing_class_fc} "
-                  f"(Min f'c: {highest_req_fc} psi)")
+            print(f'   - Durability Check: Governing Class {governing_class_wcm} '
+                  f'(Max w/cm: {most_restrictive_wcm})')
+            print(f'   - Durability Check: Governing Class {governing_class_fc} '
+                  f'(Min fc: {highest_req_fc} psi)')
 
             # Vital Check: Does durability require higher strength than the structural design?
             if self.fc < highest_req_fc:
-                print(f"   CRITICAL WARNING: Your specified f'c ({self.fc} psi) is LOWER "
-                      f"than the durability requirement for {governing_class_fc} ({highest_req_fc} psi). "
-                      f"You must increase your specified strength.")
+                print(f'   CRITICAL WARNING: Your specified fc ({self.fc} psi) is LOWER '
+                      f'than the durability requirement for {governing_class_fc} ({highest_req_fc} psi). '
+                      f'You must increase your specified strength.')
         else:
-            print("   - No exposure classes defined.")
+            print('   - No exposure classes defined.')
 
         # --- 3. DETERMINE FINAL GOVERNING w/cm ---
         final_wcm = min(strength_wcm, most_restrictive_wcm)
 
         if final_wcm == most_restrictive_wcm:
-            print(f"   * GOVERNS: Durability ({governing_class_wcm})")
+            print(f'   * GOVERNS: Durability ({governing_class_wcm})')
         else:
-            print(f"   * GOVERNS: Strength (f'cr = {f_cr:.0f})")
+            print(f'   * GOVERNS: Strength (fcr = {f_cr:.0f})')
 
         return final_wcm
 
     def _estimate_coarse_aggregate(self):
         # Table 5.3.6 Interpolation
         row = self.TABLE_5_3_6.get(self.nmas)
-        if not row: raise ValueError("NMAS invalid for CA table")
+        if not row: raise ValueError('NMAS invalid for CA table')
 
         fm = self.fa_fineness_modulus
 
@@ -379,11 +379,11 @@ class ACIMixDesign:
             else:
                 raise ValueError(f'Cannot find key {fm} in TABLE 5.3.6')
 
-        print(f"   - Coarse Agg Volume Fraction (b/b0): {vol_frac:.3f}")
+        print(f'   - Coarse Agg Volume Fraction (b/b0): {vol_frac:.3f}')
         return vol_frac * self.ca_druw * 27.0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     aci_mix = ACIMixDesign()
 
     # --- TEST CASE ---
@@ -400,7 +400,7 @@ if __name__ == "__main__":
     aci_mix.ca_sg_ssd = 2.68
     aci_mix.ca_druw = 100.0
     aci_mix.ca_moisture = 2.0
-    aci_mix.ca_shape = "Rounded"
+    aci_mix.ca_shape = 'Rounded'
     aci_mix.ca_absorption = 0.5
 
     aci_mix.fa_fineness_modulus = 2.80

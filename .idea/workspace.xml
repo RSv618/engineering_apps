@@ -4,8 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Updated launcher">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Implemented standard deviation for strength target">
       <change beforePath="$PROJECT_DIR$/app_concrete_mix.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_concrete_mix.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -330,7 +329,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763723334067</updated>
     </task>
-    <option name="localTasksCounter" value="31" />
+    <task id="LOCAL-00031" summary="Implemented standard deviation for strength target">
+      <option name="closed" value="true" />
+      <created>1763724195565</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1763724195565</updated>
+    </task>
+    <option name="localTasksCounter" value="32" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -345,7 +352,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="First Commit" />
     <MESSAGE value="Improved validation for optimal purchase by styling invalid inputs" />
     <MESSAGE value="Converted some staticmethods to utils function" />
     <MESSAGE value="Formatting correction" />
@@ -370,6 +376,7 @@
     <MESSAGE value="Added launcher.&#10;Improved market lengths page by showing only selected bar sizes." />
     <MESSAGE value="Added app_concrete_mix for design mix" />
     <MESSAGE value="Updated launcher" />
-    <option name="LAST_COMMIT_MESSAGE" value="Updated launcher" />
+    <MESSAGE value="Implemented standard deviation for strength target" />
+    <option name="LAST_COMMIT_MESSAGE" value="Implemented standard deviation for strength target" />
   </component>
 </project>
