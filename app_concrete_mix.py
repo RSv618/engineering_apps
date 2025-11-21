@@ -1,8 +1,8 @@
 import sys
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QComboBox, QFrame, QCheckBox, QStackedWidget,
-    QFormLayout, QRadioButton, QButtonGroup, QGridLayout, QGroupBox, QTabWidget, QSizePolicy, QSpinBox, QDoubleSpinBox
+    QLabel, QComboBox, QFrame, QCheckBox, QFormLayout, QGridLayout,
+    QTabWidget, QSizePolicy, QSpinBox, QDoubleSpinBox
 )
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import Qt, QTimer
@@ -10,8 +10,8 @@ from PyQt6.QtCore import Qt, QTimer
 from concrete_aci import ACIMixDesign
 from utils import (
     load_stylesheet, global_exception_hook,
-    HoverButton, BlankSpinBox, BlankDoubleSpinBox,
-    make_scrollable, resource_path, GlobalWheelEventFilter
+    BlankDoubleSpinBox, make_scrollable,
+    resource_path, GlobalWheelEventFilter
 )
 from constants import DEBUG_MODE
 
@@ -50,16 +50,16 @@ class ConcreteMixWindow(QMainWindow):
         main_layout.setSpacing(0)
 
         self.tabs = QTabWidget()
-        self.tabs.setObjectName("mainTabs")
+        self.tabs.setObjectName('mainTabs')
 
         # Page 1: Design
         self.design_page = ConcreteDesignPage()
-        self.tabs.addTab(self.design_page, "ACI Mix Design")
+        self.tabs.addTab(self.design_page, 'ACI Mix Design')
 
         # Page 2: Estimator (Placeholder)
-        self.estimator_placeholder = QLabel("Strength Estimator Feature Coming Soon")
+        self.estimator_placeholder = QLabel('Strength Estimator Feature Coming Soon')
         self.estimator_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.tabs.addTab(self.estimator_placeholder, "Strength Estimator (Beta)")
+        self.tabs.addTab(self.estimator_placeholder, 'Strength Estimator (Beta)')
 
         main_layout.addWidget(self.tabs)
 
@@ -101,6 +101,7 @@ class ConcreteDesignPage(QFrame):
         # Store the raw results from ACI logic (always in Imperial Base)
         self.base_results = None
         self.nmas_map = None
+        self.cement_map = None
 
         # Layouts
         page_layout = QHBoxLayout(self)
@@ -150,7 +151,7 @@ class ConcreteDesignPage(QFrame):
 
         # Display Mode Dropdown (Replaces Radio Buttons)
         self.combo_display_mode = QComboBox()
-        self.combo_display_mode.addItems(["By Volume", "By Weight"])
+        self.combo_display_mode.addItems(['By Volume', 'By Weight'])
         self.combo_display_mode.setCurrentIndex(0)
         self.combo_display_mode.currentIndexChanged.connect(self.update_output_display)
 
@@ -165,9 +166,9 @@ class ConcreteDesignPage(QFrame):
         mix_proportions_layout = QVBoxLayout(mix_proportions_widget)
         mix_proportions_layout.setContentsMargins(0, 0, 0, 0)
         mix_proportions_layout.setSpacing(0)
-        self.lbl_ratio_title = QLabel("Mix Proportions by Volume")
+        self.lbl_ratio_title = QLabel('Mix Proportions by Volume')
         self.lbl_ratio_title.setProperty('class', 'subtitle')
-        self.lbl_ratio_value = QLabel("- : - : -")
+        self.lbl_ratio_value = QLabel('- : - : -')
         self.lbl_ratio_value.setProperty('class', 'header-1')
         mix_proportions_layout.addWidget(self.lbl_ratio_title)
         mix_proportions_layout.addWidget(self.lbl_ratio_value)
@@ -179,21 +180,21 @@ class ConcreteDesignPage(QFrame):
         scaler_layout.setSpacing(3)
 
         # Total Volume Input & Imperial Label
-        lbl_vol = QLabel("Total Volume:")
-        self.spin_total_vol = BlankDoubleSpinBox(1, 999_999.99, decimals=2, initial=1, suffix=" m³")
+        lbl_vol = QLabel('Total Volume:')
+        self.spin_total_vol = BlankDoubleSpinBox(1, 999_999.99, decimals=2, initial=1, suffix=' m³')
         self.spin_total_vol.valueChanged.connect(self.update_output_display)
         size_policy = self.spin_total_vol.sizePolicy()
         size_policy.setHorizontalPolicy(QSizePolicy.Policy.Expanding)
         self.spin_total_vol.setSizePolicy(size_policy)
 
-        self.lbl_vol_imperial = QLabel("(- yd³)")
+        self.lbl_vol_imperial = QLabel('(- yd³)')
         self.lbl_vol_imperial.setProperty('class', 'unit-convert')
 
         # Bag Size Input
-        lbl_bag = QLabel("Cement Bag:")
-        self.spin_bag_size = BlankDoubleSpinBox(1, 999_999.99, decimals=2, initial=40, suffix=" kg")
+        lbl_bag = QLabel('Cement Bag:')
+        self.spin_bag_size = BlankDoubleSpinBox(1, 999_999.99, decimals=2, initial=40, suffix=' kg')
         self.spin_bag_size.valueChanged.connect(self.update_output_display)
-        self.spin_bag_imperial = QLabel("(- lb)")
+        self.spin_bag_imperial = QLabel('(- lb)')
         self.spin_bag_imperial.setProperty('class', 'unit-convert')
 
         # Layout for Scaler (Grid)
@@ -213,26 +214,26 @@ class ConcreteDesignPage(QFrame):
         self.output_grid.setContentsMargins(0, 0, 0, 0)
         self.output_grid.setSpacing(5)
 
-        headers = ["Material", "Weight", "Volume", "Bags"]
+        headers = ['Material', 'Weight', 'Volume', 'Bags']
         for c, h in enumerate(headers):
             lbl = QLabel(h)
             lbl.setProperty('class', 'header-4')
             self.output_grid.addWidget(lbl, 0, c)
 
         self.out_labels = {}
-        materials = ["Cement", "Sand", "Gravel", "Water"]
+        materials = ['Cement', 'Sand', 'Gravel', 'Water']
         for r, mat in enumerate(materials, 1):
             lbl_mat = QLabel(mat)
             lbl_mat.setProperty('class', 'form-value')
             self.output_grid.addWidget(lbl_mat, r, 0)
 
             # Columns: Weight, Volume, Bags
-            for c, key in enumerate(["weight", "vol", "bags"], 1):
-                lbl_val = QLabel("0.0")
+            for c, key in enumerate(['weight', 'vol', 'bags'], 1):
+                lbl_val = QLabel('0.0')
                 lbl_val.setProperty('class', 'form-value')
                 lbl_val.setAlignment(Qt.AlignmentFlag.AlignRight)
                 self.output_grid.addWidget(lbl_val, r, c)
-                self.out_labels[f"{mat}_{key}"] = lbl_val
+                self.out_labels[f'{mat}_{key}'] = lbl_val
 
         right_layout.addWidget(grid_widget)
         right_layout.addStretch()
@@ -263,9 +264,9 @@ class ConcreteDesignPage(QFrame):
         # --- 1. CEMENT SECTION ---
         self.inputs['cement_type'] = QComboBox()
         self.cement_map = {
-            "Portland (Type I, II, III, V)": 3.15,
-            "Blended (Type IS, IP, IT)": 2.95,
-            "Custom": 3.15
+            'Portland (Type I, II, III, V)': 3.15,
+            'Blended (Type IS, IP, IT)': 2.95,
+            'Custom': 3.15
         }
         self.inputs['cement_type'].addItems(self.cement_map.keys())
         self.inputs['cement_type'].currentTextChanged.connect(self.update_cement_sg)
@@ -273,14 +274,14 @@ class ConcreteDesignPage(QFrame):
         self.inputs['cement_sg'] = BlankDoubleSpinBox(1.0, 5.0, initial=3.15, decimals=2)
         self.inputs['cement_sg'].setEnabled(False)  # Disabled by default
 
-        form_layout.addRow("Cement Type:", self.inputs['cement_type'])
-        form_layout.addRow("Cement S.G.:", self.inputs['cement_sg'])
+        form_layout.addRow('Cement Type:', self.inputs['cement_type'])
+        form_layout.addRow('Cement S.G.:', self.inputs['cement_sg'])
 
         # --- 2. STRENGTH SECTION ---
         # Strength (MPa)
         self.inputs['fc'] = BlankDoubleSpinBox(0.01, 999.99, initial=20.68, decimals=2)
-        self.inputs['fc'].setSuffix(" MPa")
-        self.equiv_labels['fc'] = QLabel("(- psi)")
+        self.inputs['fc'].setSuffix(' MPa')
+        self.equiv_labels['fc'] = QLabel('(- psi)')
         self.equiv_labels['fc'].setProperty('class', 'unit-convert')
 
         fc_layout = QHBoxLayout()
@@ -289,19 +290,19 @@ class ConcreteDesignPage(QFrame):
         fc_layout.addWidget(self.inputs['fc'])
         fc_layout.addWidget(self.equiv_labels['fc'])
 
-        form_layout.addRow("Target Strength (f'c):", fc_layout)
+        form_layout.addRow('Target Strength:', fc_layout)
 
         # --- 3. STANDARD DEVIATION SECTION ---
-        self.inputs['use_std_dev'] = QCheckBox("Standard Deviation")
+        self.inputs['use_std_dev'] = QCheckBox('Standard Deviation')
         self.inputs['use_std_dev'].setProperty('class', 'check-box')
         self.inputs['use_std_dev'].toggled.connect(self.toggle_std_dev_input)
 
         # Std Dev Input (Hidden/Disabled initially)
         self.inputs['std_dev'] = BlankDoubleSpinBox(0.00, 50.00, initial=2.00, decimals=2)
-        self.inputs['std_dev'].setSuffix(" MPa")
+        self.inputs['std_dev'].setSuffix(' MPa')
         self.inputs['std_dev'].setEnabled(False)  # Locked until checkbox is ticked
 
-        self.equiv_labels['std_dev'] = QLabel("(- psi)")
+        self.equiv_labels['std_dev'] = QLabel('(- psi)')
         self.equiv_labels['std_dev'].setProperty('class', 'unit-convert')
 
         sd_layout = QHBoxLayout()
@@ -315,8 +316,8 @@ class ConcreteDesignPage(QFrame):
 
         # --- 4. SLUMP SECTION ---
         self.inputs['slump'] = BlankDoubleSpinBox(0.1, 999, initial=127, decimals=1)
-        self.inputs['slump'].setSuffix(" mm")
-        self.equiv_labels['slump'] = QLabel("(- in)")
+        self.inputs['slump'].setSuffix(' mm')
+        self.equiv_labels['slump'] = QLabel('(- in)')
         self.equiv_labels['slump'].setProperty('class', 'unit-convert')
 
         slump_layout = QHBoxLayout()
@@ -325,13 +326,13 @@ class ConcreteDesignPage(QFrame):
         slump_layout.addWidget(self.inputs['slump'])
         slump_layout.addWidget(self.equiv_labels['slump'])
 
-        form_layout.addRow("Target Slump:", slump_layout)
+        form_layout.addRow('Target Slump:', slump_layout)
 
         section_layout.addLayout(form_layout)
         section_layout.addSpacing(5)
 
         # Air Checkbox
-        self.inputs['air'] = QCheckBox("Air Entrained Concrete")
+        self.inputs['air'] = QCheckBox('Air Entrained Concrete')
         self.inputs['air'].setProperty('class', 'check-box')
         self.inputs['air'].setChecked(False)
         section_layout.addWidget(self.inputs['air'])
@@ -360,30 +361,30 @@ class ConcreteDesignPage(QFrame):
         self.inputs['nmas'] = QComboBox()
         # Map displayed text to Imperial inch values for backend
         self.nmas_map = {
-            "9.5 mm": 0.375,
-            "12.5 mm": 0.5,
-            "19.0 mm": 0.75,
-            "25.0 mm": 1.0,
-            "37.5 mm": 1.5,
-            "50.0 mm": 2.0
+            '9.5 mm': 0.375,
+            '12.5 mm': 0.5,
+            '19.0 mm': 0.75,
+            '25.0 mm': 1.0,
+            '37.5 mm': 1.5,
+            '50.0 mm': 2.0
         }
 
         self.inputs['nmas'].addItems(self.nmas_map.keys())
         self.inputs['nmas'].setCurrentIndex(4)
         self.inputs['ca_sg'] = BlankDoubleSpinBox(0, 10, initial=2.75, decimals=2)
-        self.inputs['ca_abs'] = BlankDoubleSpinBox(0, 10, initial=1.49, decimals=2, suffix="%")
+        self.inputs['ca_abs'] = BlankDoubleSpinBox(0, 10, initial=1.49, decimals=2, suffix='%')
         nmas_layout = QHBoxLayout()
         nmas_layout.setContentsMargins(0, 0, 0, 0)
         nmas_layout.setSpacing(3)
         nmas_layout.addWidget(self.inputs['nmas'])
-        self.equiv_labels['nmas'] = QLabel("(- inch)")
+        self.equiv_labels['nmas'] = QLabel('(- inch)')
         self.equiv_labels['nmas'].setProperty('class', 'unit-convert')
         nmas_layout.addWidget(self.equiv_labels['nmas'])
 
         # DRUW (kg/m³)
         self.inputs['ca_druw'] = BlankDoubleSpinBox(0, 3000, initial=1588, decimals=1)
-        self.inputs['ca_druw'].setSuffix(" kg/m³")
-        self.equiv_labels['druw'] = QLabel("(- lb/ft³)")
+        self.inputs['ca_druw'].setSuffix(' kg/m³')
+        self.equiv_labels['druw'] = QLabel('(- lb/ft³)')
         self.equiv_labels['druw'].setProperty('class', 'unit-convert')
 
         druw_layout = QHBoxLayout()
@@ -392,16 +393,16 @@ class ConcreteDesignPage(QFrame):
         druw_layout.addWidget(self.inputs['ca_druw'])
         druw_layout.addWidget(self.equiv_labels['druw'])
 
-        self.inputs['ca_mc'] = BlankDoubleSpinBox(0, 20, initial=5.00, decimals=2, suffix="%")
+        self.inputs['ca_mc'] = BlankDoubleSpinBox(0, 20, initial=5.00, decimals=2, suffix='%')
         self.inputs['ca_shape'] = QComboBox()
-        self.inputs['ca_shape'].addItems(["Angular (Crushed)", "Rounded (River Run)"])
+        self.inputs['ca_shape'].addItems(['Angular (Crushed)', 'Rounded (River Run)'])
 
-        layout.addRow("Max Aggregate Size:", nmas_layout)
-        layout.addRow("Particle Shape:", self.inputs['ca_shape'])
-        layout.addRow("Specific Gravity (SSD):", self.inputs['ca_sg'])
-        layout.addRow("Absorption:", self.inputs['ca_abs'])
-        layout.addRow("Moisture Content:", self.inputs['ca_mc'])
-        layout.addRow("Dry Rodded Unit Wt:", druw_layout)
+        layout.addRow('Max Aggregate Size:', nmas_layout)
+        layout.addRow('Particle Shape:', self.inputs['ca_shape'])
+        layout.addRow('Specific Gravity (SSD):', self.inputs['ca_sg'])
+        layout.addRow('Absorption:', self.inputs['ca_abs'])
+        layout.addRow('Moisture Content:', self.inputs['ca_mc'])
+        layout.addRow('Dry Rodded Unit Wt:', druw_layout)
 
         section_layout.addLayout(layout)
         self.form_layout.addLayout(section_layout)
@@ -422,14 +423,14 @@ class ConcreteDesignPage(QFrame):
         layout.setSpacing(3)
 
         self.inputs['fa_sg'] = BlankDoubleSpinBox(0, 10, initial=2.70, decimals=2)
-        self.inputs['fa_abs'] = BlankDoubleSpinBox(0, 10, initial=1.78, decimals=2, suffix="%")
+        self.inputs['fa_abs'] = BlankDoubleSpinBox(0, 10, initial=1.78, decimals=2, suffix='%')
         self.inputs['fa_fm'] = BlankDoubleSpinBox(0, 10, initial=2.60, decimals=2)
-        self.inputs['fa_mc'] = BlankDoubleSpinBox(0, 20, initial=6.00, decimals=2, suffix="%")
+        self.inputs['fa_mc'] = BlankDoubleSpinBox(0, 20, initial=6.00, decimals=2, suffix='%')
 
-        layout.addRow("Specific Gravity (SSD):", self.inputs['fa_sg'])
-        layout.addRow("Absorption:", self.inputs['fa_abs'])
-        layout.addRow("Fineness Modulus:", self.inputs['fa_fm'])
-        layout.addRow("Moisture Content:", self.inputs['fa_mc'])
+        layout.addRow('Specific Gravity (SSD):', self.inputs['fa_sg'])
+        layout.addRow('Absorption:', self.inputs['fa_abs'])
+        layout.addRow('Fineness Modulus:', self.inputs['fa_fm'])
+        layout.addRow('Moisture Content:', self.inputs['fa_mc'])
 
         section_layout.addLayout(layout)
         self.form_layout.addLayout(section_layout)
@@ -448,7 +449,7 @@ class ConcreteDesignPage(QFrame):
         Updates the SG spinbox based on selection.
         Disables input for presets, Enables input for Custom.
         """
-        if text == "Custom":
+        if text == 'Custom':
             self.inputs['cement_sg'].setEnabled(True)
             # We don't change the value automatically here;
             # we let the user keep whatever was there or edit it.
@@ -463,40 +464,40 @@ class ConcreteDesignPage(QFrame):
         # Strength: MPa -> psi
         val_fc = self.inputs['fc'].value()
         equiv_psi = val_fc * MPA_TO_PSI
-        self.equiv_labels['fc'].setText(f"({equiv_psi:,.0f} psi)")
+        self.equiv_labels['fc'].setText(f'({equiv_psi:,.0f} psi)')
 
         # Std Dev: MPa -> psi (NEW)
         val_sd = self.inputs['std_dev'].value()
         equiv_sd_psi = val_sd * MPA_TO_PSI
-        self.equiv_labels['std_dev'].setText(f"({equiv_sd_psi:,.0f} psi)")
+        self.equiv_labels['std_dev'].setText(f'({equiv_sd_psi:,.0f} psi)')
 
         # Slump: mm -> inch
         val_slump = self.inputs['slump'].value()
         equiv_inch = val_slump * MM_TO_INCH
-        self.equiv_labels['slump'].setText(f"({equiv_inch:.1f} in)")
+        self.equiv_labels['slump'].setText(f'({equiv_inch:.1f} in)')
 
         # DRUW: kg/m³ -> lb/ft³
         val_druw = self.inputs['ca_druw'].value()
         equiv_lb_ft3 = val_druw * KG_M3_TO_LB_FT3
-        self.equiv_labels['druw'].setText(f"({equiv_lb_ft3:.1f} lb/ft³)")
+        self.equiv_labels['druw'].setText(f'({equiv_lb_ft3:.1f} lb/ft³)')
 
         # NMAS: mm -> inch
         nmas_mm = self.inputs['nmas'].currentText()
         nmas_to_inch_map = {
-            "9.5 mm": "3/8\"",
-            "12.5 mm": "1/2\"",
-            "19.0 mm": "3/4\"",
-            "25.0 mm": "1\"",
-            "37.5 mm": "1.5\"",
-            "50.0 mm": "2\""
+            '9.5 mm': '3/8\'',
+            '12.5 mm': '1/2\'',
+            '19.0 mm': '3/4\'',
+            '25.0 mm': '1\'',
+            '37.5 mm': '1.5\'',
+            '50.0 mm': '2\''
         }
-        self.equiv_labels['nmas'].setText(f"({nmas_to_inch_map[nmas_mm]})")
+        self.equiv_labels['nmas'].setText(f'({nmas_to_inch_map[nmas_mm]})')
 
         # Update the Imperial Label (m3 -> yd3)
         batch_vol_m3 = self.spin_total_vol.value()
         batch_vol_yd3 = batch_vol_m3 * M3_TO_YD3
-        self.lbl_vol_imperial.setText(f"({batch_vol_yd3:,.2f} yd³)")
-        self.spin_bag_imperial.setText(f"({self.spin_bag_size.value() * KG_TO_LB:,.2f} lb)")
+        self.lbl_vol_imperial.setText(f'({batch_vol_yd3:,.2f} yd³)')
+        self.spin_bag_imperial.setText(f'({self.spin_bag_size.value() * KG_TO_LB:,.2f} lb)')
 
     def prefill_defaults(self):
         self.inputs['cement_type'].setCurrentIndex(0)  # Portland
@@ -542,7 +543,7 @@ class ConcreteDesignPage(QFrame):
                 # Pass the value in PSI
                 aci.standard_deviation = self.inputs['std_dev'].value() * MPA_TO_PSI
             else:
-                # Pass None to trigger ACI "No Data" default logic
+                # Pass None to trigger ACI 'No Data' default logic
                 aci.standard_deviation = None
             # --------------------------------------
 
@@ -556,7 +557,7 @@ class ConcreteDesignPage(QFrame):
             aci.ca_absorption = self.inputs['ca_abs'].value()
             aci.ca_druw = ca_druw_lb_ft3
             aci.ca_moisture = self.inputs['ca_mc'].value()
-            aci.ca_shape = "Angular" if self.inputs['ca_shape'].currentIndex() == 0 else "Rounded"
+            aci.ca_shape = 'Angular' if self.inputs['ca_shape'].currentIndex() == 0 else 'Rounded'
 
             # Fine Agg
             aci.fa_sg_ssd = self.inputs['fa_sg'].value()
@@ -571,7 +572,7 @@ class ConcreteDesignPage(QFrame):
             self.update_output_display()
 
         except Exception as e:
-            if DEBUG_MODE: print(f"Calc Error: {e}")
+            if DEBUG_MODE: print(f'Calc Error: {e}')
             pass
 
     # --- LOGIC SECTION 2: DISPLAY ---
@@ -639,13 +640,13 @@ class ConcreteDesignPage(QFrame):
 
         # 6. Update Ratio Display (Dimensionless)
         if show_by_volume:
-            self.lbl_ratio_title.setText("Mix Proportions by Volume")
+            self.lbl_ratio_title.setText('Mix Proportions by Volume')
             if v_c_ft3 > 0:
                 r_sand = v_fa_ft3 / v_c_ft3
                 r_gravel = v_ca_ft3 / v_c_ft3
-                self.lbl_ratio_value.setText(f"1 : {r_sand:.2f} : {r_gravel:.2f}")
+                self.lbl_ratio_value.setText(f'1 : {r_sand:.2f} : {r_gravel:.2f}')
         else:
-            self.lbl_ratio_title.setText("Mix Proportions by Weight")
+            self.lbl_ratio_title.setText('Mix Proportions by Weight')
             # Use SSD weights for design ratio (Base Imperial Results)
             c_ssd_lb = w_lb['cement']
             # SSD Weight = Vol * SG * 62.4
@@ -655,26 +656,26 @@ class ConcreteDesignPage(QFrame):
             if c_ssd_lb > 0:
                 r_sand = fa_ssd_lb / c_ssd_lb
                 r_gravel = ca_ssd_lb / c_ssd_lb
-                self.lbl_ratio_value.setText(f"1 : {r_sand:.2f} : {r_gravel:.2f}")
+                self.lbl_ratio_value.setText(f'1 : {r_sand:.2f} : {r_gravel:.2f}')
 
         # 7. Update Grid
         # Order: Cement, Sand, Gravel, Water
         # Data tuple: (Weight, Volume, Bags)
         rows = [
-            ("Cement", batch_w_c, batch_v_c, bags_c),
-            ("Sand", batch_w_fa, batch_v_fa, bags_fa),
-            ("Gravel", batch_w_ca, batch_v_ca, bags_ca),
-            ("Water", batch_w_w, batch_v_w, 0.0)
+            ('Cement', batch_w_c, batch_v_c, bags_c),
+            ('Sand', batch_w_fa, batch_v_fa, bags_fa),
+            ('Gravel', batch_w_ca, batch_v_ca, bags_ca),
+            ('Water', batch_w_w, batch_v_w, 0.0)
         ]
 
         for r_idx, (mat_name, w_val, v_val, b_val) in enumerate(rows):
-            self.out_labels[f"{mat_name}_weight"].setText(f"{w_val:,.1f} kg")
-            self.out_labels[f"{mat_name}_vol"].setText(f"{v_val:,.3f} m³")
+            self.out_labels[f'{mat_name}_weight'].setText(f'{w_val:,.1f} kg')
+            self.out_labels[f'{mat_name}_vol'].setText(f'{v_val:,.3f} m³')
 
-            if mat_name == "Water":
-                self.out_labels[f"{mat_name}_bags"].setText("-")
+            if mat_name == 'Water':
+                self.out_labels[f'{mat_name}_bags'].setText('-')
             else:
-                self.out_labels[f"{mat_name}_bags"].setText(f"{b_val:,.1f}")
+                self.out_labels[f'{mat_name}_bags'].setText(f'{b_val:,.1f}')
 
 
 if __name__ == '__main__':
