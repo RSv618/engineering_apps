@@ -4,7 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Implemented standard deviation for strength target">
+    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="cleanup code">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_concrete_mix.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_concrete_mix.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -337,7 +338,39 @@
       <option name="project" value="LOCAL" />
       <updated>1763724195565</updated>
     </task>
-    <option name="localTasksCounter" value="32" />
+    <task id="LOCAL-00032" summary="cleanup code">
+      <option name="closed" value="true" />
+      <created>1763724686778</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1763724686778</updated>
+    </task>
+    <task id="LOCAL-00033" summary="cleanup code">
+      <option name="closed" value="true" />
+      <created>1763724765370</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1763724765370</updated>
+    </task>
+    <task id="LOCAL-00034" summary="cleanup code">
+      <option name="closed" value="true" />
+      <created>1763724894754</created>
+      <option name="number" value="00034" />
+      <option name="presentableId" value="LOCAL-00034" />
+      <option name="project" value="LOCAL" />
+      <updated>1763724894754</updated>
+    </task>
+    <task id="LOCAL-00035" summary="cleanup code">
+      <option name="closed" value="true" />
+      <created>1763725010754</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1763725010754</updated>
+    </task>
+    <option name="localTasksCounter" value="36" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -352,7 +385,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Improved validation for optimal purchase by styling invalid inputs" />
     <MESSAGE value="Converted some staticmethods to utils function" />
     <MESSAGE value="Formatting correction" />
     <MESSAGE value="info text" />
@@ -377,6 +409,7 @@
     <MESSAGE value="Added app_concrete_mix for design mix" />
     <MESSAGE value="Updated launcher" />
     <MESSAGE value="Implemented standard deviation for strength target" />
-    <option name="LAST_COMMIT_MESSAGE" value="Implemented standard deviation for strength target" />
+    <MESSAGE value="cleanup code" />
+    <option name="LAST_COMMIT_MESSAGE" value="cleanup code" />
   </component>
 </project>

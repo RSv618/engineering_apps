@@ -15,6 +15,10 @@ from utils import (
 )
 from constants import DEBUG_MODE, MPA_TO_PSI, MM_TO_INCH, KG_M3_TO_LB_FT3, M3_TO_YD3, KG_TO_LB, LB_YD3_TO_KG_M3
 
+r"""
+TO BUILD:
+pyinstaller --name 'ConcreteMix' --onefile --windowed --icon='images/logo.png' --add-data 'images:images' --add-data 'style.qss:.' app_concrete_mix.py
+"""
 
 class ConcreteMixWindow(QMainWindow):
     def __init__(self):
@@ -22,9 +26,9 @@ class ConcreteMixWindow(QMainWindow):
 
         self.setWindowTitle('Concrete Mix Design (ACI 211.1) - Metric')
         self.setWindowIcon(QIcon(resource_path('images/logo.png')))
-        self.setGeometry(50, 50, 900, 600)
+        self.setGeometry(50, 50, 900, 650)
         self.setMinimumWidth(900)
-        self.setMinimumHeight(600)
+        self.setMinimumHeight(650)
 
         # Main Container
         main_widget = QWidget()
@@ -287,7 +291,7 @@ class ConcreteDesignPage(QFrame):
         self.inputs['use_std_dev'].toggled.connect(self.toggle_std_dev_input)
 
         # Std Dev Input (Hidden/Disabled initially)
-        self.inputs['std_dev'] = BlankDoubleSpinBox(0.00, 50.00, initial=2.00, decimals=2)
+        self.inputs['std_dev'] = BlankDoubleSpinBox(0.01, 50.00, initial=2.00, decimals=2)
         self.inputs['std_dev'].setSuffix(' MPa')
         self.inputs['std_dev'].setEnabled(False)  # Locked until checkbox is ticked
 
@@ -386,7 +390,7 @@ class ConcreteDesignPage(QFrame):
         self.inputs['ca_shape'] = QComboBox()
         self.inputs['ca_shape'].addItems(['Angular (Crushed)', 'Rounded (River Run)'])
 
-        layout.addRow('Max Aggregate Size:', nmas_layout)
+        layout.addRow('Max Gravel Size:', nmas_layout)
         layout.addRow('Particle Shape:', self.inputs['ca_shape'])
         layout.addRow('Specific Gravity (SSD):', self.inputs['ca_sg'])
         layout.addRow('Absorption:', self.inputs['ca_abs'])
