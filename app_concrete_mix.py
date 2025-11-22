@@ -768,38 +768,47 @@ class ConcreteEstimatorPage(QFrame):
 
     def create_inputs(self):
         # --- SECTION 1: MIX PROPORTIONS ---
-        lbl_mix = QLabel("Mix Proportions")
+        lbl_mix = QLabel("Cement")
         lbl_mix.setProperty('class', 'header-4')
         self.form_layout.addWidget(lbl_mix)
 
-        form_mix = QFormLayout()
-        form_mix.setContentsMargins(3, 0, 0, 0)
-        form_mix.setSpacing(3)
+        form_cement = QFormLayout()
+        form_cement.setContentsMargins(3, 0, 0, 0)
+        form_cement.setSpacing(3)
 
         self.inputs['bags'] = BlankDoubleSpinBox(1, 1000, initial=10, decimals=1, suffix=" bags")
         self.inputs['bag_weight'] = BlankDoubleSpinBox(1, 100, initial=40, decimals=1, suffix=" kg")
         self.inputs['water'] = BlankDoubleSpinBox(1, 1000, initial=200, decimals=1, suffix=" kg (L)")
+        self.inputs['cement_type'] = QComboBox()
+        self.inputs['cement_type'].addItems(self.cement_map.keys())
+        self.inputs['cement_type'].setCurrentIndex(0)  # Type I default
 
-        form_mix.addRow("Bag Weight:", self.inputs['bag_weight'])
-        form_mix.addRow("Cement Qty:", self.inputs['bags'])
-        form_mix.addRow("Total Water:", self.inputs['water'])
+        form_cement.addRow("Cement Type:", self.inputs['cement_type'])
+        form_cement.addRow("Bag Weight:", self.inputs['bag_weight'])
+        form_cement.addRow("Cement Qty:", self.inputs['bags'])
 
-        self.form_layout.addLayout(form_mix)
+        self.form_layout.addLayout(form_cement)
         self.form_layout.addSpacing(35)
 
-        # --- SECTION 2: FACTORS ---
-        lbl_fac = QLabel("Bolomey Factors")
+        # --- SECTION 2: Water ---
+        form_wat = QFormLayout()
+        form_wat.setContentsMargins(3, 0, 0, 0)
+        form_wat.setSpacing(3)
+        lbl_fac = QLabel("Water")
+        lbl_fac.setProperty('class', 'header-4')
+        self.form_layout.addWidget(lbl_fac)
+        form_wat.addRow("Total Water:", self.inputs['water'])
+        self.form_layout.addLayout(form_wat)
+        self.form_layout.addSpacing(35)
+
+        # --- SECTION 3: Aggregates ---
+        lbl_fac = QLabel("Aggregates")
         lbl_fac.setProperty('class', 'header-4')
         self.form_layout.addWidget(lbl_fac)
 
         form_fac = QFormLayout()
         form_fac.setContentsMargins(3, 0, 0, 0)
         form_fac.setSpacing(3)
-
-        # Cement Type
-        self.inputs['cement_type'] = QComboBox()
-        self.inputs['cement_type'].addItems(self.cement_map.keys())
-        self.inputs['cement_type'].setCurrentIndex(0)  # Type I default
 
         # Agg Quality
         self.inputs['agg_quality'] = QComboBox()
@@ -811,9 +820,8 @@ class ConcreteEstimatorPage(QFrame):
         self.inputs['gravel_size'].addItems(self.gravel_map.keys())
         self.inputs['gravel_size'].setCurrentIndex(1)
 
-        form_fac.addRow("Cement Type:", self.inputs['cement_type'])
-        form_fac.addRow("Agg. Quality:", self.inputs['agg_quality'])
         form_fac.addRow("Gravel Size:", self.inputs['gravel_size'])
+        form_fac.addRow("Agg. Quality:", self.inputs['agg_quality'])
 
         self.form_layout.addLayout(form_fac)
         self.form_layout.addStretch()
