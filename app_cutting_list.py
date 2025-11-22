@@ -6,7 +6,7 @@ from typing import Any
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QStackedWidget, QWidget, QVBoxLayout,
     QHBoxLayout, QLabel, QPushButton, QLineEdit, QDialog,
-    QFormLayout, QSpinBox, QComboBox, QGridLayout, QCheckBox, QTextEdit, QFrame,
+    QFormLayout, QComboBox, QGridLayout, QCheckBox, QTextEdit, QFrame,
     QSizePolicy, QGroupBox, QStyle, QStyleOption, QMessageBox, QFileDialog, QInputDialog
 )
 from PyQt6.QtGui import QIcon, QColor, QPen, QPainter, QPaintEvent
@@ -409,9 +409,8 @@ class FoundationDetailsDialog(QDialog):
         form_layout.setColumnStretch(2, 1)  # Allow the column (2) to stretch, keeping other columns fixed
 
         # Pedestal Per Footing
-        ped_per_footing = QSpinBox()
+        ped_per_footing = BlankSpinBox(1, 4, initial=1)
         ped_per_footing.setProperty('class', 'form-value')
-        ped_per_footing.setRange(1, 4)
         image_map = {
             '1': resource_path('images/label_1ped.png'),
             '2': resource_path('images/label_2ped.png'),

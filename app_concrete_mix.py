@@ -14,6 +14,9 @@ from utils import (
     resource_path, GlobalWheelEventFilter
 )
 from constants import DEBUG_MODE, MPA_TO_PSI, MM_TO_INCH, KG_M3_TO_LB_FT3, M3_TO_YD3, KG_TO_LB, LB_YD3_TO_KG_M3
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+import numpy as np
 
 r"""
 TO BUILD:
@@ -28,11 +31,10 @@ class ConcreteMixWindow(QMainWindow):
         self.setWindowIcon(QIcon(resource_path('images/logo.png')))
         self.setGeometry(50, 50, 900, 650)
         self.setMinimumWidth(900)
-        self.setMinimumHeight(650)
+        self.setMinimumHeight(450)
 
         # Main Container
         main_widget = QWidget()
-        main_widget.setObjectName('concreteMixMainWidget')
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -45,10 +47,9 @@ class ConcreteMixWindow(QMainWindow):
         self.design_page = ConcreteDesignPage()
         self.tabs.addTab(self.design_page, 'ACI Mix Design')
 
-        # Page 2: Estimator (Placeholder)
-        self.estimator_placeholder = QLabel('Strength Estimator Feature Coming Soon')
-        self.estimator_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.tabs.addTab(self.estimator_placeholder, 'Strength Estimator (Beta)')
+        # Page 2: Estimator
+        self.estimator_page = ConcreteEstimatorPage()
+        self.tabs.addTab(self.estimator_page, 'Strength Estimator')
 
         main_layout.addWidget(self.tabs)
 
@@ -87,7 +88,6 @@ class ConcreteMixWindow(QMainWindow):
 class ConcreteDesignPage(QFrame):
     def __init__(self):
         super().__init__()
-        self.setObjectName('concreteMixDesignPage')
         self.setProperty('class', 'page')
 
         # Store the raw results from ACI logic (always in Imperial Base)
@@ -102,14 +102,13 @@ class ConcreteDesignPage(QFrame):
 
         # --- LEFT PANEL (Inputs) ---
         left_panel = QFrame()
-        left_panel.setObjectName('concreteMixDesignLeftPanel')
         left_panel.setProperty('class', 'panel')
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(0)
 
         # Scrollable Inputs
-        scroll_content = QWidget()
+        scroll_content = QFrame()
         scroll_content.setObjectName('concreteMixDesignScrollContent')
         scroll_content.setProperty('class', 'scroll-content')
         self.form_layout = QVBoxLayout(scroll_content)
@@ -174,6 +173,7 @@ class ConcreteDesignPage(QFrame):
 
         # Total Volume Input & Imperial Label
         lbl_vol = QLabel('Total Volume:')
+        lbl_vol.setProperty('class', 'form-label')
         self.spin_total_vol = BlankDoubleSpinBox(1, 999_999.99, decimals=2, initial=1, suffix=' m³')
         self.spin_total_vol.valueChanged.connect(self.update_output_display)
         size_policy = self.spin_total_vol.sizePolicy()
@@ -185,6 +185,7 @@ class ConcreteDesignPage(QFrame):
 
         # Bag Size Input
         lbl_bag = QLabel('Cement Bag:')
+        lbl_bag.setProperty('class', 'form-label')
         self.spin_bag_size = BlankDoubleSpinBox(1, 999_999.99, decimals=2, initial=40, suffix=' kg')
         self.spin_bag_size.valueChanged.connect(self.update_output_display)
         self.spin_bag_imperial = QLabel('(- lb)')
@@ -264,15 +265,15 @@ class ConcreteDesignPage(QFrame):
         self.inputs['cement_type'].addItems(self.cement_map.keys())
         self.inputs['cement_type'].currentTextChanged.connect(self.update_cement_sg)
 
-        self.inputs['cement_sg'] = BlankDoubleSpinBox(1.0, 5.0, initial=3.15, decimals=2)
+        self.inputs['cement_sg'] = BlankDoubleSpinBox(1.0, 5.0, initial=3.15, increment=0.1, decimals=2)
         self.inputs['cement_sg'].setEnabled(False)  # Disabled by default
 
         form_layout.addRow('Cement Type:', self.inputs['cement_type'])
-        form_layout.addRow('Cement S.G.:', self.inputs['cement_sg'])
+        form_layout.addRow('Specific Gravity (Cement):', self.inputs['cement_sg'])
 
         # --- 2. STRENGTH SECTION ---
         # Strength (MPa)
-        self.inputs['fc'] = BlankDoubleSpinBox(0.01, 999.99, initial=20.68, decimals=2)
+        self.inputs['fc'] = BlankDoubleSpinBox(0.01, 99.99, initial=20.68, increment=0.5, decimals=2)
         self.inputs['fc'].setSuffix(' MPa')
         self.equiv_labels['fc'] = QLabel('(- psi)')
         self.equiv_labels['fc'].setProperty('class', 'unit-convert')
@@ -291,7 +292,7 @@ class ConcreteDesignPage(QFrame):
         self.inputs['use_std_dev'].toggled.connect(self.toggle_std_dev_input)
 
         # Std Dev Input (Hidden/Disabled initially)
-        self.inputs['std_dev'] = BlankDoubleSpinBox(0.01, 50.00, initial=2.00, decimals=2)
+        self.inputs['std_dev'] = BlankDoubleSpinBox(0.01, 50.00, initial=2.00, increment=0.5, decimals=2)
         self.inputs['std_dev'].setSuffix(' MPa')
         self.inputs['std_dev'].setEnabled(False)  # Locked until checkbox is ticked
 
@@ -364,8 +365,8 @@ class ConcreteDesignPage(QFrame):
 
         self.inputs['nmas'].addItems(self.nmas_map.keys())
         self.inputs['nmas'].setCurrentIndex(4)
-        self.inputs['ca_sg'] = BlankDoubleSpinBox(0, 10, initial=2.75, decimals=2)
-        self.inputs['ca_abs'] = BlankDoubleSpinBox(0, 10, initial=1.49, decimals=2, suffix='%')
+        self.inputs['ca_sg'] = BlankDoubleSpinBox(0, 10, initial=2.75, increment=0.1, decimals=2)
+        self.inputs['ca_abs'] = BlankDoubleSpinBox(0, 10, initial=1.49, decimals=2, increment=0.1, suffix='%')
         nmas_layout = QHBoxLayout()
         nmas_layout.setContentsMargins(0, 0, 0, 0)
         nmas_layout.setSpacing(3)
@@ -386,7 +387,7 @@ class ConcreteDesignPage(QFrame):
         druw_layout.addWidget(self.inputs['ca_druw'])
         druw_layout.addWidget(self.equiv_labels['druw'])
 
-        self.inputs['ca_mc'] = BlankDoubleSpinBox(0, 20, initial=5.00, decimals=2, suffix='%')
+        self.inputs['ca_mc'] = BlankDoubleSpinBox(0, 20, initial=5.00, decimals=2, increment=0.1, suffix='%')
         self.inputs['ca_shape'] = QComboBox()
         self.inputs['ca_shape'].addItems(['Angular (Crushed)', 'Rounded (River Run)'])
 
@@ -415,10 +416,10 @@ class ConcreteDesignPage(QFrame):
         layout.setContentsMargins(3, 0, 0, 0)
         layout.setSpacing(3)
 
-        self.inputs['fa_sg'] = BlankDoubleSpinBox(0, 10, initial=2.70, decimals=2)
-        self.inputs['fa_abs'] = BlankDoubleSpinBox(0, 10, initial=1.78, decimals=2, suffix='%')
-        self.inputs['fa_fm'] = BlankDoubleSpinBox(0, 10, initial=2.60, decimals=2)
-        self.inputs['fa_mc'] = BlankDoubleSpinBox(0, 20, initial=6.00, decimals=2, suffix='%')
+        self.inputs['fa_sg'] = BlankDoubleSpinBox(0, 10, initial=2.70, increment=0.1, decimals=2)
+        self.inputs['fa_abs'] = BlankDoubleSpinBox(0, 10, initial=1.78, increment=0.1, decimals=2, suffix='%')
+        self.inputs['fa_fm'] = BlankDoubleSpinBox(0, 10, initial=2.60, increment=0.1, decimals=2)
+        self.inputs['fa_mc'] = BlankDoubleSpinBox(0, 20, initial=6.00, increment=0.1, decimals=2, suffix='%')
 
         layout.addRow('Specific Gravity (SSD):', self.inputs['fa_sg'])
         layout.addRow('Absorption:', self.inputs['fa_abs'])
@@ -670,6 +671,322 @@ class ConcreteDesignPage(QFrame):
             else:
                 self.out_labels[f'{mat_name}_bags'].setText(f'{b_val:,.1f}')
 
+
+class ConcreteEstimatorPage(QFrame):
+    def __init__(self):
+        super().__init__()
+        self.setObjectName('concreteEstimatorPage')
+        self.setProperty('class', 'page')
+
+        # Initialize storage
+        self.inputs = {}
+
+        # --- DATA MAPPING ---
+        # Map ASTM Cement Types to approximate ISO Strength Classes (MPa) for the formula
+        self.cement_map = {
+            "Type I (General Purpose)": 42.5,
+            "Type II (Moderate Sulfate)": 42.5,
+            "Type III (High Early Strength)": 52.5,
+            "Type IV (Low Heat)": 32.5,
+            "Type V (High Sulfate)": 42.5
+        }
+
+        self.cement_map_S_CONSTANT_GL2000 = {
+            "Type I (General Purpose)": 0.335,
+            "Type II (Moderate Sulfate)": 0.4,
+            "Type III (High Early Strength)": 0.13,
+            "Type IV (Low Heat)": 0.335,  # Assumed
+            "Type V (High Sulfate)": 0.335,  # Assumed
+        }
+
+        self.agg_map = {
+            "Excellent (Clean)": 0.60,
+            "Average (Standard)": 0.50,
+            "Poor (Dirty)": 0.40
+        }
+
+        self.gravel_map = {
+            "Small (< 20mm)": -0.05,
+            "Medium (20mm - 40mm)": 0.00,
+            "Large (> 40mm)": 0.05
+        }
+
+        # Layouts
+        page_layout = QHBoxLayout(self)
+        page_layout.setContentsMargins(0, 0, 0, 0)
+        page_layout.setSpacing(0)
+
+        # --- LEFT PANEL (Inputs) ---
+        left_panel = QFrame()
+        left_panel.setProperty('class', 'panel')
+        left_layout = QVBoxLayout(left_panel)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(0)
+
+        # Scrollable Inputs
+        scroll_content = QFrame()
+        scroll_content.setObjectName('concreteEstimatorScrollContent')
+        scroll_content.setProperty('class', 'scroll-content')
+        self.form_layout = QVBoxLayout(scroll_content)
+        self.form_layout.setContentsMargins(0, 0, 0, 0)
+        self.form_layout.setSpacing(0)
+
+        self.create_inputs()
+
+        scroll_area = make_scrollable(scroll_content)
+        left_layout.addWidget(scroll_area)
+
+        # --- RIGHT PANEL (Graph) ---
+        right_panel = QFrame()
+        right_panel.setObjectName('concreteEstimatorRightPanel')
+        right_layout = QVBoxLayout(right_panel)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(0)
+
+        # Matplotlib Canvas
+        self.figure = Figure(figsize=(3, 3), dpi=100, facecolor='#ffffff')
+        self.canvas = FigureCanvas(self.figure)
+        self.ax = self.figure.add_subplot(111)
+
+        # Store plot data for hover interactivity
+        self.sc_plot = None
+        self.annot = None
+
+        # Connect Hover Event
+        self.canvas.mpl_connect("motion_notify_event", self.on_hover)
+
+        right_layout.addStretch()
+        right_layout.addWidget(self.canvas)
+        right_layout.addStretch()
+
+        # Add panels
+        page_layout.addWidget(left_panel, 2)  # Smaller width for inputs
+        page_layout.addWidget(right_panel, 3)  # Larger width for graph
+
+        # Initial Calculation
+        self.calculate_strength()
+
+    def create_inputs(self):
+        # --- SECTION 1: MIX PROPORTIONS ---
+        lbl_mix = QLabel("Mix Proportions")
+        lbl_mix.setProperty('class', 'header-4')
+        self.form_layout.addWidget(lbl_mix)
+
+        form_mix = QFormLayout()
+        form_mix.setContentsMargins(3, 0, 0, 0)
+        form_mix.setSpacing(3)
+
+        self.inputs['bags'] = BlankDoubleSpinBox(1, 1000, initial=10, decimals=1, suffix=" bags")
+        self.inputs['bag_weight'] = BlankDoubleSpinBox(1, 100, initial=40, decimals=1, suffix=" kg")
+        self.inputs['water'] = BlankDoubleSpinBox(1, 1000, initial=200, decimals=1, suffix=" kg (L)")
+
+        form_mix.addRow("Bag Weight:", self.inputs['bag_weight'])
+        form_mix.addRow("Cement Qty:", self.inputs['bags'])
+        form_mix.addRow("Total Water:", self.inputs['water'])
+
+        self.form_layout.addLayout(form_mix)
+        self.form_layout.addSpacing(35)
+
+        # --- SECTION 2: FACTORS ---
+        lbl_fac = QLabel("Bolomey Factors")
+        lbl_fac.setProperty('class', 'header-4')
+        self.form_layout.addWidget(lbl_fac)
+
+        form_fac = QFormLayout()
+        form_fac.setContentsMargins(3, 0, 0, 0)
+        form_fac.setSpacing(3)
+
+        # Cement Type
+        self.inputs['cement_type'] = QComboBox()
+        self.inputs['cement_type'].addItems(self.cement_map.keys())
+        self.inputs['cement_type'].setCurrentIndex(0)  # Type I default
+
+        # Agg Quality
+        self.inputs['agg_quality'] = QComboBox()
+        self.inputs['agg_quality'].addItems(self.agg_map.keys())
+        self.inputs['agg_quality'].setCurrentIndex(1)
+
+        # Gravel Size
+        self.inputs['gravel_size'] = QComboBox()
+        self.inputs['gravel_size'].addItems(self.gravel_map.keys())
+        self.inputs['gravel_size'].setCurrentIndex(1)
+
+        form_fac.addRow("Cement Type:", self.inputs['cement_type'])
+        form_fac.addRow("Agg. Quality:", self.inputs['agg_quality'])
+        form_fac.addRow("Gravel Size:", self.inputs['gravel_size'])
+
+        self.form_layout.addLayout(form_fac)
+        self.form_layout.addStretch()
+
+        # Reference
+        lbl_ref = QLabel("Dreux-Gorisse Formula for 28th-day strength:\nFc₂₈ = G × Rc × (C/W - 0.5)\n\n"
+                         "GL2000 ACI.209R Formula for maturity:\nB = exp((s/2)*(1-sqrt(28/t))\nFc_t = Fc₂₈*B²")
+        lbl_ref.setProperty('class', 'formula')
+        lbl_ref.setWordWrap(True)
+        lbl_ref.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.form_layout.addWidget(lbl_ref)
+
+        # --- CONNECT SIGNALS ---
+        for widget in self.inputs.values():
+            if isinstance(widget, (QSpinBox, QDoubleSpinBox)):
+                widget.valueChanged.connect(self.calculate_strength)
+            elif isinstance(widget, QComboBox):
+                widget.currentIndexChanged.connect(self.calculate_strength)
+
+    def calculate_strength(self):
+        # Guard clause for safety
+        if not all(k in self.inputs for k in ['bags', 'bag_weight', 'water']): return
+
+        try:
+            # 1. Ratios
+            bags = self.inputs['bags'].value()
+            bag_wt = self.inputs['bag_weight'].value()
+            water = self.inputs['water'].value()
+            if water <= 0: return
+
+            cw_ratio = (bags * bag_wt) / water
+
+            # 2. Coefficients
+            c_type = self.inputs['cement_type'].currentText()
+            rc = self.cement_map.get(c_type, 42.5)
+
+            agg_q = self.inputs['agg_quality'].currentText()
+            g_base = self.agg_map.get(agg_q, 0.48)
+
+            grav_s = self.inputs['gravel_size'].currentText()
+            g_adj = self.gravel_map.get(grav_s, 0.00)
+
+            G = g_base + g_adj
+
+            # 3. 28-Day Strength
+            fc_28 = max(0, G * rc * (cw_ratio - 0.5))
+
+            # 4. Maturity Curve
+            # USES GL2000 AS DESCRIBED IN ACI-209.2R-08
+            # Points to plot: 3, 7, 14, 21, 28 days
+            days = np.array([3, 7, 14, 21, 28])
+            s = self.cement_map_S_CONSTANT_GL2000[c_type]
+
+            # GL2000 formula
+            beta_cc = np.exp(s/2 * (1 - np.sqrt(28 / days)))
+            strengths = fc_28 * beta_cc**2
+
+            # Insert 0,0 for the graph visuals
+            plot_days = np.insert(days, 0, 0)
+            plot_strengths = np.insert(strengths, 0, 0)
+
+            self.update_plot(plot_days, plot_strengths)
+
+        except Exception as e:
+            print(f"Calc Error: {e}")
+
+    def update_plot(self, x_data, y_data):
+        self.ax.clear()
+
+        # --- STYLE CONFIGURATION ---
+        text_color = '#555555'  # Softer dark gray for text
+        border_color = '#CCCCCC'  # Light gray for the box borders
+
+        # --- PRIMARY AXIS (MPa) ---
+        self.ax.set_xlabel("Age (Days)", color=text_color)
+        self.ax.set_ylabel("Strength (MPa)", color=text_color)
+
+        # Style the grid
+        self.ax.grid(True, which='major', linestyle='--', alpha=0.5, color='#e0e0e0')
+
+        # Style the ticks (numbers)
+        self.ax.tick_params(axis='both', colors=text_color, which='both')
+
+        # Style the Spines (The box around the chart)
+        for spine in self.ax.spines.values():
+            spine.set_color(border_color)
+
+        # --- PLOT DATA ---
+        self.ax.plot(x_data, y_data, color='#009580', linewidth=2, label='Maturity Curve')
+        self.ax.fill_between(x_data, y_data, color='#009580', alpha=0.1)
+
+        points_x = x_data[1:]
+        points_y = y_data[1:]
+        self.sc_plot = self.ax.scatter(points_x, points_y, color='white', edgecolor='#009580', s=50, zorder=5)
+
+        # Limits
+        max_y = max(y_data) * 1.2 if len(y_data) > 0 else 10
+        self.ax.set_xlim(0, 30)
+        self.ax.set_ylim(0, max_y)
+
+        # --- SECONDARY AXIS (PSI) ---
+        def mpa_to_psi(x):
+            return x * 145.038
+
+        def psi_to_mpa(x):
+            return x / 145.038
+
+        secax = self.ax.secondary_yaxis('right', functions=(mpa_to_psi, psi_to_mpa))
+        secax.set_ylabel("Strength (psi)", color=text_color)
+
+        # Style Secondary Axis Ticks
+        secax.tick_params(axis='y', colors=text_color)
+
+        # Style Secondary Axis Spine (The right vertical line)
+        secax.spines['right'].set_color(border_color)
+
+        # --- REFERENCE LINES ---
+        ref_lines = [(3000, 20.684, '#ffc600'), (4000, 27.579, '#ff003c')]
+        for psi_val, mpa_val, color in ref_lines:
+            if mpa_val < max_y:
+                self.ax.axhline(y=mpa_val, color=color, linestyle=':', linewidth=1.5, alpha=0.8)
+                self.ax.text(0.5, mpa_val + (max_y * 0.01), f'{psi_val} psi',
+                             color=color, fontsize=8, fontweight='bold')
+
+        # --- ANNOTATION (Bottom Fixed) ---
+        self.annot = self.ax.annotate(
+            "",
+            xy=(0, 0),
+            xytext=(0, -15),
+            textcoords="offset points",
+            ha='center', va='top',
+            # Added styling to the tooltip box as well
+            bbox=dict(boxstyle="round", fc="white", ec="#cccccc", alpha=0.95),
+            arrowprops=dict(arrowstyle="->", color=text_color)
+        )
+        self.annot.set_visible(False)
+
+        # Layout fix
+        self.figure.tight_layout()
+        self.canvas.draw()
+
+    def on_hover(self, event):
+        vis = self.annot.get_visible()
+
+        if event.inaxes == self.ax and self.sc_plot is not None:
+            cont, ind = self.sc_plot.contains(event)
+            if cont:
+                # 1. Move anchor to the point
+                pos = self.sc_plot.get_offsets()[ind["ind"][0]]
+                self.annot.xy = pos
+
+                # 2. Get Data
+                day = int(pos[0])
+                mpa = pos[1]
+                psi = mpa * 145.038
+
+                # 3. Force "Bottom Center" alignment
+                # We reset this every time just in case the previous dynamic code changed it
+                self.annot.set_position((0, -15))
+                self.annot.set_ha('center')
+                self.annot.set_va('top')
+
+                # 4. Update Text
+                text = f"Day: {day}\n{mpa:.1f} MPa\n{psi:,.0f} psi"
+                self.annot.set_text(text)
+                self.annot.get_bbox_patch().set_alpha(0.9)
+                self.annot.set_visible(True)
+                self.canvas.draw_idle()
+                return
+
+        if vis:
+            self.annot.set_visible(False)
+            self.canvas.draw_idle()
 
 if __name__ == '__main__':
     sys.excepthook = global_exception_hook

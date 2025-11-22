@@ -3,7 +3,7 @@ from typing import Any
 from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtWidgets import (
     QLabel, QApplication, QMessageBox, QWidget, QVBoxLayout, QSpinBox, QDoubleSpinBox, QPushButton, QGroupBox,
-    QLineEdit, QComboBox, QTextEdit, QCheckBox, QScrollArea, QStackedWidget
+    QLineEdit, QComboBox, QTextEdit, QCheckBox, QScrollArea, QStackedWidget, QAbstractSpinBox
 )
 import traceback
 from PyQt6.QtGui import QPixmap, QCursor, QEnterEvent, QPainter, QColor
@@ -236,7 +236,8 @@ class LinkSpinboxes(QCheckBox):
 
 class BlankSpinBox(QSpinBox):
     """Integer spinbox with blank special value."""
-    def __init__(self, minimum: int, maximum: int, initial: int | None = None, suffix: str | None = None, parent: QWidget | None = None):
+    def __init__(self, minimum: int, maximum: int, initial: int | None = None, suffix: str | None = None,
+                 increment: int | None = None, parent: QWidget | None = None):
         super().__init__(parent)
         self.setRange(minimum, maximum)
         if initial:
@@ -245,12 +246,15 @@ class BlankSpinBox(QSpinBox):
             self.setSpecialValueText(' ')
         if suffix:
             self.setSuffix(suffix)
+        self.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
+        if increment:
+            self.setSingleStep(increment)
         self.setGroupSeparatorShown(True)
 
 class BlankDoubleSpinBox(QDoubleSpinBox):
     """Float spinbox with configurable decimals, and blank special value."""
-    def __init__(self, minimum: float, maximum: float, decimals: int | None = None, initial: float | None = None, suffix: str | None = None,
-                 parent: QWidget | None = None):
+    def __init__(self, minimum: float, maximum: float, decimals: int | None = None, initial: float | None = None,
+                 suffix: str | None = None, increment: float | None = None, parent: QWidget | None = None):
         super().__init__(parent)
         self.setRange(minimum, maximum)
         if initial:
@@ -261,6 +265,9 @@ class BlankDoubleSpinBox(QDoubleSpinBox):
             self.setSuffix(suffix)
         if decimals:
             self.setDecimals(decimals)
+        self.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
+        if increment:
+            self.setSingleStep(increment)
         self.setGroupSeparatorShown(True)
 
 class InfoPopup(QWidget):

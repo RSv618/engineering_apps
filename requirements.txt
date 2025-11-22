@@ -1,3 +1,5 @@
+numpy
+matplotlib
 pillow
 PyQt6~=6.10.0
 PyQt6_sip~=13.10.2

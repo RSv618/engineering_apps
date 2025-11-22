@@ -244,10 +244,6 @@ QSpinBox:disabled, QDoubleSpinBox:disabled {
     color: #A7A6A6;
     border: 1px solid #E3E3E3; /* A subtle border to define the field */
 }
-QSpinBox::up-button, QSpinBox::down-button,
-QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
-    image: none; /* Remove Arrows */
-}
 QComboBox {
     padding-left: 8px;
 }
@@ -600,15 +596,11 @@ QMessageBox#questionMessageBox {
 /* --------------------- */
 /* -- Design Mix Page -- */
 /* --------------------- */
-#concreteMixMainWidget {
-}
-#concreteMixDesignPage {
-}
-#concreteMixDesignLeftPanel {
-    padding: 10px;
-}
 #concreteMixDesignRightPanel {
     padding: 20px 80px;
+}
+#concreteEstimatorRightPanel {
+    padding: 10px 20px;
 }
 #concreteMixDesignProportions {
     margin-top: 50px;
@@ -630,7 +622,12 @@ QMessageBox#questionMessageBox {
 #concreteMixDesignGrid {
     margin-top: 20px;
 }
-#concreteMixDesignScrollContent .header-4 {
+#concreteMixDesignScrollContent,
+#concreteEstimatorScrollContent {
+    padding: 10px 20px;
+}
+#concreteMixDesignScrollContent .header-4,
+#concreteEstimatorScrollContent .header-4 {
     color: #32302c;
     margin-bottom: 10px;
 }
@@ -643,8 +640,14 @@ QMessageBox#questionMessageBox {
 #concreteMixDesignScrollContent .check-box {
     color: #5d5d5d;
 }
-#concreteMixDesignScrollContent QLabel {
+#concreteMixDesignScrollContent QLabel,
+#concreteEstimatorScrollContent QLabel {
     color: #5d5d5d;
+}
+#concreteEstimatorScrollContent .formula {
+    color: #A7A6A6;
+    padding-left: 3px;
+    font-size: 7pt
 }
 /* --------------------- */
 /* -- Launcher Styles -- */
