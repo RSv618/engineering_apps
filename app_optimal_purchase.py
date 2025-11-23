@@ -16,11 +16,6 @@ from rebar_optimizer import find_optimized_cutting_plan
 from constants import BAR_DIAMETERS, MARKET_LENGTHS, DEBUG_MODE, LOGO_MAP
 from excel_writer import add_sheet_purchase_plan, add_sheet_cutting_plan, delete_blank_worksheets
 
-r"""
-TO BUILD:
-pyinstaller --name 'OptimalPurchase' --onefile --windowed --icon='images/logo.png' --add-data 'images:images' --add-data 'style.qss:.' --add-binary 'C:\Users\rober\PycharmProjects\engineering_apps\.venv\Lib\site-packages\pulp\solverdir\cbc\win\i64\cbc.exe;.' app_optimal_purchase.py
-"""
-
 class OptimalPurchaseWindow(QMainWindow):
     def __init__(self):
         super().__init__()

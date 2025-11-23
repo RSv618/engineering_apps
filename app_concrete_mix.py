@@ -7,7 +7,6 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import Qt, QTimer
 from matplotlib.ticker import MultipleLocator
-from openpyxl.styles import Alignment
 
 from concrete_aci import ACIMixDesign
 from utils import (
@@ -20,11 +19,6 @@ from constants import DEBUG_MODE, MPA_TO_PSI, MM_TO_INCH, KG_M3_TO_LB_FT3, M3_TO
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
-
-r"""
-TO BUILD:
-pyinstaller --name 'ConcreteMix' --onefile --windowed --icon='images/logo.png' --add-data 'images:images' --add-data 'style.qss:.' app_concrete_mix.py
-"""
 
 class ConcreteMixWindow(QMainWindow):
     def __init__(self):
