@@ -35,6 +35,7 @@ LOGO_MAP = {
     'app_optimal_purchase': 'images/logo_purple.png',
     'app_concrete_mix': 'images/logo_red.png'
 }
+VERSION = '1.0.0'
 
 # --- Application Configuration ---
 # This is the perfect place for the debug flag.
