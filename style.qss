@@ -694,3 +694,6 @@ QMessageBox#questionMessageBox {
 #launcherAboutPage QLabel {
     qproperty-alignment: AlignCenter;
 }
+#launcherAboutPage .transparent-button {
+    border: 1px solid #009580;
+}

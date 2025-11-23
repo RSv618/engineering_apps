@@ -36,7 +36,7 @@ class AboutDialog(QDialog):
                 pixmap.scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(logo_label)
-        layout.addSpacing(20)
+        layout.addSpacing(25)
 
         # 2. Title & Version
         title = QLabel("Engineering Apps Suite")
@@ -74,7 +74,7 @@ class AboutDialog(QDialog):
         contact_label.setProperty('class', 'form-value')
         layout.addWidget(contact_label)
 
-        layout.addSpacing(20)
+        layout.addSpacing(25)
         layout.addStretch()
 
         # Close Button
@@ -82,6 +82,7 @@ class AboutDialog(QDialog):
         close_btn.setProperty('class', 'transparent-button next-button')
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn)
+        self.setFocus()
 
 
 class AppCard(QFrame):
@@ -250,20 +251,38 @@ class LauncherWindow(QMainWindow):
         else:
             super().keyPressEvent(event)
 
-    def launch_cutting_list(self):
-        self.window = CuttingListWindow()
+    def _launch_app(self, app_window_class):
+        """
+        Helper to hide launcher, open app, and re-show launcher on close.
+        """
+        self.hide()  # Hide the launcher
+        self.window = app_window_class()
+
+        # We need to hook into the sub-window's close event.
+        # We save the original closeEvent to ensure we don't break
+        # any validation/saving logic inside the specific apps.
+        original_close_event = self.window.closeEvent
+
+        def on_close_wrapper(event):
+            # Run the app's standard close logic (e.g., "Are you sure?")
+            original_close_event(event)
+
+            # If the event was accepted (window actually closed), show launcher
+            if event.isAccepted():
+                self.show()
+
+        # Override the instance's closeEvent
+        self.window.closeEvent = on_close_wrapper
         self.window.show()
-        self.close()
+
+    def launch_cutting_list(self):
+        self._launch_app(CuttingListWindow)
 
     def launch_optimal_purchase(self):
-        self.window = OptimalPurchaseWindow()
-        self.window.show()
-        self.close()
+        self._launch_app(OptimalPurchaseWindow)
 
     def launch_concrete_mix_design(self):
-        self.window = ConcreteMixWindow()
-        self.window.show()
-        self.close()
+        self._launch_app(ConcreteMixWindow)
 
 
 if __name__ == "__main__":
