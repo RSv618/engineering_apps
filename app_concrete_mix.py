@@ -6,6 +6,8 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import Qt, QTimer
+from matplotlib.ticker import MultipleLocator
+from openpyxl.styles import Alignment
 
 from concrete_aci import ACIMixDesign
 from utils import (
@@ -13,7 +15,8 @@ from utils import (
     BlankDoubleSpinBox, make_scrollable,
     resource_path, GlobalWheelEventFilter
 )
-from constants import DEBUG_MODE, MPA_TO_PSI, MM_TO_INCH, KG_M3_TO_LB_FT3, M3_TO_YD3, KG_TO_LB, LB_YD3_TO_KG_M3
+from constants import DEBUG_MODE, MPA_TO_PSI, MM_TO_INCH, KG_M3_TO_LB_FT3, M3_TO_YD3, KG_TO_LB, LB_YD3_TO_KG_M3, \
+    LOGO_MAP
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
@@ -27,8 +30,8 @@ class ConcreteMixWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle('Concrete Mix Design (ACI 211.1) - Metric')
-        self.setWindowIcon(QIcon(resource_path('images/logo.png')))
+        self.setWindowTitle('Concrete Mix')
+        self.setWindowIcon(QIcon(resource_path(LOGO_MAP['app_concrete_mix'])))
         self.setGeometry(50, 50, 900, 650)
         self.setMinimumWidth(900)
         self.setMinimumHeight(450)
@@ -45,7 +48,7 @@ class ConcreteMixWindow(QMainWindow):
 
         # Page 1: Design
         self.design_page = ConcreteDesignPage()
-        self.tabs.addTab(self.design_page, 'ACI Mix Design')
+        self.tabs.addTab(self.design_page, 'Mix Proportions')
 
         # Page 2: Estimator
         self.estimator_page = ConcreteEstimatorPage()
@@ -744,7 +747,7 @@ class ConcreteEstimatorPage(QFrame):
         right_layout.setSpacing(0)
 
         # Matplotlib Canvas
-        self.figure = Figure(figsize=(3, 3), dpi=100, facecolor='#ffffff')
+        self.figure = Figure(figsize=(5, 3), dpi=100, facecolor='#ffffff')
         self.canvas = FigureCanvas(self.figure)
         self.ax = self.figure.add_subplot(111)
 
@@ -756,6 +759,10 @@ class ConcreteEstimatorPage(QFrame):
         self.canvas.mpl_connect("motion_notify_event", self.on_hover)
 
         right_layout.addStretch()
+
+        title = QLabel('Strength vs Age')
+        title.setProperty('class', 'header-1')
+        right_layout.addWidget(title)
         right_layout.addWidget(self.canvas)
         right_layout.addStretch()
 
@@ -837,8 +844,10 @@ class ConcreteEstimatorPage(QFrame):
         # --- CONNECT SIGNALS ---
         for widget in self.inputs.values():
             if isinstance(widget, (QSpinBox, QDoubleSpinBox)):
+                # noinspection PyUnresolvedReferences
                 widget.valueChanged.connect(self.calculate_strength)
             elif isinstance(widget, QComboBox):
+                # noinspection PyUnresolvedReferences
                 widget.currentIndexChanged.connect(self.calculate_strength)
 
     def calculate_strength(self):
@@ -892,12 +901,14 @@ class ConcreteEstimatorPage(QFrame):
         self.ax.clear()
 
         # --- STYLE CONFIGURATION ---
-        text_color = '#555555'  # Softer dark gray for text
-        border_color = '#CCCCCC'  # Light gray for the box borders
+        text_color = '#5d5d5d'  # Softer dark gray for text
+        border_color = '#eeeeec'  # Light gray for the box borders
 
         # --- PRIMARY AXIS (MPa) ---
         self.ax.set_xlabel("Age (Days)", color=text_color)
-        self.ax.set_ylabel("Strength (MPa)", color=text_color)
+        self.ax.set_ylabel("MPa", color=text_color)
+        self.ax.xaxis.set_major_locator(MultipleLocator(7))
+
 
         # Style the grid
         self.ax.grid(True, which='major', linestyle='--', alpha=0.5, color='#e0e0e0')
@@ -930,7 +941,7 @@ class ConcreteEstimatorPage(QFrame):
             return x / 145.038
 
         secax = self.ax.secondary_yaxis('right', functions=(mpa_to_psi, psi_to_mpa))
-        secax.set_ylabel("Strength (psi)", color=text_color)
+        secax.set_ylabel("psi", color=text_color)
 
         # Style Secondary Axis Ticks
         secax.tick_params(axis='y', colors=text_color)

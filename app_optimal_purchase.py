@@ -13,7 +13,7 @@ from utils import (load_stylesheet, parse_nested_dict, global_exception_hook,
                    InfoPopup, HoverLabel, BlankSpinBox, HoverButton, resource_path,
                    style_invalid_input, GlobalWheelEventFilter)
 from rebar_optimizer import find_optimized_cutting_plan
-from constants import BAR_DIAMETERS, MARKET_LENGTHS, DEBUG_MODE
+from constants import BAR_DIAMETERS, MARKET_LENGTHS, DEBUG_MODE, LOGO_MAP
 from excel_writer import add_sheet_purchase_plan, add_sheet_cutting_plan, delete_blank_worksheets
 
 r"""
@@ -26,7 +26,7 @@ class OptimalPurchaseWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle('RSB Purchase and Cutting Plan')
-        self.setWindowIcon(QIcon(resource_path('images/logo.png')))
+        self.setWindowIcon(QIcon(resource_path(LOGO_MAP['app_optimal_purchase'])))
         self.setGeometry(50, 50, 600, 600)
         self.setMinimumWidth(600)
         self.setMinimumHeight(500)

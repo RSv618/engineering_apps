@@ -16,7 +16,7 @@ from PyQt6.QtCore import (Qt, pyqtSignal as Signal, QEvent, QPointF,
 from constants import (FOOTING_IMAGE_WIDTH, RSB_IMAGE_WIDTH,
                        BAR_DIAMETERS, STIRRUP_ROW_IMAGE_WIDTH,
                        BAR_DIAMETERS_FOR_STIRRUPS, MARKET_LENGTHS,
-                       DEBUG_MODE)
+                       DEBUG_MODE, LOGO_MAP)
 from excel_writer import (process_rebar_input, add_sheet_cutting_list,
                           add_sheet_purchase_plan, add_sheet_cutting_plan,
                           delete_blank_worksheets)
@@ -1698,7 +1698,7 @@ class CuttingListWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle('Cutting List')
-        self.setWindowIcon(QIcon(resource_path('images/logo.png')))
+        self.setWindowIcon(QIcon(resource_path(LOGO_MAP['app_cutting_list'])))
         self.setGeometry(50, 50, 750, 550)
         self.setMinimumWidth(750)
         self.setMinimumHeight(500)

@@ -606,10 +606,10 @@ QMessageBox#questionMessageBox {
     margin-top: 50px;
     margin-bottom: 50px;
 }
-#concreteMixDesignRightPanel .header-1 {
+#concreteMixDesignRightPanel .header-1,
+#concreteEstimatorRightPanel .header-1 {
     qproperty-alignment: AlignCenter;
     color: #009580;
-    font-size: 18pt;
 }
 #concreteMixDesignRightPanel .subtitle {
     qproperty-alignment: AlignCenter;

@@ -7,6 +7,7 @@ from PyQt6.QtGui import QIcon, QPixmap
 from app_concrete_mix import ConcreteMixWindow
 from app_cutting_list import CuttingListWindow
 from app_optimal_purchase import OptimalPurchaseWindow
+from constants import LOGO_MAP
 from utils import load_stylesheet, resource_path, GlobalWheelEventFilter, HoverButton
 
 
@@ -95,7 +96,7 @@ class LauncherWindow(QMainWindow):
         card1 = AppCard(
             "Foundation Cutting List",
             "Calculate rebar cutting lists for pad footings, pedestals, and columns. Generates detailed Excel schedules.",
-            "images/logo.png",  # Use specific icon if available
+            resource_path(LOGO_MAP['app_cutting_list']),  # Use specific icon if available
             self.launch_cutting_list
         )
         grid.addWidget(card1, 0, 0)
@@ -104,7 +105,7 @@ class LauncherWindow(QMainWindow):
         card2 = AppCard(
             "Rebar Optimal Purchase",
             "Input raw rebar requirements to optimize stock lengths, minimize waste (1D Cutting Stock), and generate purchase orders.",
-            "images/logo.png",
+            resource_path(LOGO_MAP['app_optimal_purchase']),
             self.launch_optimal_purchase
         )
         grid.addWidget(card2, 0, 1)
@@ -113,7 +114,7 @@ class LauncherWindow(QMainWindow):
         card3 = AppCard(
             "Concrete Mix Design",
             "Implements the ACI 211.11 concrete mix design standard to find mix proportions. Estimates concrete strength based on given proportions.",
-            "images/logo.png",
+            resource_path(LOGO_MAP['app_concrete_mix']),
             self.launch_concrete_mix_design
         )
         grid.addWidget(card3, 0, 2)

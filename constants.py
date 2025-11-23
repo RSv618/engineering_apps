@@ -29,6 +29,13 @@ LB_YD3_TO_KG_M3 = 0.593276
 YD3_TO_M3 = 0.764555
 M3_TO_YD3 = 1.307951
 
+# APP Logo
+LOGO_MAP = {
+    'app_cutting_list': 'images/logo_blue.png',
+    'app_optimal_purchase': 'images/logo_purple.png',
+    'app_concrete_mix': 'images/logo_red.png'
+}
+
 # --- Application Configuration ---
 # This is the perfect place for the debug flag.
 DEBUG_MODE = False
