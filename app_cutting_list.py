@@ -2112,24 +2112,37 @@ class CuttingListWindow(QMainWindow):
 
     def add_market_length(self):
         """Prompts the user for a new market length and redraws the grid."""
-        # --- Create an instance of the dialog ---
-        dialog = QInputDialog(self)
-
-        # --- Set an objectName for QSS styling ---
-        dialog.setObjectName('marketLengthInputDialog')
-
-        # --- Configure the dialog's properties ---
+        # 1. Create a custom dialog
+        dialog = QDialog(self)
+        dialog.setObjectName('marketLengthInputDialog')  # Kept for your QSS styling
         dialog.setWindowTitle('Add Market Length')
-        dialog.setLabelText('Enter new length (in meters):')
-        dialog.setInputMode(QInputDialog.InputMode.DoubleInput)
-        dialog.setDoubleRange(0.01, 999.9)
-        dialog.setDoubleDecimals(1)
-        dialog.setDoubleValue(1.0)
 
-        # --- Execute the dialog and check the result ---
+        # 2. Setup Layout
+        layout = QVBoxLayout(dialog)
+
+        # 3. Add Label
+        label = QLabel('Enter new length (in meters):')
+        layout.addWidget(label)
+
+        # 4. Add your Custom Spinbox (No buttons, custom behavior)
+        # Using 0.01 as min to prevent zero input
+        spinbox = BlankDoubleSpinBox(0.01, 999.9, decimals=1, initial=6.0, parent=dialog)
+        layout.addWidget(spinbox)
+
+        # 5. Add Standard OK/Cancel Buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        # noinspection PyUnresolvedReferences
+        button_box.accepted.connect(dialog.accept)
+        # noinspection PyUnresolvedReferences
+        button_box.rejected.connect(dialog.reject)
+        layout.addWidget(button_box)
+
+        # 6. Execute and Process
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            new_length = dialog.doubleValue()
-            # The rest of your logic remains the same
+            new_length = spinbox.value()
+
+            # Use specific check because BlankSpinBox can return a special value if empty,
+            # though here it is initialized to 6.0
             if new_length > 0:
                 new_length_str = f'{new_length:.0f}m' if int(new_length) == new_length else f'{new_length:.1f}m'
 
