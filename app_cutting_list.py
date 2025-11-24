@@ -7,7 +7,8 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QStackedWidget, QWidget, QVBoxLayout,
     QHBoxLayout, QLabel, QPushButton, QLineEdit, QDialog,
     QFormLayout, QComboBox, QGridLayout, QCheckBox, QTextEdit, QFrame,
-    QSizePolicy, QGroupBox, QStyle, QStyleOption, QMessageBox, QFileDialog, QInputDialog
+    QSizePolicy, QGroupBox, QStyle, QStyleOption, QMessageBox, QFileDialog,
+    QInputDialog, QDialogButtonBox
 )
 from PyQt6.QtGui import QIcon, QColor, QPen, QPainter, QPaintEvent
 from PyQt6.QtCore import (Qt, pyqtSignal as Signal, QEvent, QPointF,
@@ -19,7 +20,7 @@ from constants import (FOOTING_IMAGE_WIDTH, RSB_IMAGE_WIDTH,
                        DEBUG_MODE, LOGO_MAP)
 from excel_writer import (process_rebar_input, add_sheet_cutting_list,
                           add_sheet_purchase_plan, add_sheet_cutting_plan,
-                          delete_blank_worksheets)
+                          delete_blank_worksheets, add_concrete_plan_to_workbook)
 from rebar_calculations import compile_rebar
 from rebar_optimizer import find_optimized_cutting_plan
 from utils import (HoverButton, HoverLabel, resource_path,
@@ -28,7 +29,7 @@ from utils import (HoverButton, HoverLabel, resource_path,
                    parse_spacing_string, get_bar_dia, make_scrollable,
                    LinkSpinboxes, toggle_obj_visibility,
                    GlobalWheelEventFilter, is_widget_empty,
-                   style_invalid_input, get_dia_code)
+                   style_invalid_input, get_dia_code, BlankDoubleSpinBox)
 from openpyxl import Workbook
 
 class DrawStirrup(QWidget):
@@ -1687,6 +1688,29 @@ class FoundationItem(QFrame):
         self.data = new_details
         self.label.setText(self.data.get('name', 'Unnamed'))
 
+    def calculate_volume(self) -> float:
+        """
+        Calculates the total concrete volume for this foundation item in cubic meters.
+        """
+        # Dimensions are in mm, convert to meters
+        n_footing = self.data.get('n_footing', 0)
+        n_ped = self.data.get('n_ped', 0)
+
+        # Pad Volume
+        Bx = self.data.get('Bx', 0) / 1000.0
+        By = self.data.get('By', 0) / 1000.0
+        t = self.data.get('t', 0) / 1000.0
+        vol_pad = Bx * By * t
+
+        # Pedestal Volume
+        bx = self.data.get('bx', 0) / 1000.0
+        by = self.data.get('by', 0) / 1000.0
+        h = self.data.get('h', 0) / 1000.0
+        vol_ped = bx * by * h * n_ped
+
+        total_vol_one = vol_pad + vol_ped
+        return total_vol_one * n_footing
+
 class CuttingListWindow(QMainWindow):
     def __init__(self) -> None:
         """Initializes the main application window and its components."""
@@ -2586,12 +2610,26 @@ class CuttingListWindow(QMainWindow):
                 return
             proceed_with_optimization = False
 
-        all_results, splicing_ok, wb = [], True, Workbook()
+        # Initialize
+        total_concrete_vol_m3 = 0.0
+        foundation_vol_breakdown = []
+        all_results = []
+        splicing_ok = True
+        wb = Workbook()
+
         for data in all_data:
             rebars_per_fdn_type = compile_rebar(data)
             all_results.append(rebars_per_fdn_type)
             grouped_rebars_per_fdn_type = process_rebar_input(rebars_per_fdn_type)
             wb, proceed = add_sheet_cutting_list(data['name'], grouped_rebars_per_fdn_type, market_lengths, wb)
+
+            # We temporarily create an item wrapper to calculate volume easily
+            temp_item = FoundationItem(data)
+            vol = temp_item.calculate_volume()
+            temp_item.deleteLater()
+            total_concrete_vol_m3 += vol
+            foundation_vol_breakdown.append((data['name'], vol, data['n_footing']))
+
             if not proceed:
                 splicing_ok = False
                 msg_box = QMessageBox(self)
@@ -2609,6 +2647,10 @@ class CuttingListWindow(QMainWindow):
 
                 if msg_box.exec() == QMessageBox.StandardButton.No:
                     return
+
+        # --- Generate Concrete Purchase Plan Sheet ---
+        if total_concrete_vol_m3 > 0:
+            add_concrete_plan_to_workbook(wb, foundation_vol_breakdown)
 
         if proceed_with_optimization and splicing_ok:
             cuts_by_diameter = {}
@@ -2631,7 +2673,7 @@ class CuttingListWindow(QMainWindow):
             wb = add_sheet_purchase_plan(wb, purchase_list)
             wb = add_sheet_cutting_plan(wb, cutting_plan)
 
-        # --- 4. Save and Open the Excel File ---
+        # --- Save and Open the Excel File ---
         wb = delete_blank_worksheets(wb)
         save_path, _ = QFileDialog.getSaveFileName(
             self, 'Save Cutting List As', 'rebar_cutting_schedule.xlsx',

@@ -366,7 +366,7 @@ def create_excel_cutting_list(rebar_config: dict[str, Any],
     print(f'Excel sheet {output_filename} has been created successfully.')
 
 def add_sheet_purchase_plan(wb, purchase_list) -> Workbook:
-    ws = wb.create_sheet('Purchase Qty')
+    ws = wb.create_sheet('Rebar Purchase')
 
     # --- Styles ---
     white_side = Side(style='thin', color='FFFFFF')
@@ -696,6 +696,240 @@ def add_sheet_cutting_list(title: str, rebar_config: list[dict[str, Any]],
         current_row += 1
 
     return wb, proceed_purchase_plan
+
+def add_concrete_plan_to_workbook(wb: Workbook, breakdown: list):
+    """
+    Adds a sheet with a concrete volume breakdown and an EDITABLE mix design section.
+    Calculations for materials are done via Excel Formulas so the user can tweak the mix.
+    """
+    ws = wb.create_sheet('Concrete Purchase')
+
+    # --- Styles ---
+    white_side = Side(style='thin', color='FFFFFF')
+    black_side = Side(style='thin', color='404040')
+    title_font = Font(name='Calibri', size=16, bold=True)
+    header_font = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
+    header_fill = PatternFill(start_color='404040', end_color='404040', fill_type='solid')
+    alter_row_fill = PatternFill(start_color='F3F3F3', end_color='404040', fill_type='solid')
+    header_border = Border(left=white_side, right=white_side, top=black_side, bottom=black_side)
+
+    # Style for input cells to indicate they are editable (Light Yellow)
+    input_fill = PatternFill(start_color='FFFFCC', end_color='FFFFCC', fill_type='solid')
+
+    center_align = Alignment(horizontal='center', vertical='center')
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                         top=Side(style='thin'), bottom=Side(style='thin'))
+
+    # =========================================================
+    # SECTION 1: VOLUME BREAKDOWN
+    # =========================================================
+    ws.merge_cells('A1:D1')
+    cell = ws['A1']
+    cell.value = 'Concrete Volume Breakdown'
+    cell.font = title_font
+    cell.alignment = Alignment(horizontal='center', vertical='center')
+    ws.row_dimensions[1].height = 30
+
+    ws['A2'] = 'Foundation Type'
+    ws['B2'] = 'Vol. Per Footing'
+    ws['C2'] = 'Quantity'
+    ws['D2'] = 'Vol. Per Type'
+    ws.row_dimensions[2].height = 25
+    for col in ['A', 'B', 'C', 'D']:
+        c = ws[f'{col}2']
+        c.font = header_font
+        c.fill = header_fill
+        c.alignment = center_align
+        c.border = header_border
+
+    # Apply black border to left and right outer edges
+    cell = ws.cell(row=2, column=1)
+    cell.border = Border(left=black_side, top=black_side, right=white_side, bottom=black_side)
+    cell = ws.cell(row=2, column=4)
+    cell.border = Border(left=white_side, top=black_side, right=black_side, bottom=black_side)
+
+    row_idx = 3
+    for name, vol, n_footing in breakdown:
+        vol_per_footing = vol / n_footing
+        ws[f'A{row_idx}'] = name
+        ws[f'B{row_idx}'] = vol_per_footing
+        ws[f'C{row_idx}'] = n_footing
+        ws[f'D{row_idx}'] = f'=B{row_idx}*C{row_idx}'
+
+        ws[f'B{row_idx}'].number_format = f'#,##0.00" m³"'
+        ws[f'D{row_idx}'].number_format = f'#,##0.00" m³"'
+        ws[f'A{row_idx}'].border = thin_border
+        ws[f'B{row_idx}'].border = thin_border
+        ws[f'C{row_idx}'].border = thin_border
+        ws[f'D{row_idx}'].border = thin_border
+        if row_idx %2==0:
+            ws[f'A{row_idx}'].fill = alter_row_fill
+            ws[f'B{row_idx}'].fill = alter_row_fill
+            ws[f'C{row_idx}'].fill = alter_row_fill
+            ws[f'D{row_idx}'].fill = alter_row_fill
+        row_idx += 1
+
+    # Total Row
+    total_vol_row = row_idx
+    ws.merge_cells(f'A{row_idx}:C{row_idx}')
+    ws[f'A{total_vol_row}'] = 'Total Volume'
+    ws[f'D{total_vol_row}'].value = f'=sum(D3:D{total_vol_row-1})'
+    ws[f'A{total_vol_row}'].font = Font(bold=True)
+    ws[f'D{total_vol_row}'].font = Font(bold=True)
+    ws[f'A{total_vol_row}'].border = thin_border
+    ws[f'B{total_vol_row}'].border = thin_border
+    ws[f'C{total_vol_row}'].border = thin_border
+    ws[f'D{total_vol_row}'].border = thin_border
+    ws[f'A{total_vol_row}'].alignment = Alignment(horizontal='right')
+    ws[f'D{total_vol_row}'].number_format = f'#,##0.00" m³"'
+
+    # Store reference to total volume cell (e.g., 'B10')
+    ref_total_vol = f'D{total_vol_row}'
+
+    # =========================================================
+    # SECTION 2: EDITABLE MIX PARAMETERS
+    # =========================================================
+    param_start_row = total_vol_row + 2
+
+    ws.merge_cells(f'A{param_start_row}:B{param_start_row}')
+    cell = ws[f'A{param_start_row}']
+    cell.value = 'Mix Design Parameters'
+    cell.font = title_font
+    cell.alignment = Alignment(horizontal='center', vertical='center')
+    ws.row_dimensions[param_start_row].height = 30
+
+    # Parameter Labels and Default Values
+    # (Label, Default Value, Key for reference)
+    params = [
+        ('Cement Ratio', 1, 'ratio_c'),
+        ('Sand Ratio', 2, 'ratio_s'),
+        ('Gravel Ratio', 3, 'ratio_g'),
+        ('Water-Cement Ratio', 0.50, 'wc'),
+        ('Bag Weight', 40, 'bag_wt'),
+        ('Cement Density', 1440, 'cem_dens'),  # Usually hidden or static, but making it explicit is safer
+        ('Dry Volume Factor', 1.54, 'factor'),
+        ('Wastage Multiplier', 1.05, 'waste'),
+    ]
+
+    # Dictionary to store cell addresses for formulas
+    refs = {}
+
+    current_row = param_start_row + 1
+    for label, val, key in params:
+        # Label
+        ws[f'A{current_row}'] = label
+        ws[f'A{current_row}'].border = thin_border
+
+        # Value (Input)
+        c = ws[f'B{current_row}']
+        c.value = val
+        c.alignment = center_align
+        c.border = thin_border
+        c.fill = input_fill  # Highlight as editable
+        if label == 'Bag Weight':
+            c.number_format = '#,##0" kg"'
+        elif label == 'Cement Density':
+            c.number_format = f'#,##0" kg/m³"'
+        # Save address (e.g., 'B15')
+        refs[key] = f'B{current_row}'
+
+        current_row += 1
+
+    # =========================================================
+    # SECTION 3: MATERIAL ESTIMATION (FORMULAS)
+    # =========================================================
+    est_row = current_row + 1
+    ws.merge_cells(f'A{est_row}:B{est_row}')
+    cell = ws[f'A{est_row}']
+    cell.value = 'Materials for Purchase'
+    cell.font = title_font
+    cell.alignment = Alignment(horizontal='center', vertical='center')
+    ws.row_dimensions[est_row].height = 30
+
+    headers = ['Material', 'Quantity']
+    ws.row_dimensions[est_row + 1].height = 25
+    for i, h in enumerate(headers, 1):
+        c = ws.cell(row=est_row + 1, column=i)
+        c.value = h
+        c.font = header_font
+        c.fill = header_fill
+        c.alignment = center_align
+        c.border = header_border
+
+    # Apply black border to left and right outer edges
+    cell = ws.cell(row=est_row + 1, column=1)
+    cell.border = Border(left=black_side, top=black_side, right=white_side, bottom=black_side)
+    cell = ws.cell(row=est_row + 1, column=2)
+    cell.border = Border(left=white_side, top=black_side, right=black_side, bottom=black_side)
+
+    # --- FORMULA CONSTRUCTION ---
+    # 1. Total Ratio Sum = (Rc + Rs + Rg)
+    sum_ratio = f'({refs['ratio_c']} + {refs['ratio_s']} + {refs['ratio_g']})'
+
+    # 2. Total Dry Volume = TotalWet * Factor
+    dry_vol = f'({ref_total_vol} * {refs['factor']})'
+
+    # 3. Cement Calculation
+    # Vol_Cement_Part = DryVol * (Rc / Sum)
+    # Weight_Cement = Vol_Cement_Part * Density
+    # Bags = Weight / BagWeight
+    # Total = Bags * Wastage
+    formula_cement = f'=(({dry_vol} * ({refs['ratio_c']} / {sum_ratio})) * {refs['cem_dens']} / {refs['bag_wt']}) * {refs['waste']}'
+
+    # 4. Sand Calculation
+    # Vol_Sand = DryVol * (Rs / Sum) * Wastage
+    formula_sand = f'=({dry_vol} * ({refs['ratio_s']} / {sum_ratio})) * {refs['waste']}'
+
+    # 5. Gravel Calculation
+    # Vol_Gravel = DryVol * (Rg / Sum) * Wastage
+    formula_gravel = f'=({dry_vol} * ({refs['ratio_g']} / {sum_ratio})) * {refs['waste']}'
+
+    # 6. Water Calculation
+    # Weight of Cement (Total) = (Bags * BagWeight) ... or derived from formula 3 without bag division
+    # Let's derive it cleanly: Weight_Cement = Vol_Cement_Part * Density * Wastage
+    # Water Weight = Weight_Cement * WC_Ratio
+    # Water Vol (L) = Water Weight (1kg = 1L)
+    # Formula:
+    cement_weight_kg = f'((({dry_vol} * ({refs['ratio_c']} / {sum_ratio})) * {refs['cem_dens']}) * {refs['waste']})'
+    formula_water = f'={cement_weight_kg} * {refs['wc']}'
+
+    materials = [
+        ('Cement', formula_cement, 'Bags', 'Based on bag weight & ratio'),
+        ('Sand', formula_sand, 'm³', 'Loose Volume'),
+        ('Gravel', formula_gravel, 'm³', 'Loose Volume'),
+        ('Water', formula_water, 'Liters', 'Based on w/c ratio')
+    ]
+
+    r = est_row + 2
+    for mat, formula, unit, note in materials:
+        # Name
+        ws.cell(row=r, column=1, value=mat).border = thin_border
+
+        # Formula Cell
+        c = ws.cell(row=r, column=2)
+        c.value = formula  # Write the Excel formula string
+        c.number_format = f'#,##0.00" {unit}"'
+        c.alignment = center_align
+        c.border = thin_border
+
+        # Note
+        # ws.cell(row=r, column=3, value=note).border = thin_border
+
+        if r%2==0:
+            for i in range(len(headers)):
+                c = ws.cell(row=r, column=i + 1)
+                c.fill = alter_row_fill
+        r += 1
+
+    # Add Footer Note
+    cell = ws.cell(row=r, column=1, value='Note: Modify values in yellow cells to update quantities automatically.')
+    cell.font = Font(name='Calibri', size=10, color='5D5D5D')
+
+    # Column widths
+    ws.column_dimensions['A'].width = 20
+    ws.column_dimensions['B'].width = 20
+    ws.column_dimensions['C'].width = 20
+    ws.column_dimensions['D'].width = 20
 
 def delete_blank_worksheets(wb: Workbook) -> Workbook:
     """

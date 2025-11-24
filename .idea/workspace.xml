@@ -4,10 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Launcher re-open">
+    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="use blankspinbox to remove arrows">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_concrete_mix.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_concrete_mix.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_cutting_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_cutting_list.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app_optimal_purchase.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_optimal_purchase.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/constants.py" beforeDir="false" afterPath="$PROJECT_DIR$/constants.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/excel_writer.py" beforeDir="false" afterPath="$PROJECT_DIR$/excel_writer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -57,6 +59,7 @@
     &quot;Python.concrete_aci.executor&quot;: &quot;Run&quot;,
     &quot;Python.concrete_strenth_calculator.executor&quot;: &quot;Run&quot;,
     &quot;Python.constants.executor&quot;: &quot;Run&quot;,
+    &quot;Python.excel_writer.executor&quot;: &quot;Run&quot;,
     &quot;Python.launcher.executor&quot;: &quot;Run&quot;,
     &quot;Python.rebar_calculations.executor&quot;: &quot;Run&quot;,
     &quot;Python.rebar_optimizer.executor&quot;: &quot;Run&quot;,
@@ -428,7 +431,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763887910723</updated>
     </task>
-    <option name="localTasksCounter" value="43" />
+    <task id="LOCAL-00043" summary="use blankspinbox to remove arrows">
+      <option name="closed" value="true" />
+      <created>1763896911940</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1763896911940</updated>
+    </task>
+    <option name="localTasksCounter" value="44" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -443,7 +454,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="added perimeter 4 5 and no top bar image" />
     <MESSAGE value="Major refactor: added FoundationItem to create many different foundation types." />
     <MESSAGE value="Fixed: PULP Error on different hardware. Fixed via resource_path in solver argument." />
     <MESSAGE value="Added feature: custom market lengths" />
@@ -468,6 +478,7 @@
     <MESSAGE value="added Strength Estimator" />
     <MESSAGE value="Logo" />
     <MESSAGE value="Launcher re-open" />
-    <option name="LAST_COMMIT_MESSAGE" value="Launcher re-open" />
+    <MESSAGE value="use blankspinbox to remove arrows" />
+    <option name="LAST_COMMIT_MESSAGE" value="use blankspinbox to remove arrows" />
   </component>
 </project>

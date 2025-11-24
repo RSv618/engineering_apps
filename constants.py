@@ -39,4 +39,4 @@ VERSION = '1.0.0'
 
 # --- Application Configuration ---
 # This is the perfect place for the debug flag.
-DEBUG_MODE = False
+DEBUG_MODE = True

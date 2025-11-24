@@ -575,6 +575,7 @@ class ConcreteDesignPage(QFrame):
         if not self.base_results: return
 
         batch_vol_m3 = self.spin_total_vol.value()
+        batch_vol_m3 *= 1.54 # Convert to concrete Dry volume
 
         bag_size_kg = self.spin_bag_size.value()
         show_by_volume = (self.combo_display_mode.currentIndex() == 0)
