@@ -4,12 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="use blankspinbox to remove arrows">
+    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Added dry volume of concrete for purchasing.&#10;&#10;Added concrete materials for estimation of puchase quantity in cutting list.">
+      <change afterPath="$PROJECT_DIR$/app_timeline.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app_concrete_mix.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_concrete_mix.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_cutting_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_cutting_list.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/constants.py" beforeDir="false" afterPath="$PROJECT_DIR$/constants.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/excel_writer.py" beforeDir="false" afterPath="$PROJECT_DIR$/excel_writer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_launcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_launcher.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/style.qss" beforeDir="false" afterPath="$PROJECT_DIR$/style.qss" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -46,34 +46,35 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.app_concrete_mix.executor&quot;: &quot;Run&quot;,
-    &quot;Python.app_concrete_mix2.executor&quot;: &quot;Run&quot;,
-    &quot;Python.app_cutting_list.executor&quot;: &quot;Run&quot;,
-    &quot;Python.app_launcher.executor&quot;: &quot;Run&quot;,
-    &quot;Python.app_launcher_test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.app_optimal_purchase.executor&quot;: &quot;Run&quot;,
-    &quot;Python.app_refactored.executor&quot;: &quot;Run&quot;,
-    &quot;Python.concrete_aci.executor&quot;: &quot;Run&quot;,
-    &quot;Python.concrete_strenth_calculator.executor&quot;: &quot;Run&quot;,
-    &quot;Python.constants.executor&quot;: &quot;Run&quot;,
-    &quot;Python.excel_writer.executor&quot;: &quot;Run&quot;,
-    &quot;Python.launcher.executor&quot;: &quot;Run&quot;,
-    &quot;Python.rebar_calculations.executor&quot;: &quot;Run&quot;,
-    &quot;Python.rebar_optimizer.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test2.executor&quot;: &quot;Run&quot;,
-    &quot;Python.utils.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;full.screen.before.presentation.mode&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/rober/PycharmProjects/engineering_apps&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.app_concrete_mix.executor": "Run",
+    "Python.app_concrete_mix2.executor": "Run",
+    "Python.app_cutting_list.executor": "Run",
+    "Python.app_launcher.executor": "Run",
+    "Python.app_launcher_test.executor": "Run",
+    "Python.app_optimal_purchase.executor": "Run",
+    "Python.app_refactored.executor": "Run",
+    "Python.app_timeline.executor": "Run",
+    "Python.concrete_aci.executor": "Run",
+    "Python.concrete_strenth_calculator.executor": "Run",
+    "Python.constants.executor": "Run",
+    "Python.excel_writer.executor": "Run",
+    "Python.launcher.executor": "Run",
+    "Python.rebar_calculations.executor": "Run",
+    "Python.rebar_optimizer.executor": "Run",
+    "Python.test.executor": "Run",
+    "Python.test2.executor": "Run",
+    "Python.utils.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "full.screen.before.presentation.mode": "false",
+    "git-widget-placeholder": "master",
+    "last_opened_file_path": "C:/Users/rober/PycharmProjects/engineering_apps"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\rober\PycharmProjects\engineering_apps" />
@@ -439,7 +440,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763896911940</updated>
     </task>
-    <option name="localTasksCounter" value="44" />
+    <task id="LOCAL-00044" summary="Added dry volume of concrete for purchasing.&#10;&#10;Added concrete materials for estimation of puchase quantity in cutting list.">
+      <option name="closed" value="true" />
+      <created>1763978533857</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1763978533857</updated>
+    </task>
+    <option name="localTasksCounter" value="45" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -454,7 +463,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Major refactor: added FoundationItem to create many different foundation types." />
     <MESSAGE value="Fixed: PULP Error on different hardware. Fixed via resource_path in solver argument." />
     <MESSAGE value="Added feature: custom market lengths" />
     <MESSAGE value="Complete refactor for styling." />
@@ -479,6 +487,7 @@
     <MESSAGE value="Logo" />
     <MESSAGE value="Launcher re-open" />
     <MESSAGE value="use blankspinbox to remove arrows" />
-    <option name="LAST_COMMIT_MESSAGE" value="use blankspinbox to remove arrows" />
+    <MESSAGE value="Added dry volume of concrete for purchasing.&#10;&#10;Added concrete materials for estimation of puchase quantity in cutting list." />
+    <option name="LAST_COMMIT_MESSAGE" value="Added dry volume of concrete for purchasing.&#10;&#10;Added concrete materials for estimation of puchase quantity in cutting list." />
   </component>
 </project>

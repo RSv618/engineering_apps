@@ -10,6 +10,7 @@ from PyQt6.QtCore import QUrl
 from app_concrete_mix import ConcreteMixWindow
 from app_cutting_list import CuttingListWindow
 from app_optimal_purchase import OptimalPurchaseWindow
+from app_timeline import TimelineWindow
 from constants import LOGO_MAP, VERSION
 from utils import load_stylesheet, resource_path, GlobalWheelEventFilter, HoverButton, make_scrollable
 
@@ -214,6 +215,15 @@ class LauncherWindow(QMainWindow):
         card3 = AppCard("Concrete Mix Design", desc_mix, LOGO_MAP['app_concrete_mix'], self.launch_concrete_mix_design)
         cards_layout.addWidget(card3)
 
+        desc_timeline = (
+            "Generate professional Project Timelines and S-Curves in Excel. "
+            "Track Original, Revised, and Actual schedules, assign weights to activities, "
+            "and visualize progress with automatically generated charts."
+        )
+        card4 = AppCard("Timeline & S-Curve", desc_timeline, LOGO_MAP.get('app_timeline', 'images/logo.png'),
+                        self.launch_timeline)
+        cards_layout.addWidget(card4)
+
         # Add a stretch at the end so cards stick to the top if there are only a few
         cards_layout.addStretch()
 
@@ -284,6 +294,8 @@ class LauncherWindow(QMainWindow):
     def launch_concrete_mix_design(self):
         self._launch_app(ConcreteMixWindow)
 
+    def launch_timeline(self):
+        self._launch_app(TimelineWindow)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

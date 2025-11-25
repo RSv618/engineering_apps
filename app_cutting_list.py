@@ -1814,10 +1814,11 @@ class CuttingListWindow(QMainWindow):
         button_layout.setContentsMargins(0, 0, 0, 0)
         button_layout.setSpacing(0)
         button_layout.addStretch()
-        next_button = HoverButton('Next')
-        next_button.setProperty('class', 'green-button next-button')
-        next_button.clicked.connect(self.go_to_market_length_page)
-        button_layout.addWidget(next_button)
+        self.next_button = HoverButton('Next')
+        self.next_button.setProperty('class', 'green-button next-button')
+        self.next_button.clicked.connect(self.go_to_market_length_page)
+        self.next_button.setDisabled(True)
+        button_layout.addWidget(self.next_button)
         page_layout.addWidget(bottom_nav)
 
         self.stacked_widget.addWidget(page)
@@ -1918,6 +1919,7 @@ class CuttingListWindow(QMainWindow):
                 new_item.selected.connect(self.update_detail_view)
                 self.scroll_layout.insertWidget(self.scroll_layout.count() - 1, new_item)
                 self.update_detail_view(new_item)
+        self.next_button.setEnabled(True)
 
     def create_detail_panel(self) -> QWidget:
         """Creates a comprehensive, scrollable widget to display all foundation details."""
@@ -2406,6 +2408,7 @@ class CuttingListWindow(QMainWindow):
                 # No items left, so show the placeholder
                 self.current_item = None
                 self.detail_area_stack.setCurrentIndex(0)
+                self.next_button.setDisabled(True)
 
     @staticmethod
     def get_used_diameters(all_foundation_data: list[dict]) -> set[str]:
@@ -2515,6 +2518,7 @@ class CuttingListWindow(QMainWindow):
         # Auto-select the first item to show details on startup
         if first_item:
             self.update_detail_view(first_item)
+            self.next_button.setEnabled(True)
 
     def reset_application(self):
         """Resets the application to its initial state."""
