@@ -149,6 +149,13 @@ QGroupBox::indicator:unchecked:hover, .check-box::indicator:unchecked:hover {
     image: url(images/edit-lightgrey.svg);
     background-color: transparent;
 }
+.import-button {
+    image: url(images/import.svg);
+    background-color: transparent;
+    height: 20px;
+    width: 30px;
+    border-radius: 10px;
+}
 .edit-button:hover {
     image: url(images/edit-yellow.svg);
 }
@@ -287,6 +294,126 @@ QLineEdit.invalid-input, QTextEdit.invalid-input,
 QComboBox.invalid-input, QSpinBox.invalid-input,
 QDoubleSpinBox.invalid-input {
     border: 1px solid #ff003c; /* A subtle border to define the field */
+}
+
+/* ------------------------ */
+/* -- Table And Calendar -- */
+/* ------------------------ */
+QTableWidget {
+    gridline-color: #e0e0e0;
+    color: #5d5d5d;
+    selection-background-color: #e4e4e2;
+    selection-color: #32302c;
+    background-color: #f8f8f7;
+    alternate-background-color: white;
+}
+QTableWidget QLineEdit:focus,
+QTableWidget QDoubleSpinBox:focus,
+QTableWidget QComboBox:focus {
+    border: none;
+    border-radius: 0;
+}
+QHeaderView::section {
+    background-color: #009580;
+    font-weight: bold;
+    color: white;
+    border: none;
+}
+QHeaderView {
+    background-color: #f8f8f7;
+}
+QTableCornerButton::section {
+    background-color: #009580;
+    border: none;
+    border-right: 1px solid white;
+    border-bottom: 1px solid white;
+}
+QHeaderView::section:horizontal {
+    padding-top: 3px;
+    padding-bottom: 3px;
+    border-right: 1px solid white;
+}
+QHeaderView::section:vertical {
+    padding-left: 5px;
+    padding-right: 5px;
+    qproperty-alignment: AlignCenter;
+    border-bottom: 1px solid white;
+}
+/* 2. Navigation Bar (Header) */
+QCalendarWidget QWidget#qt_calendar_navigationbar {
+    background-color: #009580;
+    border-bottom: 2px solid #009580;
+    padding: 0;
+    min-height: 30px;
+}
+QCalendarWidget QToolButton#qt_calendar_prevmonth,
+QCalendarWidget QToolButton#qt_calendar_nextmonth {
+    padding: 10px 5px; /*top-bottom, left-right*/
+}
+QCalendarWidget QMenu {
+    border-radius: 0px;
+    background-color: white;
+    border-left: 1px solid #eeeeec;
+    border-right: 1px solid #eeeeec;
+}
+QCalendarWidget QMenu::item {
+    height: 25px;
+    padding-left: 5px;
+    padding-right: 5px;
+    border-bottom: 1px solid #eeeeec;
+    background-color: transparent;
+    color: #5d5d5d;
+    border-radius: 0px;
+}
+QCalendarWidget QMenu::item:selected {
+    background-color: #e0e0e0;
+    border-bottom: 1px solid #e0e0e0;
+}
+/* 3. Navigation Buttons (Prev, Next, Month, Year) */
+QCalendarWidget QToolButton {
+    color: white;
+    background-color: transparent;
+    font-weight: bold;
+    border: none;
+    margin: 2px;
+    padding: 2px;
+}
+QCalendarWidget QToolButton:hover {
+    background-color: rgba(255,255,255,0.2);
+    border-radius: 3px;
+}
+QCalendarWidget QToolButton::menu-indicator {
+    image: none; /* Hides the small arrow on Month button */
+}
+
+/* 4. The Year SpinBox (Edit Mode) */
+QCalendarWidget QSpinBox {
+    color: white;
+    background-color: transparent; /* Blends into header */
+    selection-background-color: white;
+    selection-color: #009580;
+    border: 1px solid white;
+    max-width: 55px;
+    font-weight: bold;
+}
+QCalendarWidget QSpinBox:focus {
+    border: none;
+}
+
+QCalendarWidget QSpinBox::up-button,
+QCalendarWidget QSpinBox::down-button {
+    subcontrol-origin: border;
+    width: 20px;
+}
+
+/* 5. The Day Grid */
+QCalendarWidget QAbstractItemView:enabled {
+    color: #5d5d5d;
+    background-color: white;
+    font-size: 8pt;
+}
+QCalendarWidget QAbstractItemView:disabled {
+    color: #cccccc; /* Gray for days in other months */
 }
 
 /* -------------------------- */
@@ -665,7 +792,7 @@ QMessageBox#questionMessageBox {
     max-width: 50px;
 }
 #launcherPage .title-row {
-    padding: 20px 30px;
+    padding: 20px 30px; /*top-bottom, left-right*/
 }
 .app-card-container {
     padding: 10px;
@@ -688,7 +815,7 @@ QMessageBox#questionMessageBox {
     border: 1px solid #009580;
 }
 #launcherAboutPage {
-    padding: 20px 50px;
+    padding: 20px 50px; /*top-bottom, left-right*/
     background-color: white;
 }
 #launcherAboutPage QLabel {
@@ -696,4 +823,18 @@ QMessageBox#questionMessageBox {
 }
 #launcherAboutPage .transparent-button {
     border: 1px solid #009580;
+}
+
+/* -------------------- */
+/* -- Timeline Table -- */
+/* -------------------- */
+#timelinePage .title-row {
+    padding: 10px 20px 0px 20px; /*top, right, bottom, left*/
+}
+#timelinePage .panel {
+    padding: 5px 20px 10px 20px; /*top, right, bottom, left*/
+    background-color: transparent;
+}
+#timelinePage .panel .check-box{
+    margin-right: 20px;
 }

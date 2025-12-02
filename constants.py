@@ -33,7 +33,8 @@ M3_TO_YD3 = 1.307951
 LOGO_MAP = {
     'app_cutting_list': 'images/logo_blue.png',
     'app_optimal_purchase': 'images/logo_purple.png',
-    'app_concrete_mix': 'images/logo_red.png'
+    'app_concrete_mix': 'images/logo_red.png',
+    'app_timeline': 'images/logo_yellow.png'
 }
 VERSION = '1.0.0'
 
