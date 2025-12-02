@@ -1728,7 +1728,7 @@ def create_input_actual_sheet(wb, data, _col_left_table, _row_top_table, rows_pe
         img.width = actual_w
         img.height = actual_h
 
-        img.anchor = f'J7'
+        img.anchor = f'L19'
 
         ws.add_image(img)
 

@@ -28,8 +28,9 @@ COL_START_ORIG = 2
 COL_END_ORIG = 3
 COL_START_REV = 4
 COL_END_REV = 5
-COL_START_ACT = 6
-COL_END_ACT = 7
+
+# Total columns in the UI table
+COL_COUNT = 6
 
 DATE_FORMAT = "yyyy-MM-dd"
 
@@ -40,8 +41,6 @@ CANONICAL_HEADERS = {
     COL_END_ORIG:   ['end', 'end date', 'original end', 'planned end', 'baseline end', 'finish'],
     COL_START_REV:  ['revised start', 'rev start', 'start (revised)', 'current start'],
     COL_END_REV:    ['revised end', 'rev end', 'end (revised)', 'current end'],
-    COL_START_ACT:  ['actual start', 'act start', 'start (actual)'],
-    COL_END_ACT:    ['actual end', 'act end', 'end (actual)']
 }
 
 # ------------------------------------------------------------------------
@@ -99,9 +98,7 @@ class PasteableTableWidget(QTableWidget):
             start_row = selected[0].row()
             start_col = selected[0].column()
 
-        date_cols = [COL_START_ORIG, COL_END_ORIG,
-                     COL_START_REV, COL_END_REV,
-                     COL_START_ACT, COL_END_ACT]
+        date_cols = [COL_START_ORIG, COL_END_ORIG, COL_START_REV, COL_END_REV]
 
         # --- PASS 1: INFER DATE FORMAT (DMY vs MDY) ---
         date_candidates = []
@@ -356,9 +353,10 @@ class TimelineWindow(QMainWindow):
         self.chk_rev.setProperty('class', 'check-box')
         self.chk_rev.toggled.connect(self.update_column_visibility)
 
-        self.chk_act = QCheckBox("Add Actual")
+        self.chk_act = QCheckBox("Add Actual Sheet")
         self.chk_act.setProperty('class', 'check-box')
-        self.chk_act.toggled.connect(self.update_column_visibility)
+        # Note: Toggling this no longer affects table columns,
+        # but the state is used in generate_excel
 
         self.btn_import = HoverButton('')
         self.btn_import.setProperty('class', 'blue-button import-button')
@@ -368,10 +366,16 @@ class TimelineWindow(QMainWindow):
         self.btn_add = HoverButton("+")
         self.btn_add.setProperty('class', 'green-button add-button')
         self.btn_add.clicked.connect(self.add_row)
+        self.btn_add.setAutoRepeat(True)
+        self.btn_add.setAutoRepeatDelay(500)  # Wait 500ms (0.5s) before starting to repeat
+        self.btn_add.setAutoRepeatInterval(50)  # Then add a row every 50ms (fast speed)
 
         self.btn_del = HoverButton("-")
         self.btn_del.setProperty('class', 'red-button remove-button')
         self.btn_del.clicked.connect(self.remove_row)
+        self.btn_del.setAutoRepeat(True)
+        self.btn_del.setAutoRepeatDelay(500)  # Wait 500ms (0.5s) before starting to repeat
+        self.btn_del.setAutoRepeatInterval(50)  # Then add a row every 50ms (fast speed)
 
         config_layout.addWidget(self.chk_scurve)
         config_layout.addWidget(self.chk_rev)
@@ -384,8 +388,8 @@ class TimelineWindow(QMainWindow):
 
         main_layout.addWidget(config_panel)
 
-        # --- 3. Spreadsheet Area (UPDATED CLASS) ---
-        self.table = PasteableTableWidget()  # <--- Using Custom Class Here
+        # --- 3. Spreadsheet Area ---
+        self.table = PasteableTableWidget()
         self.setup_table()
 
         self.table.setFrameShape(QFrame.Shape.NoFrame)
@@ -419,15 +423,14 @@ class TimelineWindow(QMainWindow):
         cols = [
             "Activity Name", "Weight",
             "Start", "End",
-            "Start (Revised)", "End (Revised)",
-            "Start (Actual)", "End (Actual)"
+            "Start (Revised)", "End (Revised)"
         ]
         self.table.setColumnCount(len(cols))
         self.table.setHorizontalHeaderLabels(cols)
 
         # 1. Apply Date Delegate
         date_delegate = DateDelegate(self.table)
-        for col_idx in [COL_START_ORIG, COL_END_ORIG, COL_START_REV, COL_END_REV, COL_START_ACT, COL_END_ACT]:
+        for col_idx in [COL_START_ORIG, COL_END_ORIG, COL_START_REV, COL_END_REV]:
             self.table.setItemDelegateForColumn(col_idx, date_delegate)
 
         # 2. Apply Number Delegate to Weight Column
@@ -444,9 +447,7 @@ class TimelineWindow(QMainWindow):
         is_rev = self.chk_rev.isChecked()
         self.table.setColumnHidden(COL_START_REV, not is_rev)
         self.table.setColumnHidden(COL_END_REV, not is_rev)
-        is_act = self.chk_act.isChecked()
-        self.table.setColumnHidden(COL_START_ACT, not is_act)
-        self.table.setColumnHidden(COL_END_ACT, not is_act)
+        # Actual columns are no longer managed here because they don't exist in the table
 
     def add_row(self):
         row_idx = self.table.rowCount()
@@ -457,7 +458,8 @@ class TimelineWindow(QMainWindow):
         item_wt.setData(Qt.ItemDataRole.DisplayRole, 1.0)
         self.table.setItem(row_idx, COL_WEIGHT, item_wt)
 
-        for c in range(2, 8):
+        # Loop reduced to COL_COUNT
+        for c in range(2, COL_COUNT):
             self.table.setItem(row_idx, c, QTableWidgetItem(""))
 
     def remove_row(self):
@@ -501,7 +503,9 @@ class TimelineWindow(QMainWindow):
                     'weight': weight,
                     'orig': (p_date(COL_START_ORIG), p_date(COL_END_ORIG)),
                     'rev': (p_date(COL_START_REV), p_date(COL_END_REV)),
-                    'act': (p_date(COL_START_ACT), p_date(COL_END_ACT)),
+                    # Actual dates are passed as None/Empty to Excel writer
+                    # because they are now entered manually in the generated sheet.
+                    'act': (None, None),
                 }
                 data.append(row_data)
             except ValueError:
@@ -563,10 +567,7 @@ class TimelineWindow(QMainWindow):
             has_revised = (COL_START_REV in detected_cols) or (COL_END_REV in detected_cols)
             self.chk_rev.setChecked(has_revised)
 
-            # 3. Actual Dates
-            # If we have either start or end actual, enable the actual view
-            has_actual = (COL_START_ACT in detected_cols) or (COL_END_ACT in detected_cols)
-            self.chk_act.setChecked(has_actual)
+            # Note: We cannot detect 'Actual' from CSV anymore since the columns don't exist in the importer mapping
 
             # --- EXECUTE IMPORT ---
             self.table.setRowCount(0)  # Clear Table
@@ -574,7 +575,7 @@ class TimelineWindow(QMainWindow):
             # Prepare date preference inference
             date_cols_indices = [
                 idx for idx, tbl_col in mapping.items()
-                if tbl_col in [COL_START_ORIG, COL_END_ORIG, COL_START_REV, COL_END_REV, COL_START_ACT, COL_END_ACT]
+                if tbl_col in [COL_START_ORIG, COL_END_ORIG, COL_START_REV, COL_END_REV]
             ]
 
             sample_dates = []
@@ -611,9 +612,7 @@ class TimelineWindow(QMainWindow):
                         except ValueError:
                             pass
 
-                    # Dates
-                    elif table_col_idx in [COL_START_ORIG, COL_END_ORIG, COL_START_REV, COL_END_REV, COL_START_ACT,
-                                           COL_END_ACT]:
+                    elif table_col_idx in [COL_START_ORIG, COL_END_ORIG, COL_START_REV, COL_END_REV]:
                         formatted_date = self.table.parse_date_smart(val, is_dmy)
                         if formatted_date:
                             self.table.setItem(r_idx, table_col_idx, QTableWidgetItem(formatted_date))
@@ -667,10 +666,17 @@ class TimelineWindow(QMainWindow):
             QMessageBox.warning(self, "No Data", "Table is empty or invalid.")
             return
 
+        # 'act' removed from categories list for date calculation,
+        # because the UI does not have actual dates anymore.
         categories = ['orig']
         if self.chk_rev.isChecked(): categories.append('rev')
-        if self.chk_act.isChecked(): categories.append('act')
-        check_boxes = {'Actual': self.chk_act.isChecked(), 'Revised': self.chk_rev.isChecked(), 'S-Curve': self.chk_scurve.isChecked()}
+
+        # We still pass check_boxes['Actual'] so create_schedule_sheet knows to create the tab
+        check_boxes = {
+            'Actual': self.chk_act.isChecked(),
+            'Revised': self.chk_rev.isChecked(),
+            'S-Curve': self.chk_scurve.isChecked()
+        }
 
         all_dates = []
         for row in raw_data:
