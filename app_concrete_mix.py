@@ -682,31 +682,31 @@ class ConcreteEstimatorPage(QFrame):
         # --- DATA MAPPING ---
         # Map ASTM Cement Types to approximate ISO Strength Classes (MPa) for the formula
         self.cement_map = {
-            "Type I (General Purpose)": 42.5,
-            "Type II (Moderate Sulfate)": 42.5,
-            "Type III (High Early Strength)": 52.5,
-            "Type IV (Low Heat)": 32.5,
-            "Type V (High Sulfate)": 42.5
+            'Type I (General Purpose)': 42.5,
+            'Type II (Moderate Sulfate)': 42.5,
+            'Type III (High Early Strength)': 52.5,
+            'Type IV (Low Heat)': 32.5,
+            'Type V (High Sulfate)': 42.5
         }
 
         self.cement_map_S_CONSTANT_GL2000 = {
-            "Type I (General Purpose)": 0.335,
-            "Type II (Moderate Sulfate)": 0.4,
-            "Type III (High Early Strength)": 0.13,
-            "Type IV (Low Heat)": 0.335,  # Assumed
-            "Type V (High Sulfate)": 0.335,  # Assumed
+            'Type I (General Purpose)': 0.335,
+            'Type II (Moderate Sulfate)': 0.4,
+            'Type III (High Early Strength)': 0.13,
+            'Type IV (Low Heat)': 0.335,  # Assumed
+            'Type V (High Sulfate)': 0.335,  # Assumed
         }
 
         self.agg_map = {
-            "Excellent (Clean)": 0.60,
-            "Average (Standard)": 0.50,
-            "Poor (Dirty)": 0.40
+            'Excellent (Clean)': 0.60,
+            'Average (Standard)': 0.50,
+            'Poor (Dirty)': 0.40
         }
 
         self.gravel_map = {
-            "Small (< 20mm)": -0.05,
-            "Medium (20mm - 40mm)": 0.00,
-            "Large (> 40mm)": 0.05
+            'Small (< 20mm)': -0.05,
+            'Medium (20mm - 40mm)': 0.00,
+            'Large (> 40mm)': 0.05
         }
 
         # Layouts
@@ -751,7 +751,7 @@ class ConcreteEstimatorPage(QFrame):
         self.annot = None
 
         # Connect Hover Event
-        self.canvas.mpl_connect("motion_notify_event", self.on_hover)
+        self.canvas.mpl_connect('motion_notify_event', self.on_hover)
 
         right_layout.addStretch()
 
@@ -770,7 +770,7 @@ class ConcreteEstimatorPage(QFrame):
 
     def create_inputs(self):
         # --- SECTION 1: MIX PROPORTIONS ---
-        lbl_mix = QLabel("Cement")
+        lbl_mix = QLabel('Cement')
         lbl_mix.setProperty('class', 'header-4')
         self.form_layout.addWidget(lbl_mix)
 
@@ -778,16 +778,16 @@ class ConcreteEstimatorPage(QFrame):
         form_cement.setContentsMargins(3, 0, 0, 0)
         form_cement.setSpacing(3)
 
-        self.inputs['bags'] = BlankDoubleSpinBox(1, 1000, initial=10, decimals=1, suffix=" bags")
-        self.inputs['bag_weight'] = BlankDoubleSpinBox(1, 100, initial=40, decimals=1, suffix=" kg")
-        self.inputs['water'] = BlankDoubleSpinBox(1, 1000, initial=200, decimals=1, suffix=" kg (L)")
+        self.inputs['bags'] = BlankDoubleSpinBox(1, 1000, initial=10, decimals=1, suffix=' bags per m³')
+        self.inputs['bag_weight'] = BlankDoubleSpinBox(1, 100, initial=40, decimals=1, suffix=' kg')
+        self.inputs['water'] = BlankDoubleSpinBox(1, 1000, initial=200, decimals=1, suffix=' kg (L) per m³')
         self.inputs['cement_type'] = QComboBox()
         self.inputs['cement_type'].addItems(self.cement_map.keys())
         self.inputs['cement_type'].setCurrentIndex(0)  # Type I default
 
-        form_cement.addRow("Cement Type:", self.inputs['cement_type'])
-        form_cement.addRow("Bag Weight:", self.inputs['bag_weight'])
-        form_cement.addRow("Cement Qty:", self.inputs['bags'])
+        form_cement.addRow('Cement Type:', self.inputs['cement_type'])
+        form_cement.addRow('Bag Weight:', self.inputs['bag_weight'])
+        form_cement.addRow('Cement Qty:', self.inputs['bags'])
 
         self.form_layout.addLayout(form_cement)
         self.form_layout.addSpacing(35)
@@ -796,15 +796,15 @@ class ConcreteEstimatorPage(QFrame):
         form_wat = QFormLayout()
         form_wat.setContentsMargins(3, 0, 0, 0)
         form_wat.setSpacing(3)
-        lbl_fac = QLabel("Water")
+        lbl_fac = QLabel('Water')
         lbl_fac.setProperty('class', 'header-4')
         self.form_layout.addWidget(lbl_fac)
-        form_wat.addRow("Total Water:", self.inputs['water'])
+        form_wat.addRow('Amount:', self.inputs['water'])
         self.form_layout.addLayout(form_wat)
         self.form_layout.addSpacing(35)
 
         # --- SECTION 3: Aggregates ---
-        lbl_fac = QLabel("Aggregates")
+        lbl_fac = QLabel('Aggregates')
         lbl_fac.setProperty('class', 'header-4')
         self.form_layout.addWidget(lbl_fac)
 
@@ -822,15 +822,15 @@ class ConcreteEstimatorPage(QFrame):
         self.inputs['gravel_size'].addItems(self.gravel_map.keys())
         self.inputs['gravel_size'].setCurrentIndex(1)
 
-        form_fac.addRow("Gravel Size:", self.inputs['gravel_size'])
-        form_fac.addRow("Agg. Quality:", self.inputs['agg_quality'])
+        form_fac.addRow('Gravel Size:', self.inputs['gravel_size'])
+        form_fac.addRow('Agg. Quality:', self.inputs['agg_quality'])
 
         self.form_layout.addLayout(form_fac)
         self.form_layout.addStretch()
 
         # Reference
-        lbl_ref = QLabel("Dreux-Gorisse Formula for 28th-day strength:\nFc₂₈ = G × Rc × (C/W - 0.5)\n\n"
-                         "GL2000 ACI.209R Formula for maturity:\nB = exp((s/2)*(1-sqrt(28/t))\nFc_t = Fc₂₈*B²")
+        lbl_ref = QLabel('Dreux-Gorisse Formula for 28th-day strength:\nFc₂₈ = G × Rc × (C/W - 0.5)\n\n'
+                         'GL2000 ACI.209R Formula for maturity:\nB = exp((s/2)*(1-sqrt(28/t))\nFc_t = Fc₂₈*B²')
         lbl_ref.setProperty('class', 'formula')
         lbl_ref.setWordWrap(True)
         lbl_ref.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -890,7 +890,7 @@ class ConcreteEstimatorPage(QFrame):
             self.update_plot(plot_days, plot_strengths)
 
         except Exception as e:
-            print(f"Calc Error: {e}")
+            print(f'Calc Error: {e}')
 
     def update_plot(self, x_data, y_data):
         self.ax.clear()
@@ -900,8 +900,8 @@ class ConcreteEstimatorPage(QFrame):
         border_color = '#eeeeec'  # Light gray for the box borders
 
         # --- PRIMARY AXIS (MPa) ---
-        self.ax.set_xlabel("Age (Days)", color=text_color)
-        self.ax.set_ylabel("MPa", color=text_color)
+        self.ax.set_xlabel('Age (Days)', color=text_color)
+        self.ax.set_ylabel('MPa', color=text_color)
         self.ax.xaxis.set_major_locator(MultipleLocator(7))
 
 
@@ -936,7 +936,7 @@ class ConcreteEstimatorPage(QFrame):
             return x / 145.038
 
         secax = self.ax.secondary_yaxis('right', functions=(mpa_to_psi, psi_to_mpa))
-        secax.set_ylabel("psi", color=text_color)
+        secax.set_ylabel('psi', color=text_color)
 
         # Style Secondary Axis Ticks
         secax.tick_params(axis='y', colors=text_color)
@@ -954,14 +954,14 @@ class ConcreteEstimatorPage(QFrame):
 
         # --- ANNOTATION (Bottom Fixed) ---
         self.annot = self.ax.annotate(
-            "",
+            '',
             xy=(0, 0),
             xytext=(0, -15),
-            textcoords="offset points",
+            textcoords='offset points',
             ha='center', va='top',
             # Added styling to the tooltip box as well
-            bbox=dict(boxstyle="round", fc="white", ec="#cccccc", alpha=0.95),
-            arrowprops=dict(arrowstyle="->", color=text_color)
+            bbox=dict(boxstyle='round', fc='white', ec='#cccccc', alpha=0.95),
+            arrowprops=dict(arrowstyle='->', color=text_color)
         )
         self.annot.set_visible(False)
 
@@ -976,7 +976,7 @@ class ConcreteEstimatorPage(QFrame):
             cont, ind = self.sc_plot.contains(event)
             if cont:
                 # 1. Move anchor to the point
-                pos = self.sc_plot.get_offsets()[ind["ind"][0]]
+                pos = self.sc_plot.get_offsets()[ind['ind'][0]]
                 self.annot.xy = pos
 
                 # 2. Get Data
@@ -984,14 +984,14 @@ class ConcreteEstimatorPage(QFrame):
                 mpa = pos[1]
                 psi = mpa * 145.038
 
-                # 3. Force "Bottom Center" alignment
+                # 3. Force 'Bottom Center' alignment
                 # We reset this every time just in case the previous dynamic code changed it
                 self.annot.set_position((0, -15))
                 self.annot.set_ha('center')
                 self.annot.set_va('top')
 
                 # 4. Update Text
-                text = f"Day: {day}\n{mpa:.1f} MPa\n{psi:,.0f} psi"
+                text = f'Day: {day}\n{mpa:.1f} MPa\n{psi:,.0f} psi'
                 self.annot.set_text(text)
                 self.annot.get_bbox_patch().set_alpha(0.9)
                 self.annot.set_visible(True)

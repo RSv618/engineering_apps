@@ -191,37 +191,39 @@ class LauncherWindow(QMainWindow):
         cards_layout.setSpacing(0)  # Space between cards
 
         # C. Add your App Cards
+        desc_timeline = (
+            "Generate professional Project Timelines and S-Curves in Excel. "
+            "Track Original, Revised, and Actual schedules, assign weights to activities, "
+            "and visualize progress with automatically generated charts."
+        )
+        card1 = AppCard("Timeline & S-Curve", desc_timeline, LOGO_MAP.get('app_timeline', 'images/logo.png'),
+                        self.launch_timeline)
+        cards_layout.addWidget(card1)
+
         desc_cutting = (
             "Automate the generation of rebar cutting lists for reinforced concrete footings. "
             "Input geometry and reinforcement details to generate a fully visualized Excel schedule, "
             "optimized purchase plan, and step-by-step cutting instructions."
         )
-        card1 = AppCard("Foundation Cutting List", desc_cutting, LOGO_MAP['app_cutting_list'], self.launch_cutting_list)
-        cards_layout.addWidget(card1)
+        card2 = AppCard("Foundation Cutting List", desc_cutting, LOGO_MAP['app_cutting_list'], self.launch_cutting_list)
+        cards_layout.addWidget(card2)
 
         desc_purchase = (
             "Minimize waste and reduce material costs using advanced linear programming. "
             "Enter your required rebar cut lengths, and the algorithm calculates the exact "
             "combination of market-length bars to purchase, complete with a waste-minimized cutting guide."
         )
-        card2 = AppCard("Rebar Optimal Purchase", desc_purchase, LOGO_MAP['app_optimal_purchase'], self.launch_optimal_purchase)
-        cards_layout.addWidget(card2)
+
+        card3 = AppCard("Rebar Optimal Purchase", desc_purchase, LOGO_MAP['app_optimal_purchase'], self.launch_optimal_purchase)
+        cards_layout.addWidget(card3)
 
         desc_mix = (
             "Calculate precise concrete mix proportions based on ACI 211.1 standards. "
             "Features field moisture adjustments, detailed aggregate property inputs, and a "
             "compressive strength maturity estimator (Dreux-Gorisse/GL2000) to predict performance."
         )
-        card3 = AppCard("Concrete Mix Design", desc_mix, LOGO_MAP['app_concrete_mix'], self.launch_concrete_mix_design)
-        cards_layout.addWidget(card3)
 
-        desc_timeline = (
-            "Generate professional Project Timelines and S-Curves in Excel. "
-            "Track Original, Revised, and Actual schedules, assign weights to activities, "
-            "and visualize progress with automatically generated charts."
-        )
-        card4 = AppCard("Timeline & S-Curve", desc_timeline, LOGO_MAP.get('app_timeline', 'images/logo.png'),
-                        self.launch_timeline)
+        card4 = AppCard("Concrete Mix Design", desc_mix, LOGO_MAP['app_concrete_mix'], self.launch_concrete_mix_design)
         cards_layout.addWidget(card4)
 
         # Add a stretch at the end so cards stick to the top if there are only a few
