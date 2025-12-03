@@ -611,73 +611,99 @@ class TimelineWindow(QMainWindow):
         return data
 
     def import_csv(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Import CSV", "", "CSV Files (*.csv)")
+        path, _ = QFileDialog.getOpenFileName(self, "Import CSV", "", "CSV Files (*.csv);;Text Files (*.txt)")
         if not path:
             return
 
+        all_rows = []
+
+        # --- FIX 1: Robust File Reading (Handle Encoding & Binary Garbage) ---
         try:
+            # First try UTF-8-SIG (Standard for Excel CSVs)
             with open(path, mode='r', newline='', encoding='utf-8-sig') as f:
                 reader = csv.reader(f)
                 all_rows = [row for row in reader if any(field.strip() for field in row)]
+        except UnicodeDecodeError:
+            try:
+                # Fallback to Latin-1 (Common for older system CSVs)
+                with open(path, mode='r', newline='', encoding='latin-1') as f:
+                    reader = csv.reader(f)
+                    all_rows = [row for row in reader if any(field.strip() for field in row)]
+            except Exception as e:
+                QMessageBox.critical(self, "Import Error", f"Could not decode file. Is it a valid text CSV?\n{e}")
+                return
+        except csv.Error as e:
+            # Catches "line contains NULL byte" (binary file read as text)
+            QMessageBox.critical(self, "Import Error", f"File appears corrupted or binary (not CSV).\n{e}")
+            return
+        except Exception as e:
+            QMessageBox.critical(self, "Import Error", f"Unexpected error reading file.\n{e}")
+            return
 
-            if not all_rows:
-                QMessageBox.warning(self, "Import Error", "The selected CSV file is empty.")
+        if not all_rows:
+            QMessageBox.warning(self, "Import Error", "The selected CSV file is empty.")
+            return
+
+        # --- FIX 2: Layout Detection & User Confirmation ---
+        # Analyze headers
+        mapping, start_row_index, confidence_score = self._detect_csv_layout(all_rows[0])
+
+        # If we didn't find ANY matching headers, warn the user.
+        # This prevents importing unrelated data (e.g. "Name, Email, Address") into "Activity, Weight, Start"
+        if confidence_score == 0:
+            # Check if dimensions look wildly wrong (e.g. 1 column)
+            if len(all_rows[0]) < 2:
+                QMessageBox.warning(self, "Format Error", "File does not look like a schedule (too few columns).")
                 return
 
-            # Analyze headers and data
-            mapping, start_row_index = self._detect_csv_layout(all_rows[0])
-
-            # Extract data rows based on analysis
-            data_rows = all_rows[start_row_index:]
-
-            if not data_rows:
-                QMessageBox.warning(self, "Import Warning", "Header row detected, but no data rows were found.")
+            reply = QMessageBox.question(
+                self, "Unknown Format",
+                "Could not automatically identify headers (Activity, Start, End, etc.).\n"
+                "Import anyway assuming default column order?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if reply == QMessageBox.StandardButton.No:
                 return
 
-            # Confirm with user if overwriting existing data
-            if self.table.rowCount() > 0:
-                is_empty = (self.table.rowCount() == 1 and
-                            self.table.item(0, 0) and
-                            self.table.item(0, 0).text() == "Task 1")
+        # Extract data rows based on analysis
+        data_rows = all_rows[start_row_index:]
 
-                if not is_empty:
-                    reply = QMessageBox.question(
-                        self, "Overwrite Data?",
-                        "Importing will overwrite the current table. Continue?",
-                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-                    )
-                    if reply == QMessageBox.StandardButton.No:
-                        return
+        if not data_rows:
+            QMessageBox.warning(self, "Import Warning", "Header found, but no data rows.")
+            return
 
-            # --- AUTO-CONFIGURE UI BASED ON COLUMNS ---
-            # We explicitly check/uncheck boxes based on what data is present.
-            # Since these checkboxes have signals connected to update_column_visibility,
-            # the table columns will hide/show automatically.
+        # Confirm overwrite
+        if self.table.rowCount() > 0:
+            is_empty = (self.table.rowCount() == 1 and
+                        self.table.item(0, 0) and
+                        self.table.item(0, 0).text().startswith("Task"))
 
-            detected_cols = set(mapping.values())
+            if not is_empty:
+                reply = QMessageBox.question(
+                    self, "Overwrite Data?",
+                    "Importing will overwrite the current table. Continue?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                if reply == QMessageBox.StandardButton.No:
+                    return
 
-            # 1. Weight / S-Curve
-            # If we have a weight column, check the box. If not, uncheck it.
-            self.chk_scurve.setChecked(COL_WEIGHT in detected_cols)
+        # --- AUTO-CONFIGURE UI ---
+        detected_cols = set(mapping.values())
+        self.chk_scurve.setChecked(COL_WEIGHT in detected_cols)
+        has_revised = (COL_START_REV in detected_cols) or (COL_END_REV in detected_cols)
+        self.chk_rev.setChecked(has_revised)
 
-            # 2. Revised Dates
-            # If we have either start or end revised, enable the revised view
-            has_revised = (COL_START_REV in detected_cols) or (COL_END_REV in detected_cols)
-            self.chk_rev.setChecked(has_revised)
+        # --- EXECUTE IMPORT ---
+        try:
+            self.table.setRowCount(0)
 
-            # Note: We cannot detect 'Actual' from CSV anymore since the columns don't exist in the importer mapping
-
-            # --- EXECUTE IMPORT ---
-            self.table.setRowCount(0)  # Clear Table
-
-            # Prepare date preference inference
+            # Smart Date Detection Logic
             date_cols_indices = [
                 idx for idx, tbl_col in mapping.items()
                 if tbl_col in [COL_START_ORIG, COL_END_ORIG, COL_START_REV, COL_END_REV]
             ]
-
             sample_dates = []
-            for row in data_rows[:10]:
+            for row in data_rows[:15]:  # Check first 15 rows
                 for csv_idx in date_cols_indices:
                     if csv_idx < len(row) and row[csv_idx].strip():
                         sample_dates.append(row[csv_idx])
@@ -687,11 +713,12 @@ class TimelineWindow(QMainWindow):
             self.table.setRowCount(len(data_rows))
 
             for r_idx, row_data in enumerate(data_rows):
-                # Ensure Activity Name exists
+                # Ensure Activity Name cell exists even if mapping misses it
                 if COL_ACTIVITY not in mapping.values():
                     self.table.setItem(r_idx, COL_ACTIVITY, QTableWidgetItem(f"Activity {r_idx + 1}"))
 
                 for csv_col_idx, table_col_idx in mapping.items():
+                    # --- FIX 3: Index Safety ---
                     if csv_col_idx >= len(row_data):
                         continue
 
@@ -699,30 +726,37 @@ class TimelineWindow(QMainWindow):
                     if not val:
                         continue
 
-                    # Weight
                     if table_col_idx == COL_WEIGHT:
                         try:
                             clean_num = val.replace(',', '').replace('$', '').replace('£', '')
-                            float_val = float(clean_num)
+                            # Handle percentage signs if present
+                            if '%' in clean_num:
+                                float_val = float(clean_num.replace('%', '')) / 100
+                            else:
+                                float_val = float(clean_num)
+
                             item = QTableWidgetItem()
                             item.setData(Qt.ItemDataRole.DisplayRole, float_val)
                             self.table.setItem(r_idx, table_col_idx, item)
                         except ValueError:
-                            pass
+                            pass  # Not a number, leave empty
 
                     elif table_col_idx in [COL_START_ORIG, COL_END_ORIG, COL_START_REV, COL_END_REV]:
-                        formatted_date = self.table.parse_date_smart(val, is_dmy)
-                        if formatted_date:
-                            self.table.setItem(r_idx, table_col_idx, QTableWidgetItem(formatted_date))
+                        try:
+                            formatted_date = self.table.parse_date_smart(val, is_dmy)
+                            if formatted_date:
+                                self.table.setItem(r_idx, table_col_idx, QTableWidgetItem(formatted_date))
+                        except Exception:
+                            pass  # Date parse fail, leave empty
 
-                    # Text
                     else:
+                        # Standard Text
                         self.table.setItem(r_idx, table_col_idx, QTableWidgetItem(val))
 
             QMessageBox.information(self, "Success", f"Successfully imported {len(data_rows)} rows.")
 
         except Exception as e:
-            QMessageBox.critical(self, "Import Error", f"Failed to import CSV.\n{e}")
+            QMessageBox.critical(self, "Processing Error", f"An error occurred while processing rows.\n{e}")
 
     def _get_column_type(self, header_text):
         """
@@ -774,19 +808,16 @@ class TimelineWindow(QMainWindow):
         """
         Returns:
             mapping (dict): {csv_column_index: table_column_constant}
-            start_row_index (int): 0 if no header found, 1 if header found.
+            start_row_index (int): 0 (no header found) or 1 (header found).
+            matches_found (int): Number of recognized columns (confidence).
         """
         mapping = {}
         matches_found = 0
 
         # Loop through CSV headers and identify columns using fuzzy logic
         for csv_idx, header_text in enumerate(header_row):
-
             col_type = self._get_column_type(header_text)
-
             if col_type is not None:
-                # Prevent duplicate mappings (e.g., if two columns look like 'Start')
-                # We prefer the first occurrence, or specific logic could go here.
                 if col_type not in mapping.values():
                     mapping[csv_idx] = col_type
                     matches_found += 1
@@ -795,16 +826,17 @@ class TimelineWindow(QMainWindow):
         # If we matched at least 2 columns (e.g. "Activity" and "Start"),
         # we assume this is a valid header row.
         if matches_found >= 2:
-            return mapping, 1
+            return mapping, 1, matches_found
 
-        # Fallback: No headers detected
-        # Assume strict order: Name, Weight, Start, End...
+        # FALLBACK: No headers detected.
+        # Create a default linear mapping (Col 0 -> Activity, Col 1 -> Weight, etc.)
         default_mapping = {}
+        # Limit by whichever is smaller: CSV columns or Table columns
         limit = min(len(header_row), self.table.columnCount())
         for i in range(limit):
             default_mapping[i] = i
 
-        return default_mapping, 0
+        return default_mapping, 0, 0
 
     def generate_excel(self):
         # --- A. GATHER DATA (Main Thread) ---
