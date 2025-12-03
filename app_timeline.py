@@ -34,14 +34,20 @@ COL_COUNT = 6
 
 DATE_FORMAT = "yyyy-MM-dd"
 
-CANONICAL_HEADERS = {
-    COL_ACTIVITY:   ['activity', 'activity name', 'task', 'task name', 'name', 'description', 'desc'],
-    COL_WEIGHT:     ['weight', 'wt', 'cost', 'amount', 'budget', 'value', 'price'],
-    COL_START_ORIG: ['start', 'start date', 'original start', 'planned start', 'baseline start'],
-    COL_END_ORIG:   ['end', 'end date', 'original end', 'planned end', 'baseline end', 'finish'],
-    COL_START_REV:  ['revised start', 'rev start', 'start (revised)', 'current start'],
-    COL_END_REV:    ['revised end', 'rev end', 'end (revised)', 'current end'],
-}
+# --- Keyword Sets for Fuzzy Matching ---
+# 1. Activity / Name
+K_ACTIVITY = {'activity', 'task', 'name', 'description', 'desc', 'wbs', 'item', 'work'}
+
+# 2. Weight / Cost
+K_WEIGHT = {'weight', 'wt', 'cost', 'amount', 'budget', 'value', 'price', 'total'}
+
+# 3. Timing Directions
+K_START = {'start', 'begin', 'commence', 'inception', 'from', 'planned'}
+K_END   = {'end', 'finish', 'complete', 'completion', 'deadline', 'to', 'delivery'}
+
+# 4. Modifiers
+K_REVISED = {'revised', 'rev', 'current', 'new', 'latest', 'forecast', 'updated', 'actual'} # Note: treating Actual as current/revised for import purposes, or see exclusion note below
+K_EXCLUDE = {'actual', 'act'} # OPTIONAL: If you want to strictly IGNORE Actual columns, use this.
 
 
 # ------------------------------------------------------------------------
@@ -718,24 +724,72 @@ class TimelineWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Import Error", f"Failed to import CSV.\n{e}")
 
+    def _get_column_type(self, header_text):
+        """
+        Analyzes a single header string and returns the corresponding
+        Table Column Constant (e.g., COL_START_REV) or None.
+        """
+        # 1. Clean the text: Lowercase, remove anything that isn't a-z (replace punctuation with space)
+        clean_text = re.sub(r'[^a-z]', ' ', header_text.lower())
+
+        # 2. Tokenize: Split into a set of unique words
+        tokens = set(clean_text.split())
+
+        # --- LOGIC FLOW ---
+
+        # A. Check for specific exclusions first (Optional)
+        # If you strictly want to prevent "Actual Start" from loading into "Original" or "Revised":
+        if tokens & K_EXCLUDE:
+            return None
+
+        # B. Check for Weight (Distinct keywords)
+        if tokens & K_WEIGHT:
+            return COL_WEIGHT
+
+        # C. Check for Dates (Start vs End)
+        has_start = bool(tokens & K_START)
+        has_end = bool(tokens & K_END)
+        has_rev = bool(tokens & K_REVISED)
+
+        if has_start:
+            # If it says "Rev Start", "Current Start", etc.
+            if has_rev:
+                return COL_START_REV
+            # Default to Original if no "Rev" keyword is found
+            return COL_START_ORIG
+
+        if has_end:
+            if has_rev:
+                return COL_END_REV
+            return COL_END_ORIG
+
+        # D. Check for Activity (Last priority to prevent "Task Start" from matching Activity)
+        # We only check this if it wasn't already identified as a date.
+        if tokens & K_ACTIVITY:
+            return COL_ACTIVITY
+
+        return None
+
     def _detect_csv_layout(self, header_row):
         """
         Returns:
             mapping (dict): {csv_column_index: table_column_constant}
-            start_row_index (int): 0 if no header found (start immediately), 1 if header found.
+            start_row_index (int): 0 if no header found, 1 if header found.
         """
         mapping = {}
         matches_found = 0
 
-        # Check against canonical headers
+        # Loop through CSV headers and identify columns using fuzzy logic
         for csv_idx, header_text in enumerate(header_row):
-            clean_header = header_text.lower().strip()
 
-            for table_col, candidates in CANONICAL_HEADERS.items():
-                if clean_header in candidates:
-                    mapping[csv_idx] = table_col
+            col_type = self._get_column_type(header_text)
+
+            if col_type is not None:
+                # Prevent duplicate mappings (e.g., if two columns look like 'Start')
+                # We prefer the first occurrence, or specific logic could go here.
+                if col_type not in mapping.values():
+                    mapping[csv_idx] = col_type
                     matches_found += 1
-                    break
 
         # HEURISTIC:
         # If we matched at least 2 columns (e.g. "Activity" and "Start"),
@@ -743,8 +797,8 @@ class TimelineWindow(QMainWindow):
         if matches_found >= 2:
             return mapping, 1
 
-        # If headers weren't detected, assume standard column order matches the table
-        # strict order: Name, Weight, Start, End...
+        # Fallback: No headers detected
+        # Assume strict order: Name, Weight, Start, End...
         default_mapping = {}
         limit = min(len(header_row), self.table.columnCount())
         for i in range(limit):

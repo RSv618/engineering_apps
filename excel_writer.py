@@ -1730,7 +1730,7 @@ def create_input_actual_sheet(wb, data, _col_left_table, _row_top_table, rows_pe
     previous_cell = f"{get_col_letter_cached(_col_left_table + 1)}{_row_top_table + 3}"
 
     # Formula: =B1<A1
-    rule_formula = f"{current_cell}<{previous_cell}"
+    rule_formula = f'OR(AND({current_cell}<{previous_cell},{current_cell}<>""),AND({previous_cell}="",{current_cell}<>""))'
 
     # 6. Apply the Rule
     rule = FormulaRule(formula=[rule_formula], stopIfTrue=True, fill=red_fill)
@@ -1751,7 +1751,7 @@ def create_input_actual_sheet(wb, data, _col_left_table, _row_top_table, rows_pe
         img.width = actual_w
         img.height = actual_h
 
-        img.anchor = f'L19'
+        img.anchor = f'J17'
 
         ws.add_image(img)
 
