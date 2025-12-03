@@ -58,6 +58,7 @@ class CarouselWidget(QFrame):
     def __init__(self, content_widget, parent=None):
         super().__init__(parent)
         self.setProperty('class', 'carousel-container')
+        self.anim = None
 
         # --- CONFIGURATION ---
         # CHANGE THIS to match your window background color!
@@ -154,7 +155,7 @@ class CarouselWidget(QFrame):
         current = self.h_bar.value()
         target = max(0, min(current + step, self.h_bar.maximum()))
 
-        self.anim = QPropertyAnimation(self.h_bar, b"value")
+        self.anim = QPropertyAnimation(self.h_bar, b'value')
         self.anim.setDuration(400)
         self.anim.setStartValue(current)
         self.anim.setEndValue(target)
