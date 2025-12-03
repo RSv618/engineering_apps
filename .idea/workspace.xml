@@ -4,11 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Added load screen">
-      <change afterPath="$PROJECT_DIR$/version_info.txt" afterDir="false" />
+    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Made more robust canonical header">
+      <change afterPath="$PROJECT_DIR$/EngineerApps.spec" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app_timeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_timeline.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/excel_writer.py" beforeDir="false" afterPath="$PROJECT_DIR$/excel_writer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_launcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_launcher.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -94,14 +93,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1761916585036</updated>
-    </task>
-    <task id="LOCAL-00001" summary="First Commit">
-      <option name="closed" value="true" />
-      <created>1761917294446</created>
-      <option name="number" value="00001" />
-      <option name="presentableId" value="LOCAL-00001" />
-      <option name="project" value="LOCAL" />
-      <updated>1761917294446</updated>
     </task>
     <task id="LOCAL-00002" summary="Improved validation for optimal purchase by styling invalid inputs">
       <option name="closed" value="true" />
@@ -487,7 +478,15 @@
       <option name="project" value="LOCAL" />
       <updated>1764751513926</updated>
     </task>
-    <option name="localTasksCounter" value="50" />
+    <task id="LOCAL-00050" summary="Made more robust canonical header">
+      <option name="closed" value="true" />
+      <created>1764760386387</created>
+      <option name="number" value="00050" />
+      <option name="presentableId" value="LOCAL-00050" />
+      <option name="project" value="LOCAL" />
+      <updated>1764760386387</updated>
+    </task>
+    <option name="localTasksCounter" value="51" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -502,7 +501,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="stirrup quantity debug_mode fix" />
     <MESSAGE value="defocus with esc key" />
     <MESSAGE value="Fixed 'Layers' being str instead of int" />
     <MESSAGE value="Fixed Pulp Error" />
@@ -527,6 +525,7 @@
     <MESSAGE value="Improved timeline app: Removed actual columns, autorepeat buttons" />
     <MESSAGE value="Improved UI" />
     <MESSAGE value="Added load screen" />
-    <option name="LAST_COMMIT_MESSAGE" value="Added load screen" />
+    <MESSAGE value="Made more robust canonical header" />
+    <option name="LAST_COMMIT_MESSAGE" value="Made more robust canonical header" />
   </component>
 </project>

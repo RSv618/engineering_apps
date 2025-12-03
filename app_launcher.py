@@ -1,10 +1,7 @@
 import sys
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                             QGridLayout, QLabel, QFrame, QDialog, QScrollArea, QPushButton,
-                             QSizePolicy, QSpacerItem)
-from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QIcon, QPixmap, QDesktopServices, QAction
-from PyQt6.QtCore import QUrl
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,  QLabel, QFrame, QDialog)
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon, QPixmap
 
 # Assuming these imports exist based on your snippet
 from app_concrete_mix import ConcreteMixWindow
