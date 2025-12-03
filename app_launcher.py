@@ -1,6 +1,6 @@
 import sys
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,  QLabel, QFrame, QDialog)
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,  QLabel, QFrame, QDialog, QScrollArea, QScroller, QGraphicsOpacityEffect)
+from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTimer, QEvent
 from PyQt6.QtGui import QIcon, QPixmap
 
 # Assuming these imports exist based on your snippet
@@ -11,6 +11,112 @@ from app_timeline import TimelineWindow
 from constants import LOGO_MAP, VERSION
 from utils import load_stylesheet, resource_path, GlobalWheelEventFilter, HoverButton, make_scrollable
 
+class CarouselWidget(QFrame):
+    """
+    A wrapper that makes a widget scrollable horizontally with
+    floating 'Next/Prev' buttons that fade in/out.
+    """
+
+    def __init__(self, content_widget, parent=None):
+        super().__init__(parent)
+        self.setProperty('class', 'carousel-container')
+        self.anim = None
+
+        # 1. Main Layout for this wrapper
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+
+        # 2. The Scroll Area
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setProperty('class', 'scroll-content')
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidget(content_widget)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+
+        # Enable smooth scrolling gestures
+        QScroller.grabGesture(self.scroll_area.viewport(), QScroller.ScrollerGestureType.TouchGesture)
+
+        self.layout.addWidget(self.scroll_area)
+
+        # 3. Create Floating Buttons (Children of self, not in layout)
+        self.btn_left = HoverButton('<')  # Use an icon if available
+        self.btn_right = HoverButton('>')  # Use an icon if available
+
+        # Style the buttons to look like overlays (semi-transparent circles or vertical strips)
+        self._style_nav_buttons()
+
+        # 4. Connect Logic
+        self.btn_left.clicked.connect(lambda: self.scroll_step(-1))
+        self.btn_right.clicked.connect(lambda: self.scroll_step(1))
+
+        # 5. Monitor Scroll Bar to hide/show buttons
+        self.h_bar = self.scroll_area.horizontalScrollBar()
+        self.h_bar.rangeChanged.connect(self.update_button_visibility)
+        self.h_bar.valueChanged.connect(self.update_button_visibility)
+
+        # Initial check
+        QTimer.singleShot(100, self.update_button_visibility)
+
+    def _style_nav_buttons(self):
+        for btn in [self.btn_left, self.btn_right]:
+            btn.setParent(self)  # Important: Float over the layout
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setFixedSize(40, 60)  # Tall vertical buttons
+            # Styling: Semi-transparent black/white with round edges
+            btn.setStyleSheet("""
+                QPushButton {
+                    background-color: rgba(0, 0, 0, 50);
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    font-weight: bold;
+                    font-size: 18px;
+                }
+                QPushButton:hover {
+                    background-color: rgba(0, 0, 0, 150);
+                }
+            """)
+            btn.hide()  # Hidden by default
+
+    def resizeEvent(self, event):
+        """Keep buttons positioned on the edges."""
+        super().resizeEvent(event)
+        margin = 10
+        y_pos = (self.height() - self.btn_left.height()) // 2
+
+        self.btn_left.move(margin, y_pos)
+        self.btn_right.move(self.width() - self.btn_right.width() - margin, y_pos)
+
+    def update_button_visibility(self):
+        """Show Left button if not at start; Show Right button if not at end."""
+        val = self.h_bar.value()
+        mx = self.h_bar.maximum()
+
+        # Show Left if we have scrolled right
+        self.btn_left.setVisible(val > 0)
+
+        # Show Right if we are not at the end
+        # (mx > 0 ensures there is actually content to scroll)
+        self.btn_right.setVisible(val < mx and mx > 0)
+
+    def scroll_step(self, direction):
+        """Smoothly scroll by a fixed amount."""
+        step = 300 * direction  # Scroll amount
+        current = self.h_bar.value()
+        target = current + step
+
+        # Clamp logic
+        target = max(0, min(target, self.h_bar.maximum()))
+
+        # Smooth Animation
+        self.anim = QPropertyAnimation(self.h_bar, b"value")
+        self.anim.setDuration(400)  # ms
+        self.anim.setStartValue(current)
+        self.anim.setEndValue(target)
+        self.anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self.anim.start()
 
 class AboutDialog(QDialog):
     """A dialog to show app info, version, and contact details."""
@@ -68,7 +174,6 @@ class AboutDialog(QDialog):
                 <b>Source:</b> <a href='{github_url}' style='color: #009580; text-decoration: none;'>GitHub Repository</a>
             </p>
         """)
-        contact_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         contact_label.setProperty('class', 'form-value')
         layout.addWidget(contact_label)
 
@@ -227,11 +332,10 @@ class LauncherWindow(QMainWindow):
         cards_layout.addStretch()
 
         # D. Wrap the container in the Scroll Area
-        self.scroll_area = make_scrollable(self.cards_container)
+        self.carousel = CarouselWidget(self.cards_container)
 
-        # E. Add the SCROLL AREA to the Main Layout
-        # This is the most important line. It ensures the scroll area fills the middle space.
-        main_layout.addWidget(self.scroll_area)
+        # E. Add the Carousel to the Main Layout
+        main_layout.addWidget(self.carousel)
 
         # --- 4. FOOTER (FIXED at Bottom) ---
         footer_widget = QFrame()
