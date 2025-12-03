@@ -201,6 +201,22 @@ QGroupBox::indicator:unchecked:hover, .check-box::indicator:unchecked:hover {
 .transparent-button:hover { background-color: #eeeeec; }
 .transparent-button:pressed { background-color: #e0e0e0; }
 
+.carousel-button {
+    background-color: rgba(0, 0, 0, 40);
+    color: white;
+    border: none;
+    border-radius: 18px;
+}
+.carousel-button:hover {
+    background-color: rgba(0, 0, 0, 150);
+}
+.carousel-left {
+    image: url(images/carousel-left.svg);
+}
+.carousel-right {
+    image: url(images/carousel-right.svg);
+}
+
 /* ---------------- */
 /* -- Tab Styles -- */
 /* ---------------- */

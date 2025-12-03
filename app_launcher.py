@@ -1,7 +1,8 @@
 import sys
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,  QLabel, QFrame, QDialog, QScrollArea, QScroller, QGraphicsOpacityEffect)
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QDialog, QScrollArea,
+                             QScroller, QWidget)
 from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTimer, QEvent
-from PyQt6.QtGui import QIcon, QPixmap
+from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QLinearGradient
 
 # Assuming these imports exist based on your snippet
 from app_concrete_mix import ConcreteMixWindow
@@ -9,20 +10,64 @@ from app_cutting_list import CuttingListWindow
 from app_optimal_purchase import OptimalPurchaseWindow
 from app_timeline import TimelineWindow
 from constants import LOGO_MAP, VERSION
-from utils import load_stylesheet, resource_path, GlobalWheelEventFilter, HoverButton, make_scrollable
+from utils import load_stylesheet, resource_path, GlobalWheelEventFilter, HoverButton
+
+
+class FadeOverlay(QWidget):
+    """
+    A transparent overlay that paints a gradient.
+    It passes mouse events through to the widgets below.
+    """
+
+    def __init__(self, parent, is_left=True, color=QColor(240, 240, 240)):
+        super().__init__(parent)
+        self.is_left = is_left
+        self.color = color
+
+        # Crucial: Allow mouse clicks to pass through this widget to the cards below
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+
+        # Crucial: Ensure it's treated as an overlay
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+
+        # Create a gradient from Opaque -> Transparent
+        if self.is_left:
+            # Left side: Color -> Transparent
+            grad = QLinearGradient(0, 0, self.width(), 0)
+            grad.setColorAt(0.0, self.color)
+            grad.setColorAt(1.0, QColor(self.color.red(), self.color.green(), self.color.blue(), 0))
+        else:
+            # Right side: Transparent -> Color
+            grad = QLinearGradient(0, 0, self.width(), 0)
+            grad.setColorAt(0.0, QColor(self.color.red(), self.color.green(), self.color.blue(), 0))
+            grad.setColorAt(1.0, self.color)
+
+        painter.fillRect(self.rect(), grad)
+
 
 class CarouselWidget(QFrame):
     """
-    A wrapper that makes a widget scrollable horizontally with
-    floating 'Next/Prev' buttons that fade in/out.
+    A wrapper that makes a widget scrollable horizontally with:
+    1. Floating 'Next/Prev' buttons
+    2. Gradient fades on the edges
     """
 
     def __init__(self, content_widget, parent=None):
         super().__init__(parent)
         self.setProperty('class', 'carousel-container')
-        self.anim = None
 
-        # 1. Main Layout for this wrapper
+        # --- CONFIGURATION ---
+        # CHANGE THIS to match your window background color!
+        # If your theme is dark, use (30, 30, 30). If white, use (255, 255, 255).
+        # Assuming a light/grey theme based on standard Qt:
+        self.fade_color = QColor(255, 255, 255)
+        self.fade_width = 85  # How wide the gradient is
+        # ---------------------
+
+        # 1. Main Layout
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
 
@@ -35,84 +80,82 @@ class CarouselWidget(QFrame):
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
 
-        # Enable smooth scrolling gestures
+        # Smooth Touch Scrolling
         QScroller.grabGesture(self.scroll_area.viewport(), QScroller.ScrollerGestureType.TouchGesture)
 
         self.layout.addWidget(self.scroll_area)
 
-        # 3. Create Floating Buttons (Children of self, not in layout)
-        self.btn_left = HoverButton('<')  # Use an icon if available
-        self.btn_right = HoverButton('>')  # Use an icon if available
+        # 3. Create Overlays (Fades)
+        # We parent them to self so they sit on top of the ScrollArea
+        self.fade_left = FadeOverlay(self, is_left=True, color=self.fade_color)
+        self.fade_right = FadeOverlay(self, is_left=False, color=self.fade_color)
 
-        # Style the buttons to look like overlays (semi-transparent circles or vertical strips)
+        # 4. Create Floating Buttons
+        # (Created AFTER fades so they sit on TOP of the fades)
+        self.btn_left = HoverButton('')
+        self.btn_right = HoverButton('')
+        self.btn_left.setProperty('class', 'carousel-button carousel-left')
+        self.btn_right.setProperty('class', 'carousel-button carousel-right')
         self._style_nav_buttons()
 
-        # 4. Connect Logic
+        # 5. Connect Logic
         self.btn_left.clicked.connect(lambda: self.scroll_step(-1))
         self.btn_right.clicked.connect(lambda: self.scroll_step(1))
 
-        # 5. Monitor Scroll Bar to hide/show buttons
+        # 6. Monitor Scroll Bar
         self.h_bar = self.scroll_area.horizontalScrollBar()
-        self.h_bar.rangeChanged.connect(self.update_button_visibility)
-        self.h_bar.valueChanged.connect(self.update_button_visibility)
+        self.h_bar.rangeChanged.connect(self.update_ui_state)
+        self.h_bar.valueChanged.connect(self.update_ui_state)
 
         # Initial check
-        QTimer.singleShot(100, self.update_button_visibility)
+        QTimer.singleShot(50, self.update_ui_state)
 
     def _style_nav_buttons(self):
-        for btn in [self.btn_left, self.btn_right]:
-            btn.setParent(self)  # Important: Float over the layout
+        for i, btn in enumerate([self.btn_left, self.btn_right]):
+            btn.setParent(self)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.setFixedSize(40, 60)  # Tall vertical buttons
-            # Styling: Semi-transparent black/white with round edges
-            btn.setStyleSheet("""
-                QPushButton {
-                    background-color: rgba(0, 0, 0, 50);
-                    color: white;
-                    border: none;
-                    border-radius: 5px;
-                    font-weight: bold;
-                    font-size: 18px;
-                }
-                QPushButton:hover {
-                    background-color: rgba(0, 0, 0, 150);
-                }
-            """)
-            btn.hide()  # Hidden by default
+            btn.setFixedSize(40, 80)
+            btn.hide()
 
     def resizeEvent(self, event):
-        """Keep buttons positioned on the edges."""
+        """Position buttons and resize fades."""
         super().resizeEvent(event)
+
+        # 1. Resize Fades to full height, fixed width
+        h = self.height()
+        self.fade_left.setGeometry(0, 0, self.fade_width, h)
+        self.fade_right.setGeometry(self.width() - self.fade_width, 0, self.fade_width, h)
+
+        # 2. Position Buttons centered vertically
         margin = 10
-        y_pos = (self.height() - self.btn_left.height()) // 2
+        btn_y = (h - self.btn_left.height()) // 2
 
-        self.btn_left.move(margin, y_pos)
-        self.btn_right.move(self.width() - self.btn_right.width() - margin, y_pos)
+        self.btn_left.move(margin, btn_y)
+        self.btn_right.move(self.width() - self.btn_right.width() - margin, btn_y)
 
-    def update_button_visibility(self):
-        """Show Left button if not at start; Show Right button if not at end."""
+    def update_ui_state(self):
+        """Show/Hide buttons AND fades based on scroll position."""
         val = self.h_bar.value()
         mx = self.h_bar.maximum()
 
-        # Show Left if we have scrolled right
-        self.btn_left.setVisible(val > 0)
+        can_scroll_left = val > 0
+        can_scroll_right = val < mx and mx > 0
 
-        # Show Right if we are not at the end
-        # (mx > 0 ensures there is actually content to scroll)
-        self.btn_right.setVisible(val < mx and mx > 0)
+        # Buttons
+        self.btn_left.setVisible(can_scroll_left)
+        self.btn_right.setVisible(can_scroll_right)
+
+        # Fades (Match visibility of buttons)
+        self.fade_left.setVisible(can_scroll_left)
+        self.fade_right.setVisible(can_scroll_right)
 
     def scroll_step(self, direction):
-        """Smoothly scroll by a fixed amount."""
-        step = 300 * direction  # Scroll amount
+        step = 300 * direction
         current = self.h_bar.value()
-        target = current + step
+        target = max(0, min(current + step, self.h_bar.maximum()))
 
-        # Clamp logic
-        target = max(0, min(target, self.h_bar.maximum()))
-
-        # Smooth Animation
         self.anim = QPropertyAnimation(self.h_bar, b"value")
-        self.anim.setDuration(400)  # ms
+        self.anim.setDuration(400)
         self.anim.setStartValue(current)
         self.anim.setEndValue(target)
         self.anim.setEasingCurve(QEasingCurve.Type.OutCubic)
@@ -246,8 +289,8 @@ class LauncherWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Engineering Apps Suite")
         self.setWindowIcon(QIcon(resource_path('images/logo.png')))
-        self.resize(650, 600)
-        self.setMinimumSize(650, 500)
+        self.resize(920, 560)
+        self.setMinimumSize(800, 500)
         self.window = None
 
         # --- 1. THE MAIN WINDOW FRAME ---
