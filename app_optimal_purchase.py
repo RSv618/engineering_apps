@@ -71,9 +71,15 @@ class OptimalPurchaseWindow(QMainWindow):
         add_button = HoverButton('+')
         add_button.setProperty('class', 'green-button add-button')
         add_button.clicked.connect(self.add_cutting_row)
+        add_button.setAutoRepeat(True)
+        add_button.setAutoRepeatDelay(500)  # Wait 500ms (0.5s) before starting to repeat
+        add_button.setAutoRepeatInterval(50)  # Then add a row every 50ms (fast speed)
         self.remove_cutting_button = HoverButton('-')
         self.remove_cutting_button.setProperty('class', 'red-button remove-button')
         self.remove_cutting_button.clicked.connect(self.remove_cutting_row)
+        self.remove_cutting_button.setAutoRepeat(True)
+        self.remove_cutting_button.setAutoRepeatDelay(500)  # Wait 500ms (0.5s) before starting to repeat
+        self.remove_cutting_button.setAutoRepeatInterval(50)  # Then add a row every 50ms (fast speed)
         title_row_layout.addWidget(title)
         title_row_layout.addStretch()
         title_row_layout.addWidget(add_button)
