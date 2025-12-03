@@ -9,10 +9,10 @@ from openpyxl import Workbook
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
     QLabel, QFrame, QTableWidget, QTableWidgetItem, QHeaderView,
-    QMessageBox, QFileDialog, QCheckBox, QStyledItemDelegate, QDateEdit
+    QMessageBox, QFileDialog, QCheckBox, QStyledItemDelegate, QDateEdit, QWidget
 )
-from PyQt6.QtGui import QIcon, QTextCharFormat, QKeySequence
-from PyQt6.QtCore import Qt, QDate
+from PyQt6.QtGui import QIcon, QTextCharFormat, QKeySequence, QPainter, QColor, QMovie
+from PyQt6.QtCore import Qt, QDate, QThread, pyqtSignal, QSize
 
 from excel_writer import create_schedule_sheet
 from utils import (
@@ -42,6 +42,94 @@ CANONICAL_HEADERS = {
     COL_START_REV:  ['revised start', 'rev start', 'start (revised)', 'current start'],
     COL_END_REV:    ['revised end', 'rev end', 'end (revised)', 'current end'],
 }
+
+
+# ------------------------------------------------------------------------
+# --- BACKGROUND WORKER & LOADING OVERLAY ---
+# ------------------------------------------------------------------------
+
+class ExcelWorker(QThread):
+    """
+    Runs the Excel generation in a background thread.
+    """
+    finished = pyqtSignal(bool, str)  # (Success, Message/Path)
+
+    def __init__(self, save_path, raw_data, check_boxes, start_date, total_days):
+        super().__init__()
+        self.save_path = save_path
+        self.raw_data = raw_data
+        self.check_boxes = check_boxes
+        self.start_date = start_date
+        self.total_days = total_days
+
+    def run(self):
+        # self.setPriority(QThread.Priority.LowPriority)
+        try:
+            wb = Workbook()
+            default_ws = wb.active
+            wb.remove(default_ws)
+
+            ws = wb.create_sheet('Schedule')
+
+            # This is the heavy function
+            create_schedule_sheet(
+                ws,
+                self.raw_data,
+                self.check_boxes,
+                self.start_date,
+                self.total_days
+            )
+
+            wb.save(self.save_path)
+            self.finished.emit(True, self.save_path)
+
+        except Exception as e:
+            self.finished.emit(False, str(e))
+
+
+class LoadingOverlay(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
+        self.hide()
+
+        # 1. Setup Layout (Centers the spinner)
+        layout = QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # 2. Setup Label and Movie
+        self.label = QLabel()
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # CHANGE 'images/loading.gif' to your actual gif path
+        gif_path = resource_path('images/loading.gif')
+        self.movie = QMovie(gif_path)
+
+        # Optional: specific size (e.g., 64x64)
+        self.movie.setScaledSize(QSize(94, 50))
+
+        self.movie.setCacheMode(QMovie.CacheMode.CacheAll)
+        self.label.setMovie(self.movie)
+        layout.addWidget(self.label)
+
+    def paintEvent(self, event):
+        # Draw semi-transparent black background
+        painter = QPainter(self)
+        painter.fillRect(self.rect(), QColor(0, 0, 0, 128))
+
+    def show_loading(self):
+        """Resizes to cover parent, starts animation, and shows."""
+        if self.parent():
+            self.resize(self.parent().size())
+
+        self.movie.start()  # <--- Crucial: Start the GIF
+        self.show()
+        self.raise_()
+
+    def hide_loading(self):
+        """Stops animation and hides."""
+        self.movie.stop()  # <--- Stop to save CPU
+        self.hide()
 
 # ------------------------------------------------------------------------
 # --- CUSTOM TABLE WIDGET: COMPACT PASTE & SMART DATE PARSING ---
@@ -313,6 +401,7 @@ class TimelineWindow(QMainWindow):
         self.setWindowTitle('Timeline & S-Curve Generator')
         self.setWindowIcon(QIcon(resource_path(LOGO_MAP['app_timeline'])))
         self.setGeometry(50, 50, 900, 500)
+        self.worker = None
 
         # Main Layout
         main_widget = QFrame()
@@ -418,6 +507,9 @@ class TimelineWindow(QMainWindow):
             self.prefill_data()
         else:
             self.add_row()
+
+        # Loading animation
+        self.loading_overlay = LoadingOverlay(self.centralWidget())
 
     def setup_table(self):
         cols = [
@@ -661,17 +753,15 @@ class TimelineWindow(QMainWindow):
         return default_mapping, 0
 
     def generate_excel(self):
+        # --- A. GATHER DATA (Main Thread) ---
         raw_data = self.get_table_data()
         if not raw_data:
             QMessageBox.warning(self, "No Data", "Table is empty or invalid.")
             return
 
-        # 'act' removed from categories list for date calculation,
-        # because the UI does not have actual dates anymore.
         categories = ['orig']
         if self.chk_rev.isChecked(): categories.append('rev')
 
-        # We still pass check_boxes['Actual'] so create_schedule_sheet knows to create the tab
         check_boxes = {
             'Actual': self.chk_act.isChecked(),
             'Revised': self.chk_rev.isChecked(),
@@ -686,7 +776,7 @@ class TimelineWindow(QMainWindow):
                 if end: all_dates.append(end)
 
         if not all_dates:
-            QMessageBox.warning(self, "Date Error", "No valid dates found in the selected plans.")
+            QMessageBox.warning(self, "Date Error", "No valid dates found.")
             return
 
         global_min = min(all_dates)
@@ -696,22 +786,39 @@ class TimelineWindow(QMainWindow):
         table_end_date = datetime(tmp_end_date.year, tmp_end_date.month, 1) - timedelta(days=1)
         total_days = (table_end_date - table_start_date).days + 1
 
-        wb = Workbook()
-        default_ws = wb.active
-        wb.remove(default_ws)
-
-        ws = wb.create_sheet('Schedule')
-        ws = create_schedule_sheet(ws, raw_data, check_boxes, table_start_date, total_days)
-
+        # --- B. GET SAVE PATH (Main Thread) ---
         save_path, _ = QFileDialog.getSaveFileName(
             self, 'Save Schedule', 'project_timeline.xlsx', 'Excel Files (*.xlsx)'
         )
-        if save_path:
+
+        if not save_path:
+            return
+
+        # --- C. START WORKER (Background Thread) ---
+        self.loading_overlay.show_loading()  # This calls the method we added above
+
+        # Keep reference to worker so it doesn't get garbage collected
+        self.worker = ExcelWorker(save_path, raw_data, check_boxes, table_start_date, total_days)
+        self.worker.finished.connect(self.on_generation_finished)
+        self.worker.start()
+
+    # 4. Handler for when thread finishes
+    def on_generation_finished(self, success, result):
+        self.loading_overlay.hide_loading()
+
+        if success:
             try:
-                wb.save(save_path)
-                self.open_file(save_path)
+                self.open_file(result)
             except Exception as e:
-                QMessageBox.critical(self, "Save Error", f"Could not save file.\n{e}")
+                QMessageBox.warning(self, "Success", f"File saved to: {result}")
+        else:
+            QMessageBox.critical(self, "Save Error", f"Could not save file.\n{result}")
+
+    # --- Update resizeEvent to ensure overlay stays covering the window ---
+    def resizeEvent(self, event):
+        if hasattr(self, 'loading_overlay') and self.loading_overlay.isVisible():
+            self.loading_overlay.resize(self.centralWidget().size())
+        super().resizeEvent(event)
 
     def open_file(self, path):
         if sys.platform == 'win32':

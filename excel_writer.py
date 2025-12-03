@@ -1359,22 +1359,30 @@ def create_schedule_sheet(ws, data, check_boxes, table_start_date, total_days):
                                                     f'${progress_col_right}${dates_row}')
                             progress_pcent_range = (f'{a_sheet}${progress_col_left}${section_row}:'
                                                     f'${progress_col_right}${section_row}')
-                            before_index = f'MATCH({current_date}-1/24,{progress_dates_range},1)'
-                            after_index = f'{before_index}+1'
-                            before_progress = f'INDEX({progress_pcent_range},1,{before_index})'
                             first_progress = f'{a_sheet}${progress_col_left}${section_row}'
                             first_date = f'{a_sheet}${progress_col_left}${dates_row}'
                             last_progress = f'INDEX({progress_pcent_range},1,COUNT({progress_dates_range}))'
                             last_date = f'INDEX({progress_dates_range},1,COUNT({progress_dates_range}))'
-                            before_date = f'INDEX({progress_dates_range},1,{before_index})'
-                            after_progress = f'INDEX({progress_pcent_range},1,{after_index})'
-                            after_date = f'INDEX({progress_dates_range},1,{after_index})'
-                            increment_progress = f'({after_progress}-{before_progress})/({after_date}-{before_date})'
-                            ifs = f'=IF(OR(LEN(TRIM({first_date}))=0,{current_date}<{first_date},{current_date}>TODAY()),""'
-                            ifs = f'{ifs},IF({current_date}={first_date},{first_progress}'
-                            ifs = f'{ifs},IF({current_date}>{last_date},IF({last_progress}>=1,"",0)'
-                            ifs = f'{ifs},IFERROR({increment_progress},""))))'
-                            cell.value = ifs
+
+                            if check_boxes['S-Curve']:
+                                before_index = f'MATCH({current_date}-1/24,{progress_dates_range},1)'
+                                after_index = f'{before_index}+1'
+                                before_progress = f'INDEX({progress_pcent_range},1,{before_index})'
+                                before_date = f'INDEX({progress_dates_range},1,{before_index})'
+                                after_progress = f'INDEX({progress_pcent_range},1,{after_index})'
+                                after_date = f'INDEX({progress_dates_range},1,{after_index})'
+                                increment_progress = f'({after_progress}-{before_progress})/({after_date}-{before_date})'
+                                weight = f'${get_col_letter_cached(column_idx['Weight'])}{section_row}'
+                                total_weight = f'${get_col_letter_cached(column_idx['Weight'])}{_row_bot_table + 1}'
+                                ifs = f'=IF(OR(LEN(TRIM({first_date}))=0,{current_date}<{first_date},{current_date}>TODAY()),""'
+                                ifs = f'{ifs},IF({current_date}={first_date},{first_progress}*{weight}/{total_weight}'
+                                ifs = f'{ifs},IF({current_date}>{last_date},IF({last_progress}>=1,"",0)'
+                                ifs = f'{ifs},IFERROR({increment_progress}*{weight}/{total_weight},""))))'
+                                cell.value = ifs
+                            else:
+                                ifs = (f'=IF(OR(LEN(TRIM({first_date}))=0,{current_date}<{first_date},{current_date}>TODAY()),'
+                                       f'"",IF({current_date}>{last_date},IF({last_progress}>=1,"",1),1))')
+                                cell.value = ifs
 
                             # Update start and end dates
                             ws.cell(row=section_row, column=column_idx['Actual']).value = \
@@ -1598,13 +1606,13 @@ def create_input_actual_sheet(wb, data, _col_left_table, _row_top_table, rows_pe
     # styles
     white_side = Side(style='thin', color='FFFFFF')
     black_side = Side(style='thin', color='404040')
-    dash_side = Side(style='dashed', color='888888')
     none_side = Side(style='none')
     small_font = Font(name='Calibri', size=8)
     percent_font = Font(name='Calibri', size=10, bold=True)
     header_font = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
     header_fill = PatternFill(start_color='404040', end_color='404040', fill_type='solid')
     white_fill = PatternFill(start_color='FFFFFF', end_color='FFFFFF', fill_type='solid')
+    red_fill = PatternFill(start_color='FF0000', end_color='FF0000', fill_type='solid')
     alter_row_fill = PatternFill(start_color='F3F3F3', end_color='F3F3F3', fill_type='solid')
     all_white_border = Border(left=white_side, right=white_side, top=white_side, bottom=white_side)
     all_black_border = Border(left=black_side, right=black_side, top=black_side, bottom=black_side)
@@ -1641,6 +1649,7 @@ def create_input_actual_sheet(wb, data, _col_left_table, _row_top_table, rows_pe
             ws.column_dimensions[get_col_letter_cached(j)].width = col_widths['Activity']
         else:
             value = f'Progress\nEntry {j - _col_left_table}'
+            ws.column_dimensions[get_col_letter_cached(j)].width = 11
         cell = ws.cell(row=_row_top_table, column=j, value=value)
         cell.fill = header_fill
         cell.font = header_font
@@ -1713,9 +1722,23 @@ def create_input_actual_sheet(wb, data, _col_left_table, _row_top_table, rows_pe
         else:
             alter_row_fill_trigger = True
 
+    # Add conditional formatting
+    upper_left_cell = f"{get_col_letter_cached(_col_left_table + 2)}{_row_top_table + 3}"  # e.g., B1
+    lower_right_cell = f"{get_column_letter(_col_left_table + n_progress_entry)}{_row_top_table + 2 + len(data) * rows_per_activity}"  # e.g., A1
+    cell_range = f"{upper_left_cell}:{lower_right_cell}"
+    current_cell = upper_left_cell
+    previous_cell = f"{get_col_letter_cached(_col_left_table + 1)}{_row_top_table + 3}"
+
+    # Formula: =B1<A1
+    rule_formula = f"{current_cell}<{previous_cell}"
+
+    # 6. Apply the Rule
+    rule = FormulaRule(formula=[rule_formula], stopIfTrue=True, fill=red_fill)
+    ws.conditional_formatting.add(cell_range, rule)
+
     # --- Insert Timeline Image ---
     try:
-        img_path = resource_path('images/example_timeline2.png')
+        img_path = resource_path('images/example_timeline.png')
 
         # 1. Open with PIL first to get exact pixel dimensions (ignores DPI metadata)
         with PILImage.open(img_path) as pil_img:
