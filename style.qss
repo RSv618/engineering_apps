@@ -435,119 +435,20 @@ QCalendarWidget QAbstractItemView:disabled {
 /* -------------------------- */
 /* -- Custom Dialog Styles -- */
 /* -------------------------- */
-
-/* A. Base style for all custom dialogs */
-QDialog#marketLengthInputDialog,
-QDialog#marketLengthRemoveDialog,
-QMessageBox#infoMessageBox,
-QMessageBox#warningMessageBox,
-QMessageBox#criticalMessageBox,
-QMessageBox#warningMessageBoxWithChoices,
-QMessageBox#questionMessageBox {
-    background-color: #f8f8f7;
-}
-
-/* B. Base style for labels and buttons in dialogs */
-#marketLengthInputDialog QLabel,
-#marketLengthRemoveDialog QLabel,
-#infoMessageBox QLabel,
-#warningMessageBox QLabel,
-#criticalMessageBox QLabel,
-#warningMessageBoxWithChoices QLabel,
-#questionMessageBox QLabel {
-    color: #32302c;
-    font-size: 8pt;
-}
-
-#marketLengthInputDialog QPushButton,
-#marketLengthRemoveDialog QPushButton,
-#infoMessageBox QPushButton,
-#warningMessageBox QPushButton,
-#criticalMessageBox QPushButton,
-#warningMessageBoxWithChoices QPushButton,
-#questionMessageBox QPushButton {
-    min-width: 40px;
-    min-height: 20px;
+QDialogButtonBox QPushButton {
+    qproperty-alignment: AlignCenter;
     border-radius: 12px;
-    font-weight: bold;
-    padding: 5px 16px;
-    margin-top: 10px;
-}
-
-/* C. Specific Input Field Styles */
-#marketLengthInputDialog QDoubleSpinBox,
-#marketLengthRemoveDialog QComboBox {
+    padding: 5px 10px; /*top-bottom, left-right*/
+    border: 1px solid #e0e0e0;
     background-color: white;
-    border: 1px solid #cccccc;
-    border-radius: 7px;
-    padding: 5px;
-    font-size: 8pt;
-    margin-top: 5px;
+    min-width: 55px;
 }
-#marketLengthInputDialog QDoubleSpinBox:focus,
-#marketLengthRemoveDialog QComboBox:focus {
+QDialogButtonBox QPushButton[text="OK"],
+QDialogButtonBox QPushButton[text="&OK"] {
+    border: 1px solid #009580;
+}
+QDialogButtonBox QPushButton:focus {
     border: 1px solid #0083f9;
-}
-
-/* D. Custom Button Styles for Each Dialog Type */
-
-/* OK/Cancel for Input Dialogs */
-#marketLengthInputDialog QPushButton[text="OK"],
-#marketLengthRemoveDialog QPushButton[text="OK"] {
-    background-color: #009580; color: white;
-}
-#marketLengthInputDialog QPushButton[text="OK"]:hover,
-#marketLengthRemoveDialog QPushButton[text="OK"]:hover {
-    background-color: #00b49c;
-}
-
-#marketLengthInputDialog QPushButton[text="Cancel"],
-#marketLengthRemoveDialog QPushButton[text="Cancel"] {
-    background-color: #E1E1E1; color: #2c3e50; border: 1px solid #ADADAD;
-}
-#marketLengthInputDialog QPushButton[text="Cancel"]:hover,
-#marketLengthRemoveDialog QPushButton[text="Cancel"]:hover {
-    background-color: #d1d1d1;
-}
-
-/* Yes/No for WarningWithChoices */
-#warningMessageBoxWithChoices QPushButton[text="&Yes"] {
-    background-color: #ff003c; color: white;
-}
-#warningMessageBoxWithChoices QPushButton[text="&Yes"]:hover {
-    background-color: #ff6a73;
-}
-#warningMessageBoxWithChoices QPushButton[text="&No"] {
-    background-color: #009580; color: white;
-}
-#warningMessageBoxWithChoices QPushButton[text="&No"]:hover {
-    background-color: #00b49c;
-}
-
-/* Custom buttons for QuestionMessageBox */
-#questionMessageBox QPushButton[text="Start Over"] {
-    background-color: #3498db; color: white;
-}
-#questionMessageBox QPushButton[text="Start Over"]:hover {
-    background-color: #5dade2;
-}
-#questionMessageBox QPushButton[text="Close Program"] {
-    background-color: #E1E1E1; color: #2c3e50; border: 1px solid #ADADAD;
-}
-#questionMessageBox QPushButton[text="Close Program"]:hover {
-    background-color: #d1d1d1;
-}
-
-/* Simple OK button for info/warning/error boxes */
-#infoMessageBox QPushButton,
-#warningMessageBox QPushButton,
-#criticalMessageBox QPushButton {
-    background-color: #0083f9; color: white;
-}
-#infoMessageBox QPushButton:hover,
-#warningMessageBox QPushButton:hover,
-#criticalMessageBox QPushButton:hover {
-    background-color: #36a4ff;
 }
 /* --------------------- */
 /* -- Foundation Page -- */

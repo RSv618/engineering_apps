@@ -32,7 +32,7 @@ COL_END_REV = 5
 # Total columns in the UI table
 COL_COUNT = 6
 
-DATE_FORMAT = "yyyy-MM-dd"
+DATE_FORMAT = 'yyyy-MM-dd'
 
 # --- Keyword Sets for Fuzzy Matching ---
 # 1. Activity / Name
@@ -162,7 +162,7 @@ class PasteableTableWidget(QTableWidget):
         Manually clears data from selected cells.
         """
         for item in self.selectedItems():
-            item.setText("")
+            item.setText('')
             item.setData(Qt.ItemDataRole.DisplayRole, None)
 
     def paste_from_clipboard(self):
@@ -176,7 +176,7 @@ class PasteableTableWidget(QTableWidget):
         raw_rows = text.strip('\n').split('\n')
 
         # 2. COMPACT THE DATA: Remove completely empty rows immediately.
-        #    This fixes issues with Excel merged cells creating "ghost" rows.
+        #    This fixes issues with Excel merged cells creating 'ghost' rows.
         rows = [r for r in raw_rows if r.strip()]
 
         if not rows:
@@ -229,7 +229,7 @@ class PasteableTableWidget(QTableWidget):
                 # Handle specific empty cells in a valid row
                 # (We want to clear the cell if the source is blank)
                 if not val:
-                    self.setItem(target_row, target_col, QTableWidgetItem(""))
+                    self.setItem(target_row, target_col, QTableWidgetItem(''))
                     continue
 
                 # --- 1. WEIGHT COLUMN ---
@@ -245,7 +245,7 @@ class PasteableTableWidget(QTableWidget):
 
                         item.setData(Qt.ItemDataRole.DisplayRole, float_val)
                     except ValueError:
-                        self.setItem(target_row, target_col, QTableWidgetItem(""))
+                        self.setItem(target_row, target_col, QTableWidgetItem(''))
 
                 # --- 2. DATE COLUMNS ---
                 elif target_col in date_cols:
@@ -253,7 +253,7 @@ class PasteableTableWidget(QTableWidget):
                     if formatted_date:
                         self.setItem(target_row, target_col, QTableWidgetItem(formatted_date))
                     else:
-                        self.setItem(target_row, target_col, QTableWidgetItem(""))
+                        self.setItem(target_row, target_col, QTableWidgetItem(''))
 
                 # --- 3. TEXT COLUMNS ---
                 else:
@@ -304,18 +304,18 @@ class PasteableTableWidget(QTableWidget):
         iso_match = re.search(r'(\d{4})-(\d{1,2})-(\d{1,2})', date_str)
         if iso_match:
             try:
-                return f"{iso_match.group(1)}-{iso_match.group(2).zfill(2)}-{iso_match.group(3).zfill(2)}"
+                return f'{iso_match.group(1)}-{iso_match.group(2).zfill(2)}-{iso_match.group(3).zfill(2)}'
             except:
                 pass
 
         # 2. Text Formats
         text_formats = [
-            "%d-%b-%y", "%d-%b-%Y", "%d %b %Y", "%d %b %y",
-            "%b %d, %Y", "%b %d %Y"
+            '%d-%b-%y', '%d-%b-%Y', '%d %b %Y', '%d %b %y',
+            '%b %d, %Y', '%b %d %Y'
         ]
         for fmt in text_formats:
             try:
-                return datetime.strptime(date_str, fmt).strftime("%Y-%m-%d")
+                return datetime.strptime(date_str, fmt).strftime('%Y-%m-%d')
             except ValueError:
                 continue
 
@@ -323,9 +323,9 @@ class PasteableTableWidget(QTableWidget):
         clean = self.clean_numeric_date_str(date_str)
         if not clean: return None
 
-        dmy = ["%d/%m/%Y", "%d/%m/%y"]
-        mdy = ["%m/%d/%Y", "%m/%d/%y"]
-        ymd = ["%Y/%m/%d"]
+        dmy = ['%d/%m/%Y', '%d/%m/%y']
+        mdy = ['%m/%d/%Y', '%m/%d/%y']
+        ymd = ['%Y/%m/%d']
 
         if is_dmy_preference is True:
             candidates = dmy + mdy + ymd
@@ -336,7 +336,7 @@ class PasteableTableWidget(QTableWidget):
 
         for fmt in candidates:
             try:
-                return datetime.strptime(clean, fmt).strftime("%Y-%m-%d")
+                return datetime.strptime(clean, fmt).strftime('%Y-%m-%d')
             except ValueError:
                 continue
 
@@ -352,7 +352,7 @@ class NumberDelegate(QStyledItemDelegate):
         """
         try:
             val = float(value)
-            return f"{val:,.2f}"
+            return f'{val:,.2f}'
         except (ValueError, TypeError):
             return str(value)
 
@@ -362,14 +362,14 @@ class NumberDelegate(QStyledItemDelegate):
 
 class DateDelegate(QStyledItemDelegate):
     # Constants for formats
-    ISO_FMT = "yyyy-MM-dd"
-    DISP_FMT = "MMM d, yyyy"
+    ISO_FMT = 'yyyy-MM-dd'
+    DISP_FMT = 'MMM d, yyyy'
 
     def displayText(self, value, locale):
-        if not value: return ""
+        if not value: return ''
         try:
-            dt = datetime.strptime(str(value), "%Y-%m-%d")
-            return dt.strftime("%b %d, %Y")
+            dt = datetime.strptime(str(value), '%Y-%m-%d')
+            return dt.strftime('%b %d, %Y')
         except ValueError:
             return str(value)
 
@@ -425,7 +425,7 @@ class TimelineWindow(QMainWindow):
         top_layout.setContentsMargins(0, 0, 0, 0)
         top_layout.setSpacing(3)
 
-        title = QLabel("Project Schedule")
+        title = QLabel('Project Schedule')
         title.setProperty('class', 'header-1')
 
         top_layout.addWidget(title)
@@ -439,16 +439,16 @@ class TimelineWindow(QMainWindow):
         config_layout.setContentsMargins(0, 0, 0, 0)
         config_layout.setSpacing(3)
 
-        self.chk_scurve = QCheckBox("S-Curve")
+        self.chk_scurve = QCheckBox('S-Curve')
         self.chk_scurve.setChecked(True)
         self.chk_scurve.setProperty('class', 'check-box')
         self.chk_scurve.toggled.connect(self.update_column_visibility)
 
-        self.chk_rev = QCheckBox("Add Revised")
+        self.chk_rev = QCheckBox('Add Revised')
         self.chk_rev.setProperty('class', 'check-box')
         self.chk_rev.toggled.connect(self.update_column_visibility)
 
-        self.chk_act = QCheckBox("Add Actual Sheet")
+        self.chk_act = QCheckBox('Add Actual Sheet')
         self.chk_act.setProperty('class', 'check-box')
         # Note: Toggling this no longer affects table columns,
         # but the state is used in generate_excel
@@ -458,14 +458,14 @@ class TimelineWindow(QMainWindow):
         self.btn_import.setToolTip('Import CSV')
         self.btn_import.clicked.connect(self.import_csv)
 
-        self.btn_add = HoverButton("+")
+        self.btn_add = HoverButton('+')
         self.btn_add.setProperty('class', 'green-button add-button')
         self.btn_add.clicked.connect(self.add_row)
         self.btn_add.setAutoRepeat(True)
         self.btn_add.setAutoRepeatDelay(500)  # Wait 500ms (0.5s) before starting to repeat
         self.btn_add.setAutoRepeatInterval(50)  # Then add a row every 50ms (fast speed)
 
-        self.btn_del = HoverButton("-")
+        self.btn_del = HoverButton('-')
         self.btn_del.setProperty('class', 'red-button remove-button')
         self.btn_del.clicked.connect(self.remove_row)
         self.btn_del.setAutoRepeat(True)
@@ -498,7 +498,7 @@ class TimelineWindow(QMainWindow):
         bottom_layout.setContentsMargins(0, 0, 0, 0)
         bottom_layout.setSpacing(0)
 
-        self.btn_export = HoverButton("Generate Excel")
+        self.btn_export = HoverButton('Generate Excel')
         self.btn_export.setProperty('class', 'green-button next-button')
         self.btn_export.clicked.connect(self.generate_excel)
 
@@ -519,9 +519,9 @@ class TimelineWindow(QMainWindow):
 
     def setup_table(self):
         cols = [
-            "Activity Name", "Weight",
-            "Start", "End",
-            "Start (Revised)", "End (Revised)"
+            'Activity Name', 'Weight',
+            'Start', 'End',
+            'Start (Revised)', 'End (Revised)'
         ]
         self.table.setColumnCount(len(cols))
         self.table.setHorizontalHeaderLabels(cols)
@@ -550,7 +550,7 @@ class TimelineWindow(QMainWindow):
     def add_row(self):
         row_idx = self.table.rowCount()
         self.table.insertRow(row_idx)
-        self.table.setItem(row_idx, COL_ACTIVITY, QTableWidgetItem(f"Task {row_idx + 1}"))
+        self.table.setItem(row_idx, COL_ACTIVITY, QTableWidgetItem(f'Task {row_idx + 1}'))
 
         item_wt = QTableWidgetItem()
         item_wt.setData(Qt.ItemDataRole.DisplayRole, 1.0)
@@ -558,7 +558,7 @@ class TimelineWindow(QMainWindow):
 
         # Loop reduced to COL_COUNT
         for c in range(2, COL_COUNT):
-            self.table.setItem(row_idx, c, QTableWidgetItem(""))
+            self.table.setItem(row_idx, c, QTableWidgetItem(''))
 
     def remove_row(self):
         rows = sorted(set(index.row() for index in self.table.selectedIndexes()))
@@ -594,7 +594,7 @@ class TimelineWindow(QMainWindow):
                 def p_date(col):
                     item = self.table.item(r, col)
                     if not item or not item.text().strip(): return None
-                    return datetime.strptime(item.text(), "%Y-%m-%d").date()
+                    return datetime.strptime(item.text(), '%Y-%m-%d').date()
 
                 row_data = {
                     'name': activity,
@@ -611,7 +611,7 @@ class TimelineWindow(QMainWindow):
         return data
 
     def import_csv(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Import CSV", "", "CSV Files (*.csv);;Text Files (*.txt)")
+        path, _ = QFileDialog.getOpenFileName(self, 'Import CSV', '', 'CSV Files (*.csv);;Text Files (*.txt)')
         if not path:
             return
 
@@ -630,18 +630,18 @@ class TimelineWindow(QMainWindow):
                     reader = csv.reader(f)
                     all_rows = [row for row in reader if any(field.strip() for field in row)]
             except Exception as e:
-                QMessageBox.critical(self, "Import Error", f"Could not decode file. Is it a valid text CSV?\n{e}")
+                QMessageBox.critical(self, 'Import Error', f'Could not decode file. Is it a valid text CSV?\n{e}')
                 return
         except csv.Error as e:
-            # Catches "line contains NULL byte" (binary file read as text)
-            QMessageBox.critical(self, "Import Error", f"File appears corrupted or binary (not CSV).\n{e}")
+            # Catches 'line contains NULL byte' (binary file read as text)
+            QMessageBox.critical(self, 'Import Error', f'File appears corrupted or binary (not CSV).\n{e}')
             return
         except Exception as e:
-            QMessageBox.critical(self, "Import Error", f"Unexpected error reading file.\n{e}")
+            QMessageBox.critical(self, 'Import Error', f'Unexpected error reading file.\n{e}')
             return
 
         if not all_rows:
-            QMessageBox.warning(self, "Import Error", "The selected CSV file is empty.")
+            QMessageBox.warning(self, 'Import Error', 'The selected CSV file is empty.')
             return
 
         # --- FIX 2: Layout Detection & User Confirmation ---
@@ -649,17 +649,17 @@ class TimelineWindow(QMainWindow):
         mapping, start_row_index, confidence_score = self._detect_csv_layout(all_rows[0])
 
         # If we didn't find ANY matching headers, warn the user.
-        # This prevents importing unrelated data (e.g. "Name, Email, Address") into "Activity, Weight, Start"
+        # This prevents importing unrelated data (e.g. 'Name, Email, Address') into 'Activity, Weight, Start'
         if confidence_score == 0:
             # Check if dimensions look wildly wrong (e.g. 1 column)
             if len(all_rows[0]) < 2:
-                QMessageBox.warning(self, "Format Error", "File does not look like a schedule (too few columns).")
+                QMessageBox.warning(self, 'Format Error', 'File does not look like a schedule (too few columns).')
                 return
 
             reply = QMessageBox.question(
-                self, "Unknown Format",
-                "Could not automatically identify headers (Activity, Start, End, etc.).\n"
-                "Import anyway assuming default column order?",
+                self, 'Unknown Format',
+                'Could not automatically identify headers (Activity, Start, End, etc.).\n'
+                'Import anyway assuming default column order?',
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             if reply == QMessageBox.StandardButton.No:
@@ -669,19 +669,19 @@ class TimelineWindow(QMainWindow):
         data_rows = all_rows[start_row_index:]
 
         if not data_rows:
-            QMessageBox.warning(self, "Import Warning", "Header found, but no data rows.")
+            QMessageBox.warning(self, 'Import Warning', 'Header found, but no data rows.')
             return
 
         # Confirm overwrite
         if self.table.rowCount() > 0:
             is_empty = (self.table.rowCount() == 1 and
                         self.table.item(0, 0) and
-                        self.table.item(0, 0).text().startswith("Task"))
+                        self.table.item(0, 0).text().startswith('Task'))
 
             if not is_empty:
                 reply = QMessageBox.question(
-                    self, "Overwrite Data?",
-                    "Importing will overwrite the current table. Continue?",
+                    self, 'Overwrite Data?',
+                    'Importing will overwrite the current table. Continue?',
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
                 )
                 if reply == QMessageBox.StandardButton.No:
@@ -715,7 +715,7 @@ class TimelineWindow(QMainWindow):
             for r_idx, row_data in enumerate(data_rows):
                 # Ensure Activity Name cell exists even if mapping misses it
                 if COL_ACTIVITY not in mapping.values():
-                    self.table.setItem(r_idx, COL_ACTIVITY, QTableWidgetItem(f"Activity {r_idx + 1}"))
+                    self.table.setItem(r_idx, COL_ACTIVITY, QTableWidgetItem(f'Activity {r_idx + 1}'))
 
                 for csv_col_idx, table_col_idx in mapping.items():
                     # --- FIX 3: Index Safety ---
@@ -753,10 +753,10 @@ class TimelineWindow(QMainWindow):
                         # Standard Text
                         self.table.setItem(r_idx, table_col_idx, QTableWidgetItem(val))
 
-            QMessageBox.information(self, "Success", f"Successfully imported {len(data_rows)} rows.")
+            QMessageBox.information(self, 'Success', f'Successfully imported {len(data_rows)} rows.')
 
         except Exception as e:
-            QMessageBox.critical(self, "Processing Error", f"An error occurred while processing rows.\n{e}")
+            QMessageBox.critical(self, 'Processing Error', f'An error occurred while processing rows.\n{e}')
 
     def _get_column_type(self, header_text):
         """
@@ -772,7 +772,7 @@ class TimelineWindow(QMainWindow):
         # --- LOGIC FLOW ---
 
         # A. Check for specific exclusions first (Optional)
-        # If you strictly want to prevent "Actual Start" from loading into "Original" or "Revised":
+        # If you strictly want to prevent 'Actual Start' from loading into 'Original' or 'Revised':
         if tokens & K_EXCLUDE:
             return None
 
@@ -786,10 +786,10 @@ class TimelineWindow(QMainWindow):
         has_rev = bool(tokens & K_REVISED)
 
         if has_start:
-            # If it says "Rev Start", "Current Start", etc.
+            # If it says 'Rev Start', 'Current Start', etc.
             if has_rev:
                 return COL_START_REV
-            # Default to Original if no "Rev" keyword is found
+            # Default to Original if no 'Rev' keyword is found
             return COL_START_ORIG
 
         if has_end:
@@ -797,7 +797,7 @@ class TimelineWindow(QMainWindow):
                 return COL_END_REV
             return COL_END_ORIG
 
-        # D. Check for Activity (Last priority to prevent "Task Start" from matching Activity)
+        # D. Check for Activity (Last priority to prevent 'Task Start' from matching Activity)
         # We only check this if it wasn't already identified as a date.
         if tokens & K_ACTIVITY:
             return COL_ACTIVITY
@@ -823,7 +823,7 @@ class TimelineWindow(QMainWindow):
                     matches_found += 1
 
         # HEURISTIC:
-        # If we matched at least 2 columns (e.g. "Activity" and "Start"),
+        # If we matched at least 2 columns (e.g. 'Activity' and 'Start'),
         # we assume this is a valid header row.
         if matches_found >= 2:
             return mapping, 1, matches_found
@@ -842,7 +842,7 @@ class TimelineWindow(QMainWindow):
         # --- A. GATHER DATA (Main Thread) ---
         raw_data = self.get_table_data()
         if not raw_data:
-            QMessageBox.warning(self, "No Data", "Table is empty or invalid.")
+            QMessageBox.warning(self, 'No Data', 'Table is empty or invalid.')
             return
 
         categories = ['orig']
@@ -862,7 +862,7 @@ class TimelineWindow(QMainWindow):
                 if end: all_dates.append(end)
 
         if not all_dates:
-            QMessageBox.warning(self, "Date Error", "No valid dates found.")
+            QMessageBox.warning(self, 'Date Error', 'No valid dates found.')
             return
 
         global_min = min(all_dates)
@@ -896,9 +896,9 @@ class TimelineWindow(QMainWindow):
             try:
                 self.open_file(result)
             except Exception as e:
-                QMessageBox.warning(self, "Success", f"File saved to: {result}")
+                QMessageBox.warning(self, 'Success', f'File saved to: {result}')
         else:
-            QMessageBox.critical(self, "Save Error", f"Could not save file.\n{result}")
+            QMessageBox.critical(self, 'Save Error', f'Could not save file.\n{result}')
 
     # --- Update resizeEvent to ensure overlay stays covering the window ---
     def resizeEvent(self, event):
@@ -916,8 +916,8 @@ class TimelineWindow(QMainWindow):
 
     def prefill_data(self):
         data = [
-            ("Site Clearing", 5000.0, "2023-11-01", "2023-11-05"),
-            ("Excavation", 12000.55, "2023-11-04", "2023-11-10"),
+            ('Site Clearing', 5000.0, '2023-11-01', '2023-11-05'),
+            ('Excavation', 12000.55, '2023-11-04', '2023-11-10'),
         ]
         self.table.setRowCount(0)
         for name, wt, start, end in data:
@@ -929,7 +929,7 @@ class TimelineWindow(QMainWindow):
             self.table.setItem(r, COL_WEIGHT, wt_item)
             self.table.setItem(r, COL_START_ORIG, QTableWidgetItem(start))
             self.table.setItem(r, COL_END_ORIG, QTableWidgetItem(end))
-            rev_end = (datetime.strptime(end, "%Y-%m-%d") + timedelta(days=2)).strftime("%Y-%m-%d")
+            rev_end = (datetime.strptime(end, '%Y-%m-%d') + timedelta(days=2)).strftime('%Y-%m-%d')
             self.table.setItem(r, COL_START_REV, QTableWidgetItem(start))
             self.table.setItem(r, COL_END_REV, QTableWidgetItem(rev_end))
 

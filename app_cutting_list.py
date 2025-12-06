@@ -2140,7 +2140,6 @@ class CuttingListWindow(QMainWindow):
         """Prompts the user for a new market length and redraws the grid."""
         # 1. Create a custom dialog
         dialog = QDialog(self)
-        dialog.setObjectName('marketLengthInputDialog')  # Kept for your QSS styling
         dialog.setWindowTitle('Add Market Length')
 
         # 2. Setup Layout
@@ -2180,7 +2179,6 @@ class CuttingListWindow(QMainWindow):
                 else:
                     # You can apply the same principle to QMessageBox
                     msg_box = QMessageBox(self)
-                    msg_box.setObjectName('warningMessageBox')  # Style this in QSS
                     msg_box.setIcon(QMessageBox.Icon.Warning)
                     msg_box.setWindowTitle('Duplicate Length')
                     msg_box.setText('That market length already exists.')
@@ -2191,7 +2189,6 @@ class CuttingListWindow(QMainWindow):
         if not self.current_market_lengths:
             # You can style this info box as well
             msg_box = QMessageBox(self)
-            msg_box.setObjectName('infoMessageBox')
             msg_box.setIcon(QMessageBox.Icon.Information)
             msg_box.setWindowTitle('No Lengths')
             msg_box.setText('There are no market lengths to remove.')
@@ -2200,7 +2197,6 @@ class CuttingListWindow(QMainWindow):
 
         # --- Instantiate the dialog ---
         dialog = QInputDialog(self)
-        dialog.setObjectName('marketLengthRemoveDialog')  # For QSS styling
         dialog.setWindowTitle('Remove Market Length')
         dialog.setLabelText('Select a length to remove:')
 
@@ -2598,7 +2594,6 @@ class CuttingListWindow(QMainWindow):
             missing_list_str = '\n'.join([f'•  {d}' for d in missing_market_lengths])
             msg_box = QMessageBox(self)
             # Give this a specific name for more detailed styling
-            msg_box.setObjectName('warningMessageBoxWithChoices')
             msg_box.setIcon(QMessageBox.Icon.Warning)
             msg_box.setWindowTitle('Missing Market Lengths')
             msg_box.setText('The following required rebar diameters have no market lengths selected:')
@@ -2641,10 +2636,10 @@ class CuttingListWindow(QMainWindow):
                 msg_box.setObjectName('warningMessageBox')
                 msg_box.setIcon(QMessageBox.Icon.Warning)
                 msg_box.setWindowTitle('Do not splice')
-                msg_box.setText('The calculated rebars require splicing, which should be avoided.')
-                msg_box.setInformativeText(f'This will prevent the generation of the Purchase and Cutting Plan sheets.\n'
-                'To generate Purchase and Cutting Plan sheets, please select or add longer market lengths to accommodate longer cuts.\n\n'
-                'Do you want to proceed with generating only the Cutting Lists?'
+                msg_box.setText('The rebars require splicing.')
+                msg_box.setInformativeText(f'Cannot proceed with the Purchase and Cutting Plan sheets.\n'
+                'Add or select longer rebar market lengths to accommodate longer cuts.\n\n'
+                'Do you want to generate Cutting List without Purchase and Cutting Plan?'
                 )
                 msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
                 msg_box.setDefaultButton(QMessageBox.StandardButton.No)
@@ -2690,7 +2685,6 @@ class CuttingListWindow(QMainWindow):
             wb.save(save_path)
         except PermissionError:
             err_box = QMessageBox(self)
-            err_box.setObjectName('criticalMessageBox')  # Style for critical errors
             err_box.setIcon(QMessageBox.Icon.Critical)
             err_box.setWindowTitle('Save Error')
             err_box.setText(f'Could not save the file to {os.path.basename(save_path)}.')
@@ -2710,7 +2704,6 @@ class CuttingListWindow(QMainWindow):
 
         # Refactor the final prompt
         msg_box = QMessageBox(self)
-        msg_box.setObjectName('questionMessageBox')  # Style for questions
         msg_box.setWindowTitle('Generation Complete')
         msg_box.setText('The cutting list has been generated and saved.')
         msg_box.setInformativeText('What would you like to do next?')

@@ -4,10 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Replaced scroll with carousel.">
+    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Fixed import_csv crash">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_cutting_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_cutting_list.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_optimal_purchase.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_optimal_purchase.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_timeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_timeline.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/constants.py" beforeDir="false" afterPath="$PROJECT_DIR$/constants.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/style.qss" beforeDir="false" afterPath="$PROJECT_DIR$/style.qss" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -93,14 +95,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1761916585036</updated>
-    </task>
-    <task id="LOCAL-00007" summary="Major refactor: added FoundationItem to create many different foundation types.">
-      <option name="closed" value="true" />
-      <created>1762679486639</created>
-      <option name="number" value="00007" />
-      <option name="presentableId" value="LOCAL-00007" />
-      <option name="project" value="LOCAL" />
-      <updated>1762679486639</updated>
     </task>
     <task id="LOCAL-00008" summary="Fixed: PULP Error on different hardware. Fixed via resource_path in solver argument.">
       <option name="closed" value="true" />
@@ -486,7 +480,15 @@
       <option name="project" value="LOCAL" />
       <updated>1764765249077</updated>
     </task>
-    <option name="localTasksCounter" value="56" />
+    <task id="LOCAL-00056" summary="Fixed import_csv crash">
+      <option name="closed" value="true" />
+      <created>1764769489318</created>
+      <option name="number" value="00056" />
+      <option name="presentableId" value="LOCAL-00056" />
+      <option name="project" value="LOCAL" />
+      <updated>1764769489318</updated>
+    </task>
+    <option name="localTasksCounter" value="57" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -501,7 +503,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Improved validation" />
     <MESSAGE value="Minor code cleaning" />
     <MESSAGE value="Remove focus on" />
     <MESSAGE value="Fixed optimal purchase" />
@@ -526,6 +527,7 @@
     <MESSAGE value="Used spec file for building" />
     <MESSAGE value="Added autorepeat on optimal purchase" />
     <MESSAGE value="Replaced scroll with carousel." />
-    <option name="LAST_COMMIT_MESSAGE" value="Replaced scroll with carousel." />
+    <MESSAGE value="Fixed import_csv crash" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fixed import_csv crash" />
   </component>
 </project>

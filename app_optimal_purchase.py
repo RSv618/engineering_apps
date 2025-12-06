@@ -423,7 +423,6 @@ class OptimalPurchaseWindow(QMainWindow):
                 else:
                     # You can apply the same principle to QMessageBox
                     msg_box = QMessageBox(self)
-                    msg_box.setObjectName('warningMessageBox')  # Style this in QSS
                     msg_box.setIcon(QMessageBox.Icon.Warning)
                     msg_box.setWindowTitle('Duplicate Length')
                     msg_box.setText('That market length already exists.')
@@ -434,7 +433,6 @@ class OptimalPurchaseWindow(QMainWindow):
         if not self.current_market_lengths:
             # You can style this info box as well
             msg_box = QMessageBox(self)
-            msg_box.setObjectName('infoMessageBox')
             msg_box.setIcon(QMessageBox.Icon.Information)
             msg_box.setWindowTitle('No Lengths')
             msg_box.setText('There are no market lengths to remove.')
@@ -443,7 +441,6 @@ class OptimalPurchaseWindow(QMainWindow):
 
         # --- Instantiate the dialog ---
         dialog = QInputDialog(self)
-        dialog.setObjectName('marketLengthRemoveDialog')  # For QSS styling
         dialog.setWindowTitle('Remove Market Length')
         dialog.setLabelText('Select a length to remove:')
 
@@ -556,7 +553,6 @@ class OptimalPurchaseWindow(QMainWindow):
         if missing_market_lengths:
             missing_list_str = '\n'.join([f'•  {d}' for d in missing_market_lengths])
             msg_box = QMessageBox(self)
-            msg_box.setObjectName('warningMessageBox')
             msg_box.setIcon(QMessageBox.Icon.Warning)
             msg_box.setWindowTitle('Missing Market Lengths')
             msg_box.setText('Please select available market lengths for the following required diameters:')
@@ -577,12 +573,11 @@ class OptimalPurchaseWindow(QMainWindow):
                 [f'•  {dia}: Required cut of {c_len:.1f}m exceeds the maximum available length of {max_available:.1f}m.'
                  for dia, c_len, max_available in splicing_list])
             msg_box = QMessageBox(self)
-            msg_box.setObjectName('warningMessageBox')
             msg_box.setIcon(QMessageBox.Icon.Warning)
             msg_box.setWindowTitle('Do not splice')
             msg_box.setText('The following rebars require splicing, which should be avoided.')
             msg_box.setInformativeText(
-                f'Please select or add longer market lengths to accommodate these cuts:\n\n{missing_list_str}')
+                f'Add or select longer rebar market lengths to accommodate longer cuts:\n\n{missing_list_str}')
             msg_box.exec()
             return False
         return True
@@ -651,7 +646,6 @@ class OptimalPurchaseWindow(QMainWindow):
     def show_error_message(self, title, message):
         """Displays a standardized error message box."""
         msg_box = QMessageBox(self)
-        msg_box.setObjectName('warningMessageBox')
         msg_box.setIcon(QMessageBox.Icon.Warning)
         msg_box.setWindowTitle(title)
         msg_box.setText('Please correct the following errors before proceeding:')
@@ -747,7 +741,6 @@ class OptimalPurchaseWindow(QMainWindow):
             wb.save(save_path)
         except PermissionError:
             err_box = QMessageBox(self)
-            err_box.setObjectName('criticalMessageBox')  # Style for critical errors
             err_box.setIcon(QMessageBox.Icon.Critical)
             err_box.setWindowTitle('Save Error')
             err_box.setText(f'Could not save the file to {os.path.basename(save_path)}.')
@@ -767,7 +760,6 @@ class OptimalPurchaseWindow(QMainWindow):
 
         # Refactor the final prompt
         msg_box = QMessageBox(self)
-        msg_box.setObjectName('questionMessageBox')  # Style for questions
         msg_box.setWindowTitle('Generation Complete')
         msg_box.setText('The purchase plan has been generated and saved.')
         msg_box.setInformativeText('What would you like to do next?')
