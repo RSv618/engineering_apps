@@ -28,17 +28,32 @@ def m(x_mm: int) -> float:
     """
     return x_mm / 1000.0
 
+
 def get_solver_path():
     """
-    Gets the correct path to the CBC solver executable, whether running from
-    source or from a PyInstaller bundle.
+    Universal solver locator.
+    Works for: Dev, PyInstaller (OneFile/Dir), Nuitka (OneFile/Dir).
     """
-    # When bundled by PyInstaller, the solver will be in the same directory
-    # as the main executable. sys._MEIPASS gives us the path to that directory.
-    if hasattr(sys, '_MEIPASS'):
-        return os.path.join(sys._MEIPASS, 'cbc.exe')
+    # Check if we are running in a "Frozen" (compiled) state
+    if getattr(sys, 'frozen', False):
 
-    # When running as a normal script, use the default PuLP path.
+        # 1. PyInstaller Check
+        if hasattr(sys, '_MEIPASS'):
+            base_path = sys._MEIPASS
+
+        # 2. Nuitka Check (OneFile or Standalone)
+        else:
+            # os.path.dirname(__file__) gives the directory where
+            # rebar_optimizer.py is currently running.
+            # In Nuitka OneFile, this is the Temp directory.
+            # In Nuitka Standalone, this is the dist folder.
+            base_path = os.path.dirname(os.path.abspath(__file__))
+
+        # Return the path to the bundled cbc.exe
+        return os.path.join(base_path, 'cbc.exe')
+
+    # 3. Development Mode (Not Frozen)
+    # Let PuLP find it automatically in site-packages
     import pulp.apis
     return pulp.apis.PULP_CBC_CMD().path
 

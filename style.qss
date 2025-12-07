@@ -173,7 +173,6 @@ QGroupBox::indicator:unchecked:hover, .check-box::indicator:unchecked:hover {
     image: url(images/trash-red-pressed.svg);
 }
 .next-button, .back-button {
-    qproperty-alignment: AlignCenter;
     border-radius: 12px;
     padding: 5px 20px; /*top-bottom, left-right*/
 }

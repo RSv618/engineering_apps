@@ -745,15 +745,16 @@ def global_exception_hook(exc_type, exc_value, exc_traceback):
 
 def resource_path(relative_path: str) -> str:
     """
-    Get the absolute path to a resource, working for both development and PyInstaller.
+    Universal resource locator.
+    Works for: Dev, PyInstaller (OneFile/Dir), Nuitka (OneFile/Dir).
     """
-    # Check if the PyInstaller attribute exists
-    if hasattr(sys, '_MEIPASS'):
-        # Running in a bundled PyInstaller app
-        base_path = getattr(sys, '_MEIPASS')
-    else:
-        # Running in a normal development environment
-        base_path = os.path.abspath('.')
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except AttributeError:
+        # Nuitka (OneFile/Standalone) & Normal Python
+        # We look for resources relative to THIS file (utils.py)
+        base_path = os.path.dirname(os.path.abspath(__file__))
 
     return os.path.join(base_path, relative_path)
 
