@@ -346,13 +346,22 @@ class LauncherWindow(QMainWindow):
                         self.launch_timeline)
         cards_layout.addWidget(card1)
 
+        desc_mix = (
+            "Calculate precise concrete mix proportions based on ACI 211.1 standards. "
+            "Features field moisture adjustments, detailed aggregate property inputs, and a "
+            "compressive strength maturity estimator (Dreux-Gorisse/GL2000) to predict performance."
+        )
+
+        card2 = AppCard("Concrete Mix Design", desc_mix, LOGO_MAP['app_concrete_mix'], self.launch_concrete_mix_design)
+        cards_layout.addWidget(card2)
+
         desc_cutting = (
             "Automate the generation of rebar cutting lists for reinforced concrete footings. "
             "Input geometry and reinforcement details to generate a fully visualized Excel schedule, "
             "optimized purchase plan, and step-by-step cutting instructions."
         )
-        card2 = AppCard("Foundation Cutting List", desc_cutting, LOGO_MAP['app_cutting_list'], self.launch_cutting_list)
-        cards_layout.addWidget(card2)
+        card3 = AppCard("Foundation Cutting List", desc_cutting, LOGO_MAP['app_cutting_list'], self.launch_cutting_list)
+        cards_layout.addWidget(card3)
 
         desc_purchase = (
             "Minimize waste and reduce material costs using advanced linear programming. "
@@ -360,16 +369,7 @@ class LauncherWindow(QMainWindow):
             "combination of market-length bars to purchase, complete with a waste-minimized cutting guide."
         )
 
-        card3 = AppCard("Rebar Optimal Purchase", desc_purchase, LOGO_MAP['app_optimal_purchase'], self.launch_optimal_purchase)
-        cards_layout.addWidget(card3)
-
-        desc_mix = (
-            "Calculate precise concrete mix proportions based on ACI 211.1 standards. "
-            "Features field moisture adjustments, detailed aggregate property inputs, and a "
-            "compressive strength maturity estimator (Dreux-Gorisse/GL2000) to predict performance."
-        )
-
-        card4 = AppCard("Concrete Mix Design", desc_mix, LOGO_MAP['app_concrete_mix'], self.launch_concrete_mix_design)
+        card4 = AppCard("Rebar Optimal Purchase", desc_purchase, LOGO_MAP['app_optimal_purchase'], self.launch_optimal_purchase)
         cards_layout.addWidget(card4)
 
         # Add a stretch at the end so cards stick to the top if there are only a few
