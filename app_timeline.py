@@ -107,7 +107,7 @@ class LoadingOverlay(QWidget):
         self.label = QLabel()
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # CHANGE 'images/loading.gif' to your actual gif path
+        # CHANGE 'images/loading.gif' to your actual '.gif' path
         gif_path = resource_path('images/loading.gif')
         self.movie = QMovie(gif_path)
 
@@ -142,25 +142,15 @@ class LoadingOverlay(QWidget):
 # ------------------------------------------------------------------------
 class PasteableTableWidget(QTableWidget):
     def keyPressEvent(self, event):
-        """
-        Handles:
-        1. Ctrl+V (Paste)
-        2. Delete / Backspace (Clear Cells)
-        """
         if event.matches(QKeySequence.StandardKey.Paste):
             self.paste_from_clipboard()
             return
-
         if event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
             self.clear_selected_cells()
             return
-
         super().keyPressEvent(event)
 
     def clear_selected_cells(self):
-        """
-        Manually clears data from selected cells.
-        """
         for item in self.selectedItems():
             item.setText('')
             item.setData(Qt.ItemDataRole.DisplayRole, None)
@@ -168,96 +158,134 @@ class PasteableTableWidget(QTableWidget):
     def paste_from_clipboard(self):
         clipboard = QApplication.clipboard()
         text = clipboard.text()
-
         if not text:
             return
 
-        # 1. Split into raw rows
-        raw_rows = text.strip('\n').split('\n')
+        # 1. Parse Clipboard into Grid
+        # Using csv reader to handle quotes and newlines inside Excel cells correctly
+        import io
+        f = io.StringIO(text)
+        reader = csv.reader(f, delimiter='\t')
+        raw_rows = list(reader)
 
-        # 2. COMPACT THE DATA: Remove completely empty rows immediately.
-        #    This fixes issues with Excel merged cells creating 'ghost' rows.
-        rows = [r for r in raw_rows if r.strip()]
+        # 2. Filter Empty Rows (Requirement 2)
+        # We assume a row is 'data' if it has at least one non-empty field
+        clipboard_data = [r for r in raw_rows if any(field.strip() for field in r)]
 
-        if not rows:
+        if not clipboard_data:
             return
 
-        # Get the starting cell
-        selected = self.selectedIndexes()
-        if not selected:
-            start_row = 0
-            start_col = 0
-        else:
-            selected.sort(key=lambda x: (x.row(), x.column()))
-            start_row = selected[0].row()
-            start_col = selected[0].column()
+        # 3. Analyze Layout
+        # We determine a mapping: { clipboard_col_index: table_col_index }
+        col_mapping = self.determine_paste_mapping(clipboard_data)
 
-        date_cols = [COL_START_ORIG, COL_END_ORIG, COL_START_REV, COL_END_REV]
+        # 4. Perform the Paste
+        self.apply_paste_data(clipboard_data, col_mapping)
 
-        # --- PASS 1: INFER DATE FORMAT (DMY vs MDY) ---
-        date_candidates = []
-        for r_idx, row_text in enumerate(rows):
-            columns = row_text.split('\t')
-            # Check bounds just for scanning
-            if start_row + r_idx >= self.rowCount(): break
+    @staticmethod
+    def _identify_column_header(text):
+        """Re-implementation of your keyword logic for the Table widget scope"""
+        clean = re.sub(r'[^a-z]', ' ', text.lower())
+        tokens = set(clean.split())
 
-            for c_idx, data in enumerate(columns):
-                target_col = start_col + c_idx
-                if target_col in date_cols and data.strip():
-                    date_candidates.append(data.strip())
+        if tokens & K_EXCLUDE: return None
+        if tokens & K_WEIGHT: return COL_WEIGHT
 
-        is_dmy_preference = self.infer_date_order(date_candidates)
+        has_start = bool(tokens & K_START)
+        has_end = bool(tokens & K_END)
+        has_rev = bool(tokens & K_REVISED)
 
-        # --- PASS 2: PASTE COMPACTED DATA ---
-        for r_idx, row_text in enumerate(rows):
-            columns = row_text.split('\t')
-            target_row = start_row + r_idx
+        if has_start: return COL_START_REV if has_rev else COL_START_ORIG
+        if has_end: return COL_END_REV if has_rev else COL_END_ORIG
+        if tokens & K_ACTIVITY: return COL_ACTIVITY
+        return None
 
-            # Stop if we run out of table rows
-            if target_row >= self.rowCount():
-                break
+    def _get_geometric_mapping(self, num_clipboard_cols, start_table_col):
+        """
+        Maps clipboard columns to Table columns sequentially, SKIPPING hidden columns.
+        """
+        mapping = {}
+        current_table_col = start_table_col
 
-            for c_idx, data in enumerate(columns):
-                target_col = start_col + c_idx
+        for clip_col in range(num_clipboard_cols):
+            # Find next visible column in table
+            while current_table_col < self.columnCount() and self.isColumnHidden(current_table_col):
+                current_table_col += 1
 
-                # Stop if we run out of table columns
-                if target_col >= self.columnCount():
-                    break
+            if current_table_col < self.columnCount():
+                mapping[clip_col] = current_table_col
+                current_table_col += 1
+            else:
+                break  # No more columns in table
+        return mapping
 
-                val = data.strip()
+    def _infer_mapping_by_type(self, data):
+        """
+        Analyzes the first few rows to guess columns.
+        """
+        mapping = {}
+        # Analyze max 10 rows
+        sample_rows = data[:10]
 
-                # Handle specific empty cells in a valid row
-                # (We want to clear the cell if the source is blank)
-                if not val:
-                    self.setItem(target_row, target_col, QTableWidgetItem(''))
+        used_table_cols = set()
+
+        for clip_col_idx in range(len(data[0])):
+            # Extract column data
+            col_values = [row[clip_col_idx] for row in sample_rows if clip_col_idx < len(row)]
+
+            # Score this column
+            score_num = 0
+            score_date = 0
+            score_str = 0
+
+            for val in col_values:
+                val = val.strip()
+                if not val: continue
+
+                # Check Date
+                if self.parse_date_smart(val, None):
+                    score_date += 1
                     continue
 
-                # --- 1. WEIGHT COLUMN ---
-                if target_col == COL_WEIGHT:
-                    try:
-                        clean_num = val.replace(',', '').replace('$', '').replace('£', '')
-                        float_val = float(clean_num)
+                # Check Number (Weight)
+                try:
+                    float(val.replace(',', '').replace('$', ''))
+                    score_num += 1
+                    continue
+                except ValueError:
+                    pass
 
-                        item = self.item(target_row, target_col)
-                        if not item:
-                            item = QTableWidgetItem()
-                            self.setItem(target_row, target_col, item)
+                # Default String
+                score_str += 1
 
-                        item.setData(Qt.ItemDataRole.DisplayRole, float_val)
-                    except ValueError:
-                        self.setItem(target_row, target_col, QTableWidgetItem(''))
+            total = len(col_values) or 1
 
-                # --- 2. DATE COLUMNS ---
-                elif target_col in date_cols:
-                    formatted_date = self.parse_date_smart(val, is_dmy_preference)
-                    if formatted_date:
-                        self.setItem(target_row, target_col, QTableWidgetItem(formatted_date))
-                    else:
-                        self.setItem(target_row, target_col, QTableWidgetItem(''))
+            # --- ASSIGNMENT LOGIC ---
+            # 1. If mostly numeric and Weight is visible (or not hidden logic)
+            if (score_num / total) > 0.8 and COL_WEIGHT not in used_table_cols:
+                # Requirement 5: Check if Weight is hidden
+                if not self.isColumnHidden(COL_WEIGHT):
+                    mapping[clip_col_idx] = COL_WEIGHT
+                    used_table_cols.add(COL_WEIGHT)
+                    continue
 
-                # --- 3. TEXT COLUMNS ---
-                else:
-                    self.setItem(target_row, target_col, QTableWidgetItem(val))
+            # 2. If mostly dates
+            if (score_date / total) > 0.6:
+                # Assign to first available date slot
+                for date_target in [COL_START_ORIG, COL_END_ORIG, COL_START_REV, COL_END_REV]:
+                    if date_target not in used_table_cols and not self.isColumnHidden(date_target):
+                        mapping[clip_col_idx] = date_target
+                        used_table_cols.add(date_target)
+                        break
+                continue
+
+            # 3. If mostly text
+            if (score_str / total) > 0.5 and COL_ACTIVITY not in used_table_cols:
+                mapping[clip_col_idx] = COL_ACTIVITY
+                used_table_cols.add(COL_ACTIVITY)
+                continue
+
+        return mapping
 
     @staticmethod
     def clean_numeric_date_str(date_str):
@@ -342,6 +370,141 @@ class PasteableTableWidget(QTableWidget):
 
         return None
 
+    def load_data_rows(self, rows):
+        """
+        Public method to load raw list-of-lists (from CSV Import).
+        Returns the set of column indices that were populated (to update UI checkboxes).
+        """
+        if not rows:
+            return set()
+
+        # 1. Clear Table
+        self.setRowCount(0)
+
+        # 2. Analyze Layout
+        # We use the same logic as Paste, but we force start_col=0 because
+        # imports always replace the whole table structure.
+        mapping = self.determine_paste_mapping(rows, is_import=True)
+
+        # 3. Apply Data
+        self.apply_paste_data(rows, mapping, is_import=True)
+
+        # 4. Return detected columns so the Main Window can update checkboxes
+        return set(mapping.values())
+
+    def determine_paste_mapping(self, data, is_import=False):
+        """
+        Decides which clipboard column goes to which table column.
+        """
+        header_row = data[0]
+
+        # --- STRATEGY A: HEADER DETECTION ---
+        header_matches = {}
+        for c_idx, text in enumerate(header_row):
+            col_type = self._identify_column_header(text)
+            if col_type is not None:
+                header_matches[c_idx] = col_type
+
+        # If we found at least 2 headers, assume this is a Structured Copy
+        if len(header_matches) >= 2:
+            return {c_idx: t_col for c_idx, t_col in header_matches.items()}
+
+        # --- STRATEGY B: SELECTION BASED (Only for Paste) ---
+        if not is_import:
+            selected = self.selectedIndexes()
+            if selected:
+                selected.sort(key=lambda x: (x.row(), x.column()))
+                start_row = selected[0].row()
+                start_col = selected[0].column()
+                # If we are NOT at (0,0), assume standard paste skipping hidden columns
+                if start_row > 0 or start_col > 0:
+                    return self._get_geometric_mapping(len(header_row), start_col)
+
+        # --- STRATEGY C: TYPE INFERENCE ---
+        # Used for Import (no headers) OR Paste at (0,0) (no headers)
+        # Note: This internally respects Hidden Columns (won't guess Weight if Weight is hidden)
+        type_mapping = self._infer_mapping_by_type(data)
+        if type_mapping:
+            return type_mapping
+
+        # --- FALLBACK ---
+        # Linear map visible columns
+        return self._get_geometric_mapping(len(header_row), 0)
+
+    def apply_paste_data(self, data, mapping, is_import=False):
+        """
+        Writes data to the table based on mapping.
+        """
+        # Determine if we skip the first row (Header detection)
+        start_data_idx = 0
+        header_row = data[0]
+        match_count = 0
+        for c_idx, t_col in mapping.items():
+            if c_idx < len(header_row):
+                if self._identify_column_header(header_row[c_idx]) == t_col:
+                    match_count += 1
+
+        if match_count >= 2:
+            start_data_idx = 1  # Skip header row
+
+        # Determine Start Row
+        table_row_start = 0
+        if not is_import:
+            selected = self.selectedIndexes()
+            # If we didn't find headers and have a selection, paste there
+            if start_data_idx == 0 and selected:
+                selected.sort(key=lambda x: x.row())
+                table_row_start = selected[0].row()
+
+        # PRE-SCAN for Date Format
+        date_candidates = []
+        for r_idx in range(start_data_idx, len(data)):
+            row = data[r_idx]
+            for c_idx, val in enumerate(row):
+                if mapping.get(c_idx) in [COL_START_ORIG, COL_END_ORIG, COL_START_REV, COL_END_REV]:
+                    date_candidates.append(val)
+
+        is_dmy = self.infer_date_order(date_candidates)
+
+        # WRITE LOOP
+        for i, row_data in enumerate(data[start_data_idx:]):
+            target_row = table_row_start + i
+
+            if target_row >= self.rowCount():
+                self.insertRow(self.rowCount())
+                self.setItem(target_row, COL_ACTIVITY, QTableWidgetItem(f'Task {target_row + 1}'))
+                item_wt = QTableWidgetItem()
+                item_wt.setData(Qt.ItemDataRole.DisplayRole, 0.0)
+                self.setItem(target_row, COL_WEIGHT, item_wt)
+
+            for c_idx, val in enumerate(row_data):
+                if c_idx not in mapping: continue
+
+                target_col = mapping[c_idx]
+                val = val.strip()
+
+                if not val:
+                    # In Import mode, we might want to clear items to ensure clean state
+                    if is_import: self.setItem(target_row, target_col, QTableWidgetItem(''))
+                    continue
+
+                if target_col == COL_WEIGHT:
+                    try:
+                        clean_num = val.replace(',', '').replace('$', '').replace('£', '').replace('%', '')
+                        float_val = float(clean_num)
+                        if '%' in val: float_val /= 100
+                        item = self.item(target_row, target_col) or QTableWidgetItem()
+                        if not self.item(target_row, target_col): self.setItem(target_row, target_col, item)
+                        item.setData(Qt.ItemDataRole.DisplayRole, float_val)
+                    except ValueError:
+                        pass
+
+                elif target_col in [COL_START_ORIG, COL_END_ORIG, COL_START_REV, COL_END_REV]:
+                    formatted = self.parse_date_smart(val, is_dmy)
+                    if formatted: self.setItem(target_row, target_col, QTableWidgetItem(formatted))
+                else:
+                    self.setItem(target_row, target_col, QTableWidgetItem(val))
+
 # ------------------------------------------------------------------------
 # --- DELEGATES & MAIN WINDOW ---
 # ------------------------------------------------------------------------
@@ -389,8 +552,8 @@ class DateDelegate(QStyledItemDelegate):
         text = index.model().data(index, Qt.ItemDataRole.EditRole)
         if text:
             try:
-                qdate = QDate.fromString(str(text), self.ISO_FMT)
-                editor.setDate(qdate)
+                q_date = QDate.fromString(str(text), self.ISO_FMT)
+                editor.setDate(q_date)
             except ValueError:
                 editor.setDate(QDate.currentDate())
         else:
@@ -617,7 +780,7 @@ class TimelineWindow(QMainWindow):
 
         all_rows = []
 
-        # --- FIX 1: Robust File Reading (Handle Encoding & Binary Garbage) ---
+        # Robust File Reading (Handle Encoding & Binary Garbage) ---
         try:
             # First try UTF-8-SIG (Standard for Excel CSVs)
             with open(path, mode='r', newline='', encoding='utf-8-sig') as f:
@@ -644,35 +807,7 @@ class TimelineWindow(QMainWindow):
             QMessageBox.warning(self, 'Import Error', 'The selected CSV file is empty.')
             return
 
-        # --- FIX 2: Layout Detection & User Confirmation ---
-        # Analyze headers
-        mapping, start_row_index, confidence_score = self._detect_csv_layout(all_rows[0])
-
-        # If we didn't find ANY matching headers, warn the user.
-        # This prevents importing unrelated data (e.g. 'Name, Email, Address') into 'Activity, Weight, Start'
-        if confidence_score == 0:
-            # Check if dimensions look wildly wrong (e.g. 1 column)
-            if len(all_rows[0]) < 2:
-                QMessageBox.warning(self, 'Format Error', 'File does not look like a schedule (too few columns).')
-                return
-
-            reply = QMessageBox.question(
-                self, 'Unknown Format',
-                'Could not automatically identify headers (Activity, Start, End, etc.).\n'
-                'Import anyway assuming default column order?',
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-            )
-            if reply == QMessageBox.StandardButton.No:
-                return
-
-        # Extract data rows based on analysis
-        data_rows = all_rows[start_row_index:]
-
-        if not data_rows:
-            QMessageBox.warning(self, 'Import Warning', 'Header found, but no data rows.')
-            return
-
-        # Confirm overwrite
+        # 2. Confirm Overwrite
         if self.table.rowCount() > 0:
             is_empty = (self.table.rowCount() == 1 and
                         self.table.item(0, 0) and
@@ -687,78 +822,30 @@ class TimelineWindow(QMainWindow):
                 if reply == QMessageBox.StandardButton.No:
                     return
 
-        # --- AUTO-CONFIGURE UI ---
-        detected_cols = set(mapping.values())
-        self.chk_scurve.setChecked(COL_WEIGHT in detected_cols)
-        has_revised = (COL_START_REV in detected_cols) or (COL_END_REV in detected_cols)
-        self.chk_rev.setChecked(has_revised)
-
-        # --- EXECUTE IMPORT ---
+        # 3. Delegate Logic to Table
         try:
-            self.table.setRowCount(0)
+            # Load data and get back which columns were found
+            found_cols = self.table.load_data_rows(all_rows)
 
-            # Smart Date Detection Logic
-            date_cols_indices = [
-                idx for idx, tbl_col in mapping.items()
-                if tbl_col in [COL_START_ORIG, COL_END_ORIG, COL_START_REV, COL_END_REV]
-            ]
-            sample_dates = []
-            for row in data_rows[:15]:  # Check first 15 rows
-                for csv_idx in date_cols_indices:
-                    if csv_idx < len(row) and row[csv_idx].strip():
-                        sample_dates.append(row[csv_idx])
+            # 4. Auto-Configure UI based on results
+            # If the CSV specifically had 'Weight' or 'Revised', we unhide them
+            if COL_WEIGHT in found_cols:
+                self.chk_scurve.setChecked(True)
 
-            is_dmy = self.table.infer_date_order(sample_dates)
+            has_revised = (COL_START_REV in found_cols) or (COL_END_REV in found_cols)
+            if has_revised:
+                self.chk_rev.setChecked(True)
 
-            self.table.setRowCount(len(data_rows))
+            # If NO headers were found and type inference ran,
+            # it respected the CURRENT checkboxes, so we don't need to force uncheck anything.
 
-            for r_idx, row_data in enumerate(data_rows):
-                # Ensure Activity Name cell exists even if mapping misses it
-                if COL_ACTIVITY not in mapping.values():
-                    self.table.setItem(r_idx, COL_ACTIVITY, QTableWidgetItem(f'Activity {r_idx + 1}'))
-
-                for csv_col_idx, table_col_idx in mapping.items():
-                    # --- FIX 3: Index Safety ---
-                    if csv_col_idx >= len(row_data):
-                        continue
-
-                    val = row_data[csv_col_idx].strip()
-                    if not val:
-                        continue
-
-                    if table_col_idx == COL_WEIGHT:
-                        try:
-                            clean_num = val.replace(',', '').replace('$', '').replace('£', '')
-                            # Handle percentage signs if present
-                            if '%' in clean_num:
-                                float_val = float(clean_num.replace('%', '')) / 100
-                            else:
-                                float_val = float(clean_num)
-
-                            item = QTableWidgetItem()
-                            item.setData(Qt.ItemDataRole.DisplayRole, float_val)
-                            self.table.setItem(r_idx, table_col_idx, item)
-                        except ValueError:
-                            pass  # Not a number, leave empty
-
-                    elif table_col_idx in [COL_START_ORIG, COL_END_ORIG, COL_START_REV, COL_END_REV]:
-                        try:
-                            formatted_date = self.table.parse_date_smart(val, is_dmy)
-                            if formatted_date:
-                                self.table.setItem(r_idx, table_col_idx, QTableWidgetItem(formatted_date))
-                        except Exception:
-                            pass  # Date parse fail, leave empty
-
-                    else:
-                        # Standard Text
-                        self.table.setItem(r_idx, table_col_idx, QTableWidgetItem(val))
-
-            QMessageBox.information(self, 'Success', f'Successfully imported {len(data_rows)} rows.')
+            QMessageBox.information(self, 'Success', f'Successfully imported {len(all_rows)} rows.')
 
         except Exception as e:
-            QMessageBox.critical(self, 'Processing Error', f'An error occurred while processing rows.\n{e}')
+            QMessageBox.critical(self, 'Processing Error', f'An error occurred.\n{e}')
 
-    def _get_column_type(self, header_text):
+    @staticmethod
+    def _get_column_type(header_text):
         """
         Analyzes a single header string and returns the corresponding
         Table Column Constant (e.g., COL_START_REV) or None.
@@ -896,7 +983,12 @@ class TimelineWindow(QMainWindow):
             try:
                 self.open_file(result)
             except Exception as e:
-                QMessageBox.warning(self, 'Success', f'File saved to: {result}')
+                QMessageBox.warning(
+                    self,
+                    'File Saved',  # <-- Neutral, factual title
+                    f'The file was successfully saved to:\n{result}\n\n'
+                    f'However, we could not launch Excel automatically:\n{e}'
+                )
         else:
             QMessageBox.critical(self, 'Save Error', f'Could not save file.\n{result}')
 
@@ -906,7 +998,8 @@ class TimelineWindow(QMainWindow):
             self.loading_overlay.resize(self.centralWidget().size())
         super().resizeEvent(event)
 
-    def open_file(self, path):
+    @staticmethod
+    def open_file(path):
         if sys.platform == 'win32':
             os.startfile(path)
         elif sys.platform == 'darwin':
