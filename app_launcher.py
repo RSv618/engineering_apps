@@ -63,7 +63,7 @@ class CarouselWidget(QFrame):
         # --- CONFIGURATION ---
         # CHANGE THIS to match your window background color!
         # If your theme is dark, use (30, 30, 30). If white, use (255, 255, 255).
-        # Assuming a light/grey theme based on standard Qt:
+        # Assuming a light/gray theme based on standard Qt:
         self.fade_color = QColor(255, 255, 255)
         self.fade_width = 85  # How wide the gradient is
         # ---------------------
@@ -168,7 +168,7 @@ class AboutDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName('launcherAboutPage')
-        self.setWindowTitle("About")
+        self.setWindowTitle('About')
         self.setFixedSize(400, 450)
 
         layout = QVBoxLayout(self)
@@ -187,28 +187,28 @@ class AboutDialog(QDialog):
         layout.addSpacing(25)
 
         # 2. Title & Version
-        title = QLabel("Engineering Apps Suite")
+        title = QLabel('Engineering Apps Suite')
         title.setProperty('class', 'header-1')
         layout.addWidget(title)
 
-        version = QLabel(f"Version {VERSION}")
+        version = QLabel(f'Version {VERSION}')
         version.setProperty('class', 'subtitle')
         layout.addWidget(version)
         layout.addSpacing(10)
 
         # 3. Description
-        desc = QLabel("A collection of engineering tools for concrete mix design, rebar optimization, and cutting schedules.")
+        desc = QLabel('A collection of engineering tools for concrete mix design, rebar optimization, and cutting schedules.')
         desc.setProperty('class', 'form-value')
         desc.setWordWrap(True)
         layout.addWidget(desc)
         layout.addSpacing(10)
 
-        # 4. Links (Email & Github)
+        # 4. Links (Email & GitHub)
         # We use HTML for clickable links
 
         # Update these details
-        github_url = "https://github.com/RSv618/engineering_apps.git"
-        email_address = "robertsimonuy@gmail.com"
+        github_url = r'https://github.com/RSv618/engineering_apps.git'
+        email_address = r'robertsimonuy@gmail.com'
 
         contact_label = QLabel()
         contact_label.setOpenExternalLinks(True)  # Crucial for opening browser
@@ -225,7 +225,7 @@ class AboutDialog(QDialog):
         layout.addStretch()
 
         # Close Button
-        close_btn = HoverButton("Close")
+        close_btn = HoverButton('Close')
         close_btn.setProperty('class', 'transparent-button next-button')
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn)
@@ -269,7 +269,7 @@ class AppCard(QFrame):
         layout.addStretch()
 
         # Button (Visual cue)
-        self.btn = HoverButton("Launch")
+        self.btn = HoverButton('Launch')
         self.btn.setProperty('class', 'green-button next-button')
         self.btn.clicked.connect(self.on_click)
         layout.addWidget(self.btn)
@@ -288,7 +288,7 @@ class AppCard(QFrame):
 class LauncherWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Engineering Apps Suite")
+        self.setWindowTitle('Engineering Apps Suite')
         self.setWindowIcon(QIcon(resource_path('images/logo.png')))
         self.resize(920, 560)
         self.setMinimumSize(800, 500)
@@ -311,12 +311,12 @@ class LauncherWindow(QMainWindow):
         header_layout.setSpacing(0)
         header_layout.addSpacing(95)
 
-        header_title = QLabel("Select an Application")
+        header_title = QLabel('Select an Application')
         header_title.setProperty('class', 'header-1')
         header_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         header_layout.addWidget(header_title)
 
-        self.about_btn = HoverButton("About")  # Simplified for example
+        self.about_btn = HoverButton('About')  # Simplified for example
         self.about_btn.setObjectName('launcherAboutButton')
         self.about_btn.setProperty('class', 'transparent-button next-button')
         self.about_btn.clicked.connect(self.show_about_dialog)
@@ -338,38 +338,38 @@ class LauncherWindow(QMainWindow):
 
         # C. Add your App Cards
         desc_timeline = (
-            "Generate professional Project Timelines and S-Curves in Excel. "
-            "Track Original, Revised, and Actual schedules, assign weights to activities, "
-            "and visualize progress with automatically generated charts."
+            'Generate professional Project Timelines and S-Curves in Excel. '
+            'Track Original, Revised, and Actual schedules, assign weights to activities, '
+            'and visualize progress with automatically generated charts.'
         )
-        card1 = AppCard("Timeline & S-Curve", desc_timeline, LOGO_MAP.get('app_timeline', 'images/logo.png'),
+        card1 = AppCard('Timeline & S-Curve', desc_timeline, LOGO_MAP.get('app_timeline', 'images/logo.png'),
                         self.launch_timeline)
         cards_layout.addWidget(card1)
 
         desc_mix = (
-            "Calculate precise concrete mix proportions based on ACI 211.1 standards. "
-            "Features field moisture adjustments, detailed aggregate property inputs, and a "
-            "compressive strength maturity estimator (Dreux-Gorisse/GL2000) to predict performance."
+            'Calculate precise concrete mix proportions based on ACI 211.1 standards. '
+            'Features field moisture adjustments, detailed aggregate property inputs, and a '
+            'compressive strength maturity estimator (Dreux-Gorisse/GL2000) to predict performance.'
         )
 
-        card2 = AppCard("Concrete Mix Design", desc_mix, LOGO_MAP['app_concrete_mix'], self.launch_concrete_mix_design)
+        card2 = AppCard('Concrete Mix Design', desc_mix, LOGO_MAP['app_concrete_mix'], self.launch_concrete_mix_design)
         cards_layout.addWidget(card2)
 
         desc_cutting = (
-            "Automate the generation of rebar cutting lists for reinforced concrete footings. "
-            "Input geometry and reinforcement details to generate a fully visualized Excel schedule, "
-            "optimized purchase plan, and step-by-step cutting instructions."
+            'Automate the generation of rebar cutting lists for reinforced concrete footings. '
+            'Input geometry and reinforcement details to generate a fully visualized Excel schedule, '
+            'optimized purchase plan, and step-by-step cutting instructions.'
         )
-        card3 = AppCard("Foundation Cutting List", desc_cutting, LOGO_MAP['app_cutting_list'], self.launch_cutting_list)
+        card3 = AppCard('Foundation Cutting List', desc_cutting, LOGO_MAP['app_cutting_list'], self.launch_cutting_list)
         cards_layout.addWidget(card3)
 
         desc_purchase = (
-            "Minimize waste and reduce material costs using advanced linear programming. "
-            "Enter your required rebar cut lengths, and the algorithm calculates the exact "
-            "combination of market-length bars to purchase, complete with a waste-minimized cutting guide."
+            'Minimize waste and reduce material costs using advanced linear programming. '
+            'Enter your required rebar cut lengths, and the algorithm calculates the exact '
+            'combination of market-length bars to purchase, complete with a waste-minimized cutting guide.'
         )
 
-        card4 = AppCard("Rebar Optimal Purchase", desc_purchase, LOGO_MAP['app_optimal_purchase'], self.launch_optimal_purchase)
+        card4 = AppCard('Rebar Optimal Purchase', desc_purchase, LOGO_MAP['app_optimal_purchase'], self.launch_optimal_purchase)
         cards_layout.addWidget(card4)
 
         # Add a stretch at the end so cards stick to the top if there are only a few
@@ -386,7 +386,7 @@ class LauncherWindow(QMainWindow):
         footer_layout = QVBoxLayout(footer_widget)
         footer_layout.setContentsMargins(10, 10, 10, 10)
 
-        footer_text = QLabel(f"v{VERSION} | Engineering Suite")
+        footer_text = QLabel(f'v{VERSION} | Engineering Suite')
         footer_text.setProperty('class', 'subtitle')
         footer_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
         footer_layout.addWidget(footer_text)
@@ -421,7 +421,7 @@ class LauncherWindow(QMainWindow):
         original_close_event = self.window.closeEvent
 
         def on_close_wrapper(event):
-            # Run the app's standard close logic (e.g., "Are you sure?")
+            # Run the app's standard close logic (e.g., 'Are you sure?')
             original_close_event(event)
 
             # If the event was accepted (window actually closed), show launcher
@@ -444,7 +444,7 @@ class LauncherWindow(QMainWindow):
     def launch_timeline(self):
         self._launch_app(TimelineWindow)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app = QApplication(sys.argv)
 
     # Apply Global Filters and Styles

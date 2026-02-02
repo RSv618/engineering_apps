@@ -35,10 +35,10 @@ def _patched_to_tree(self, tagname=None, idx=None, namespace=None):
     if self.spPr is None:
         self.spPr = GraphicalProperties()
 
-    # Force "No Fill" (Transparent Background)
+    # Force 'No Fill' (Transparent Background)
     self.spPr.noFill = True
 
-    # Force "No Line" (No Border)
+    # Force 'No Line' (No Border)
     if self.spPr.ln is None:
         self.spPr.ln = LineProperties()
     self.spPr.ln.noFill = True
@@ -1572,7 +1572,7 @@ def create_schedule_sheet(ws, data, check_boxes, table_start_date, total_days):
 
     # 2. Define the Anchor Marker
     # We anchor to the cell DIAGONALLY ABOVE-LEFT of where the chart starts.
-    # This allows us to use positive offsets to shift the chart "Left" or "Up"
+    # This allows us to use positive offsets to shift the chart 'Left' or 'Up'
     # relative to the target start cell.
 
     # _col_left_chart is 1-based.
@@ -1580,7 +1580,7 @@ def create_schedule_sheet(ws, data, check_boxes, table_start_date, total_days):
     anchor_col = _col_left_chart
     anchor_row = _row_top_chart
 
-    # 3. Define Offsets (The "Shift")
+    # 3. Define Offsets (The 'Shift')
     # These offsets are from the top-left of the ANCHOR cell (the previous cell).
     # To shift the chart Left: reduce offset_x.
     # To shift the chart Right: increase offset_x.
@@ -1593,7 +1593,7 @@ def create_schedule_sheet(ws, data, check_boxes, table_start_date, total_days):
     # 4. Apply Anchor and Add
     chart.anchor = OneCellAnchor(_from=marker, ext=size)
 
-    # IMPORTANT: Do not pass a cell address (e.g. "A1") as the second argument.
+    # IMPORTANT: Do not pass a cell address (e.g. 'A1') as the second argument.
     # Passing only the chart forces openpyxl to use the 'chart.anchor' we just created.
     ws.add_chart(chart)
 
@@ -1723,11 +1723,11 @@ def create_input_actual_sheet(wb, data, _col_left_table, _row_top_table, rows_pe
             alter_row_fill_trigger = True
 
     # Add conditional formatting
-    upper_left_cell = f"{get_col_letter_cached(_col_left_table + 2)}{_row_top_table + 3}"  # e.g., B1
-    lower_right_cell = f"{get_column_letter(_col_left_table + n_progress_entry)}{_row_top_table + 2 + len(data) * rows_per_activity}"  # e.g., A1
-    cell_range = f"{upper_left_cell}:{lower_right_cell}"
+    upper_left_cell = f'{get_col_letter_cached(_col_left_table + 2)}{_row_top_table + 3}'  # e.g., B1
+    lower_right_cell = f'{get_column_letter(_col_left_table + n_progress_entry)}{_row_top_table + 2 + len(data) * rows_per_activity}'  # e.g., A1
+    cell_range = f'{upper_left_cell}:{lower_right_cell}'
     current_cell = upper_left_cell
-    previous_cell = f"{get_col_letter_cached(_col_left_table + 1)}{_row_top_table + 3}"
+    previous_cell = f'{get_col_letter_cached(_col_left_table + 1)}{_row_top_table + 3}'
 
     # Formula: =B1<A1
     rule_formula = f'OR(AND({current_cell}<{previous_cell},{current_cell}<>""),AND({previous_cell}="",{current_cell}<>""))'
@@ -1756,8 +1756,8 @@ def create_input_actual_sheet(wb, data, _col_left_table, _row_top_table, rows_pe
         ws.add_image(img)
 
     except FileNotFoundError:
-        print(f"Could not find image at {img_path}")
+        print(f'Could not find image at {img_path}')
     except Exception as e:
-        print(f"Error adding timeline image: {e}")
+        print(f'Error adding timeline image: {e}')
 
     return ws

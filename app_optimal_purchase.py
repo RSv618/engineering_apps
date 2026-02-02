@@ -243,11 +243,11 @@ class OptimalPurchaseWindow(QMainWindow):
     def show_cutting_length_info(self) -> None:
         """Displays an informational popup explaining 'Cutting Length' near the cursor."""
         info_text = (
-            "<b>What is Cutting Length?</b><br>"
-            "<i>Straight rebar length <u>before</u> bending.</i><br>"
-            "Visible segments + Hooks − Bend deductions<br><br>"
-            "<b>Ex: Square stirrup (200mm sides, 150mm hooks)</b><br>"
-            "4×200 + 2×150 − (3×2<i>d</i><sub>b</sub> + 2×3<i>d</i><sub>b</sub>) = 1100 − 12<i>d</i><sub>b</sub>"
+            '<b>What is Cutting Length?</b><br>'
+            '<i>Straight rebar length <u>before</u> bending.</i><br>'
+            'Visible segments + Hooks − Bend deductions<br><br>'
+            '<b>Ex: Square stirrup (200mm sides, 150mm hooks)</b><br>'
+            '4×200 + 2×150 − (3×2<i>d</i><sub>b</sub> + 2×3<i>d</i><sub>b</sub>) = 1100 − 12<i>d</i><sub>b</sub>'
         )
         self.info_popup.set_info_text(info_text)
 
@@ -355,7 +355,7 @@ class OptimalPurchaseWindow(QMainWindow):
 
         # If no diameters are active, show a placeholder message in grid
         if visual_row_index == 0:
-            lbl = QLabel("No diameters required based on current inputs.")
+            lbl = QLabel('No diameters required based on current inputs.')
             self.market_lengths_grid.addWidget(lbl, 1, 0, 1, len(self.current_market_lengths) + 1)
 
     def toggle_all_market_checkboxes(self):
@@ -584,7 +584,7 @@ class OptimalPurchaseWindow(QMainWindow):
 
     def prefill_for_debug(self):
         """Pre-fills all input fields with sample data for faster testing."""
-        print("--- DEBUG MODE: Pre-filling forms with sample data. ---")
+        print('--- DEBUG MODE: Pre-filling forms with sample data. ---')
 
         # --- Page 1: Cutting Lengths ---
         # Define some sample data
@@ -674,12 +674,12 @@ class OptimalPurchaseWindow(QMainWindow):
             row_num = i + 1
             # Rule 1: Cutting Length must be greater than 0
             if len_widget.value() <= 0:
-                errors.append(f"- Row {row_num}: 'Cutting Length' must be greater than 0.")
+                errors.append(f'- Row {row_num}: `Cutting Length` must be greater than 0.')
                 validity_map[len_widget] = False
 
             # Rule 2: Quantity must be greater than 0
             if qty_widget.value() <= 0:
-                errors.append(f"- Row {row_num}: 'Quantity' must be greater than 0.")
+                errors.append(f'- Row {row_num}: `Quantity` must be greater than 0.')
                 validity_map[qty_widget] = False
 
         # --- Apply styles based on final validity ---

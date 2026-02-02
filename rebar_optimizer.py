@@ -34,7 +34,7 @@ def get_solver_path():
     Universal solver locator.
     Works for: Dev, PyInstaller (OneFile/Dir), Nuitka (OneFile/Dir).
     """
-    # Check if we are running in a "Frozen" (compiled) state
+    # Check if we are running in a 'Frozen' (compiled) state
     if getattr(sys, 'frozen', False):
 
         # 1. PyInstaller Check

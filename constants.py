@@ -36,7 +36,7 @@ LOGO_MAP = {
     'app_concrete_mix': 'images/logo_red.png',
     'app_timeline': 'images/logo_yellow.png'
 }
-VERSION = '1.0.0'
+VERSION = '1.1.0'
 
 # --- Application Configuration ---
 # This is the perfect place for the debug flag.

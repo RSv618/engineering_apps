@@ -2112,7 +2112,7 @@ class CuttingListWindow(QMainWindow):
 
         # If no diameters are active, show a placeholder message in grid
         if visual_row_index == 0:
-            lbl = QLabel("No diameters required based on current inputs.")
+            lbl = QLabel('No diameters required based on current inputs.')
             self.market_lengths_grid.addWidget(lbl, 1, 0, 1, len(self.current_market_lengths) + 1)
 
     def toggle_all_market_checkboxes(self):
