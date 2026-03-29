@@ -4,9 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Rearrange">
+    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Updated versioning and quotation">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app_timeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_timeline.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_cutting_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_cutting_list.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_launcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_launcher.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/excel_writer.py" beforeDir="false" afterPath="$PROJECT_DIR$/excel_writer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/style.qss" beforeDir="false" afterPath="$PROJECT_DIR$/style.qss" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -98,7 +101,6 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-PY-253.29346.308" />
         <option value="bundled-python-sdk-ca5e2b39c7df-6e1f45a539f7-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.29346.308" />
       </set>
     </attachedChunks>
@@ -114,23 +116,11 @@
       <workItem from="1769566404134" duration="158000" />
       <workItem from="1769577257238" duration="787000" />
       <workItem from="1769609332959" duration="18000" />
-      <workItem from="1769993771879" duration="2199000" />
-    </task>
-    <task id="LOCAL-00010" summary="Added feature: custom market lengths">
-      <option name="closed" value="true" />
-      <created>1762839956803</created>
-      <option name="number" value="00010" />
-      <option name="presentableId" value="LOCAL-00010" />
-      <option name="project" value="LOCAL" />
-      <updated>1762839956803</updated>
-    </task>
-    <task id="LOCAL-00011" summary="Complete refactor for styling.">
-      <option name="closed" value="true" />
-      <created>1763257695880</created>
-      <option name="number" value="00011" />
-      <option name="presentableId" value="LOCAL-00011" />
-      <option name="project" value="LOCAL" />
-      <updated>1763257695881</updated>
+      <workItem from="1769993771879" duration="3187000" />
+      <workItem from="1769997013206" duration="77000" />
+      <workItem from="1770003357349" duration="51000" />
+      <workItem from="1770282962007" duration="1363000" />
+      <workItem from="1770787887717" duration="61000" />
     </task>
     <task id="LOCAL-00012" summary="remove focus on scroll areas">
       <option name="closed" value="true" />
@@ -508,7 +498,23 @@
       <option name="project" value="LOCAL" />
       <updated>1765078506497</updated>
     </task>
-    <option name="localTasksCounter" value="59" />
+    <task id="LOCAL-00059" summary="Fixed import and paste feature in timeline">
+      <option name="closed" value="true" />
+      <created>1769996010648</created>
+      <option name="number" value="00059" />
+      <option name="presentableId" value="LOCAL-00059" />
+      <option name="project" value="LOCAL" />
+      <updated>1769996010648</updated>
+    </task>
+    <task id="LOCAL-00060" summary="Updated versioning and quotation">
+      <option name="closed" value="true" />
+      <created>1769996789095</created>
+      <option name="number" value="00060" />
+      <option name="presentableId" value="LOCAL-00060" />
+      <option name="project" value="LOCAL" />
+      <updated>1769996789095</updated>
+    </task>
+    <option name="localTasksCounter" value="61" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -526,8 +532,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Fixed optimal purchase" />
-    <MESSAGE value="Updated excel generation for optimal_purchase" />
     <MESSAGE value="Added warning when splicing is required." />
     <MESSAGE value="Added launcher.&#10;Improved market lengths page by showing only selected bar sizes." />
     <MESSAGE value="Added app_concrete_mix for design mix" />
@@ -551,10 +555,23 @@
     <MESSAGE value="Fixed import_csv crash" />
     <MESSAGE value="Fixed message box buttons styles. Now consistent" />
     <MESSAGE value="Rearrange" />
-    <option name="LAST_COMMIT_MESSAGE" value="Rearrange" />
+    <MESSAGE value="Fixed import and paste feature in timeline" />
+    <MESSAGE value="Updated versioning and quotation" />
+    <option name="LAST_COMMIT_MESSAGE" value="Updated versioning and quotation" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/app_cutting_list.py</url>
+          <line>2618</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/engineering_apps$app_timeline.coverage" NAME="app_timeline Coverage Results" MODIFIED="1769995412822" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/engineering_apps$app_launcher.coverage" NAME="app_launcher Coverage Results" MODIFIED="1769577468958" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/engineering_apps$app_launcher.coverage" NAME="app_launcher Coverage Results" MODIFIED="1769997061426" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

@@ -2668,6 +2668,7 @@ class CuttingListWindow(QMainWindow):
             for key, value in cuts_by_diameter.items():
                 cuts_by_diameter[key] = [(q, l / 1000) for l, q in value.items()]
 
+            # TODO: find_optimized might be slow. Need to give user GUI feedback.
             purchase_list, cutting_plan = find_optimized_cutting_plan(cuts_by_diameter, market_lengths)
             wb = add_sheet_purchase_plan(wb, purchase_list)
             wb = add_sheet_cutting_plan(wb, cutting_plan)

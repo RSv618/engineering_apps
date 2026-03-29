@@ -289,6 +289,7 @@ QComboBox QAbstractItemView {
     color: #5d5d5d;
     border: none;
     outline: none; /* Prevents the highlight due to keyboard */
+    background-color: white;
 }
 QComboBox QAbstractItemView::item {
     height: 25px;

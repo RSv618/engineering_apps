@@ -1,7 +1,7 @@
 import sys
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QDialog, QScrollArea,
                              QScroller, QWidget)
-from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTimer, QEvent
+from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTimer
 from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QLinearGradient
 
 # Assuming these imports exist based on your snippet

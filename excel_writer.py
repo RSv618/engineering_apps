@@ -407,16 +407,23 @@ def add_sheet_purchase_plan(wb, purchase_list) -> Workbook:
     # --- Styles ---
     white_side = Side(style='thin', color='FFFFFF')
     black_side = Side(style='thin', color='404040')
+    thick_top_side = Side(style='thick', color='404040')
     title_font = Font(name='Calibri', size=16, bold=True)
     header_font = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
+    total_font = Font(name='Calibri', size=11, bold=True)
     header_fill = PatternFill(start_color='404040', end_color='404040', fill_type='solid')
     alter_row_fill = PatternFill(start_color='F3F3F3', end_color='F3F3F3', fill_type='solid')
+    total_fill = PatternFill(start_color='D9D9D9', end_color='D9D9D9', fill_type='solid')  # Grey for total row
     cell_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
     border = Border(left=black_side, right=black_side, top=black_side, bottom=black_side)
     header_border = Border(left=white_side, right=white_side, top=black_side, bottom=black_side)
 
+    # Border for the total row (Thick top)
+    total_border = Border(left=black_side, right=black_side, top=thick_top_side, bottom=black_side)
+
     # --- Static and Dynamic Headers ---
-    headers = purchase_list[0].keys()
+    # Convert keys to list to ensure index access
+    headers = list(purchase_list[0].keys())
 
     # --- Title ---
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(headers))
@@ -444,10 +451,13 @@ def add_sheet_purchase_plan(wb, purchase_list) -> Workbook:
     ws.column_dimensions['A'].width = 20
     ws.row_dimensions[2].height = 25
 
+    # --- Write Data Rows ---
     for item in purchase_list:
         ws.append(list(item.values()))
 
-    for current_row in range(3, 3 + len(purchase_list)):
+    # Apply styles to data rows
+    current_row = 3
+    for _ in range(len(purchase_list)):
         ws.row_dimensions[current_row].height = 25
 
         for col_num in range(1, len(headers) + 1):
@@ -467,6 +477,58 @@ def add_sheet_purchase_plan(wb, purchase_list) -> Workbook:
             # Number Format
             if col_num >= 2:
                 cell.number_format = '#,##0'
+
+        current_row += 1
+
+    # --- ADD TOTAL WEIGHT ROW ---
+    total_row = current_row
+    ws.row_dimensions[total_row].height = 25
+
+    # Label for Total Row
+    label_cell = ws.cell(row=total_row, column=1, value="Total Weight (kg)")
+    label_cell.font = total_font
+    label_cell.fill = total_fill
+    label_cell.border = total_border
+    label_cell.alignment = Alignment(horizontal='right', vertical='center')
+
+    # Calculate and Write Totals for each Length Column
+    grand_total_weight = 0
+
+    for col_num, header_key in enumerate(headers, 1):
+        if header_key == 'Diameter':
+            continue
+
+        # 1. Determine Length from Header (Handle '6.0m' or float 6.0)
+        try:
+            length_val = float(str(header_key).lower().replace('m', ''))
+        except ValueError:
+            # If header isn't a length (unlikely based on context), skip calculation
+            continue
+
+        # 2. Calculate Total Weight for this specific column
+        # Formula: Sum of (Qty * Length * Unit_Weight)
+        # Unit Weight (kg/m) approx = Diameter^2 / 162.2
+        col_weight_sum = 0
+
+        for item in purchase_list:
+            dia = float(item.get('Diameter', 0).strip('#'))
+            qty = float(item.get(header_key, 0))
+
+            if dia and qty:
+                # D^2 / 162 is the standard engineering approx for steel density (7850 kg/m3)
+                unit_weight = (dia ** 2) / 162.2
+                col_weight_sum += qty * length_val * unit_weight
+
+        grand_total_weight += col_weight_sum
+
+        # 3. Write to Cell
+        cell = ws.cell(row=total_row, column=col_num, value=col_weight_sum)
+        cell.font = total_font
+        cell.fill = total_fill
+        cell.border = total_border
+        cell.alignment = cell_alignment
+        cell.number_format = '#,##0.00'
+
     return wb
 
 def add_sheet_cutting_plan(wb, cutting_plan) -> Workbook:
