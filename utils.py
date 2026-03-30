@@ -6,9 +6,9 @@ from PyQt6.QtWidgets import (
     QLineEdit, QComboBox, QTextEdit, QCheckBox, QScrollArea, QStackedWidget, QAbstractSpinBox
 )
 import traceback
-from PyQt6.QtGui import QPixmap, QCursor, QEnterEvent, QPainter, QColor
+from PyQt6.QtGui import QPixmap, QCursor, QEnterEvent, QPainter, QColor, QMovie
 from PyQt6.QtCore import Qt, QEvent, pyqtSignal, QObject, QPropertyAnimation, QEasingCurve, QPoint, \
-    QParallelAnimationGroup
+    QParallelAnimationGroup, QSize
 import re
 from typing import Literal
 import os
@@ -302,6 +302,33 @@ class InfoPopup(QWidget):
         """
         self.label.setText(text)
 
+class LoadingOverlay(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
+        self.hide()
+        layout = QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.label = QLabel()
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        gif_path = resource_path('images/loading.gif')
+        self.movie = QMovie(gif_path)
+        self.movie.setScaledSize(QSize(94, 50))
+        self.movie.setCacheMode(QMovie.CacheMode.CacheAll)
+        self.label.setMovie(self.movie)
+        layout.addWidget(self.label)
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.fillRect(self.rect(), QColor(0, 0, 0, 128))
+    def show_loading(self):
+        if self.parent():
+            self.resize(self.parent().size())
+        self.movie.start()
+        self.show()
+        self.raise_()
+    def hide_loading(self):
+        self.movie.stop()
+        self.hide()
 
 class HoverLabel(QLabel):
     """

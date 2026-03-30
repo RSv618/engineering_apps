@@ -7,14 +7,39 @@ from PyQt6.QtWidgets import (
     QCheckBox, QScrollArea, QMessageBox, QFileDialog, QInputDialog, QPushButton, QDialog, QDialogButtonBox
 )
 from PyQt6.QtGui import QCursor, QIcon
-from PyQt6.QtCore import Qt, QPoint
+from PyQt6.QtCore import Qt, QPoint, QThread, pyqtSignal
 from openpyxl import Workbook
 from utils import (load_stylesheet, parse_nested_dict, global_exception_hook,
                    InfoPopup, HoverLabel, BlankSpinBox, HoverButton, resource_path,
-                   style_invalid_input, GlobalWheelEventFilter, BlankDoubleSpinBox)
+                   style_invalid_input, GlobalWheelEventFilter, BlankDoubleSpinBox,
+                   LoadingOverlay)
 from rebar_optimizer import find_optimized_cutting_plan
 from constants import BAR_DIAMETERS, MARKET_LENGTHS, DEBUG_MODE, LOGO_MAP
 from excel_writer import add_sheet_purchase_plan, add_sheet_cutting_plan, delete_blank_worksheets
+
+class ExcelWorker(QThread):
+    finished = pyqtSignal(bool, str)
+    def __init__(self, save_path, cuts_by_diameter, market_lengths):
+        super().__init__()
+        self.save_path = save_path
+        self.cuts_by_diameter = cuts_by_diameter
+        self.market_lengths = market_lengths
+    def run(self):
+        try:
+            purchase_list, cutting_plan = find_optimized_cutting_plan(
+                self.cuts_by_diameter, self.market_lengths)
+            wb = Workbook()
+            wb = add_sheet_purchase_plan(wb, purchase_list)
+            wb = add_sheet_cutting_plan(wb, cutting_plan)
+            wb = delete_blank_worksheets(wb)
+            wb.save(self.save_path)
+            self.finished.emit(True, self.save_path)
+        except PermissionError:
+            self.finished.emit(False,
+                f'Could not save the file to {os.path.basename(self.save_path)}.\n'
+                'Please ensure the file is not already open in another program.')
+        except Exception as e:
+            self.finished.emit(False, str(e))
 
 class OptimalPurchaseWindow(QMainWindow):
     def __init__(self):
@@ -50,6 +75,8 @@ class OptimalPurchaseWindow(QMainWindow):
             self.prefill_for_debug()
         self.stacked_widget.setCurrentIndex(0)
         self.setFocus()
+        self.worker = None
+        self.loading_overlay = LoadingOverlay(self.stacked_widget)
 
     def create_cutting_length_page(self) -> None:
         """Builds the UI for the first page (Cutting Lengths input)."""
@@ -736,47 +763,43 @@ class OptimalPurchaseWindow(QMainWindow):
         )
         if not save_path:
             return
+        self.loading_overlay.show_loading()
+        self.worker = ExcelWorker(save_path, cuts_by_diameter, market_lengths)
+        self.worker.finished.connect(self.on_generation_finished)
+        self.worker.start()
 
-        try:
-            wb.save(save_path)
-        except PermissionError:
-            err_box = QMessageBox(self)
-            err_box.setIcon(QMessageBox.Icon.Critical)
-            err_box.setWindowTitle('Save Error')
-            err_box.setText(f'Could not save the file to {os.path.basename(save_path)}.')
-            err_box.setInformativeText('Please ensure the file is not already open in another program.')
-            err_box.exec()
-            return
-
-        try:
-            if sys.platform == 'win32':
-                os.startfile(save_path)
-            elif sys.platform == 'darwin':
-                subprocess.call(['open', save_path])
+    def on_generation_finished(self, success, result):
+        self.loading_overlay.hide_loading()
+        if success:
+            try:
+                if sys.platform == 'win32':
+                    os.startfile(result)
+                elif sys.platform == 'darwin':
+                    subprocess.call(['open', result])
+                else:
+                    subprocess.call(['xdg-open', result])
+            except Exception as e:
+                print(f'Could not open file automatically: {e}')
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle('Generation Complete')
+            msg_box.setText('The purchase plan has been generated and saved.')
+            msg_box.setInformativeText('What would you like to do next?')
+            msg_box.setIcon(QMessageBox.Icon.Question)
+            start_over_btn = msg_box.addButton('Start Over', QMessageBox.ButtonRole.ResetRole)
+            msg_box.addButton('Close Program', QMessageBox.ButtonRole.RejectRole)
+            msg_box.setDefaultButton(start_over_btn)
+            msg_box.exec()
+            if msg_box.clickedButton() == start_over_btn:
+                self.reset_application()
             else:
-                subprocess.call(['xdg-open', save_path])
-        except Exception as e:
-            print(f'Could not open file automatically: {e}')
-
-        # Refactor the final prompt
-        msg_box = QMessageBox(self)
-        msg_box.setWindowTitle('Generation Complete')
-        msg_box.setText('The purchase plan has been generated and saved.')
-        msg_box.setInformativeText('What would you like to do next?')
-        msg_box.setIcon(QMessageBox.Icon.Question)
-
-        # Keep the existing button setup, we will style them via QSS
-        start_over_btn = msg_box.addButton('Start Over', QMessageBox.ButtonRole.ResetRole)
-        msg_box.addButton('Close Program', QMessageBox.ButtonRole.RejectRole)
-        msg_box.setDefaultButton(start_over_btn)
-
-        msg_box.exec()
-
-        if msg_box.clickedButton() == start_over_btn:
-            self.reset_application()
+                self.close()
         else:
-            self.close()
-        return
+            QMessageBox.critical(self, 'Save Error', f'Could not save file.\n{result}')
+
+    def resizeEvent(self, event):
+        if hasattr(self, 'loading_overlay') and self.loading_overlay.isVisible():
+            self.loading_overlay.resize(self.centralWidget().size())
+        super().resizeEvent(event)
 
 if __name__ == '__main__':
     sys.excepthook = global_exception_hook

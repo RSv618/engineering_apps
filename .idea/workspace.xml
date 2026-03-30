@@ -7,9 +7,9 @@
     <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Updated versioning and quotation">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_cutting_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_cutting_list.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app_launcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_launcher.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/excel_writer.py" beforeDir="false" afterPath="$PROJECT_DIR$/excel_writer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/style.qss" beforeDir="false" afterPath="$PROJECT_DIR$/style.qss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_optimal_purchase.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_optimal_purchase.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_timeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_timeline.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -97,6 +97,36 @@
       <recent name="C:\Users\rober\PycharmProjects\engineering_apps" />
       <recent name="cutting_list_REFACTORED" />
     </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="app_launcher" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="engineering_apps" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/app_launcher.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.app_launcher" />
+      </list>
+    </recent_temporary>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
@@ -558,17 +588,6 @@
     <MESSAGE value="Fixed import and paste feature in timeline" />
     <MESSAGE value="Updated versioning and quotation" />
     <option name="LAST_COMMIT_MESSAGE" value="Updated versioning and quotation" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/app_cutting_list.py</url>
-          <line>2618</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/engineering_apps$app_timeline.coverage" NAME="app_timeline Coverage Results" MODIFIED="1769995412822" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />

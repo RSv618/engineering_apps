@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QIcon, QColor, QPen, QPainter, QPaintEvent
 from PyQt6.QtCore import (Qt, pyqtSignal as Signal, QEvent, QPointF,
-                          QTimer)
+                          QTimer, QThread)
 
 from constants import (FOOTING_IMAGE_WIDTH, RSB_IMAGE_WIDTH,
                        BAR_DIAMETERS, STIRRUP_ROW_IMAGE_WIDTH,
@@ -29,7 +29,8 @@ from utils import (HoverButton, HoverLabel, resource_path,
                    parse_spacing_string, get_bar_dia, make_scrollable,
                    LinkSpinboxes, toggle_obj_visibility,
                    GlobalWheelEventFilter, is_widget_empty,
-                   style_invalid_input, get_dia_code, BlankDoubleSpinBox)
+                   style_invalid_input, get_dia_code, BlankDoubleSpinBox,
+                   LoadingOverlay)
 from openpyxl import Workbook
 
 class DrawStirrup(QWidget):
@@ -1711,6 +1712,47 @@ class FoundationItem(QFrame):
         total_vol_one = vol_pad + vol_ped
         return total_vol_one * n_footing
 
+class ExcelWorker(QThread):
+    finished = Signal(bool, str)
+
+    def __init__(self, save_path, all_data, all_grouped_rebars, market_lengths,
+                 proceed_with_optimization, cuts_by_diameter,
+                 foundation_vol_breakdown, total_concrete_vol_m3):
+        super().__init__()
+        self.save_path = save_path
+        self.all_data = all_data
+        self.all_grouped_rebars = all_grouped_rebars
+        self.market_lengths = market_lengths
+        self.proceed_with_optimization = proceed_with_optimization
+        self.cuts_by_diameter = cuts_by_diameter
+        self.foundation_vol_breakdown = foundation_vol_breakdown
+        self.total_concrete_vol_m3 = total_concrete_vol_m3
+
+    def run(self):
+        try:
+            wb = Workbook()
+            for data, grouped_rebars in zip(self.all_data, self.all_grouped_rebars):
+                wb, _ = add_sheet_cutting_list(data['name'], grouped_rebars, self.market_lengths, wb)
+
+            if self.total_concrete_vol_m3 > 0:
+                add_concrete_plan_to_workbook(wb, self.foundation_vol_breakdown)
+
+            if self.proceed_with_optimization:
+                purchase_list, cutting_plan = find_optimized_cutting_plan(
+                    self.cuts_by_diameter, self.market_lengths)
+                wb = add_sheet_purchase_plan(wb, purchase_list)
+                wb = add_sheet_cutting_plan(wb, cutting_plan)
+
+            wb = delete_blank_worksheets(wb)
+            wb.save(self.save_path)
+            self.finished.emit(True, self.save_path)
+        except PermissionError:
+            self.finished.emit(False,
+                f'Could not save the file to {os.path.basename(self.save_path)}.\n'
+                'Please ensure the file is not already open in another program.')
+        except Exception as e:
+            self.finished.emit(False, str(e))
+
 class CuttingListWindow(QMainWindow):
     def __init__(self) -> None:
         """Initializes the main application window and its components."""
@@ -1741,8 +1783,9 @@ class CuttingListWindow(QMainWindow):
 
         if DEBUG_MODE:
             self.prefill_debug_data()
-
-        self.setFocus()  # Remove focus on first open
+        self.setFocus()
+        self.worker = None
+        self.loading_overlay = LoadingOverlay(self.stacked_widget)
 
     def create_foundation_entry_page(self) -> None:
         """Builds the UI with a master-detail layout."""
@@ -2579,21 +2622,17 @@ class CuttingListWindow(QMainWindow):
             msg_box.setText('Please add at least one foundation type before generating the Excel file.')
             msg_box.exec()
             return
-
         required_diameters = self.get_used_diameters(all_data)
         market_lengths = {}
         for dia_code, lengths in self.market_lengths_checkboxes.items():
             available_lengths = [float(l.replace('m', '')) for l, cb in lengths.items() if cb.isChecked()]
             if available_lengths:
                 market_lengths[dia_code] = available_lengths
-
         missing_market_lengths = sorted([dia for dia in required_diameters if dia not in market_lengths])
         proceed_with_optimization = True
-
         if missing_market_lengths:
             missing_list_str = '\n'.join([f'•  {d}' for d in missing_market_lengths])
             msg_box = QMessageBox(self)
-            # Give this a specific name for more detailed styling
             msg_box.setIcon(QMessageBox.Icon.Warning)
             msg_box.setWindowTitle('Missing Market Lengths')
             msg_box.setText('The following required rebar diameters have no market lengths selected:')
@@ -2604,123 +2643,119 @@ class CuttingListWindow(QMainWindow):
             )
             msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             msg_box.setDefaultButton(QMessageBox.StandardButton.No)
-
             if msg_box.exec() == QMessageBox.StandardButton.No:
                 return
             proceed_with_optimization = False
-
-        # Initialize
-        total_concrete_vol_m3 = 0.0
-        foundation_vol_breakdown = []
         all_results = []
-        splicing_ok = True
-        wb = Workbook()
-
+        all_grouped_rebars = []
         for data in all_data:
             rebars_per_fdn_type = compile_rebar(data)
             all_results.append(rebars_per_fdn_type)
-            grouped_rebars_per_fdn_type = process_rebar_input(rebars_per_fdn_type)
-            wb, proceed = add_sheet_cutting_list(data['name'], grouped_rebars_per_fdn_type, market_lengths, wb)
-
-            # We temporarily create an item wrapper to calculate volume easily
-            temp_item = FoundationItem(data)
-            vol = temp_item.calculate_volume()
-            temp_item.deleteLater()
+            all_grouped_rebars.append(process_rebar_input(rebars_per_fdn_type))
+        splicing_ok = True
+        if proceed_with_optimization:
+            for grouped_rebars in all_grouped_rebars:
+                for bar in grouped_rebars:
+                    dia = get_dia_code(bar['diameter'])
+                    if dia in market_lengths:
+                        max_len = max(market_lengths[dia])
+                        if bar['cut_length'] / 1000 > max_len:
+                            splicing_ok = False
+                            break
+                if not splicing_ok:
+                    break
+        if proceed_with_optimization and not splicing_ok:
+            msg_box = QMessageBox(self)
+            msg_box.setObjectName('warningMessageBox')
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle('Do not splice')
+            msg_box.setText('The rebars require splicing.')
+            msg_box.setInformativeText(f'Cannot proceed with the Purchase and Cutting Plan sheets.\n'
+                                       'Add or select longer rebar market lengths to accommodate longer cuts.\n\n'
+                                       'Do you want to generate Cutting List without Purchase and Cutting Plan?'
+                                       )
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            msg_box.setDefaultButton(QMessageBox.StandardButton.No)
+            if msg_box.exec() == QMessageBox.StandardButton.No:
+                return
+            proceed_with_optimization = False
+        total_concrete_vol_m3 = 0.0
+        foundation_vol_breakdown = []
+        for data in all_data:
+            n_footing = data.get('n_footing', 0)
+            n_ped = data.get('n_ped', 0)
+            Bx = data.get('Bx', 0) / 1000.0
+            By = data.get('By', 0) / 1000.0
+            t = data.get('t', 0) / 1000.0
+            vol_pad = Bx * By * t
+            bx = data.get('bx', 0) / 1000.0
+            by = data.get('by', 0) / 1000.0
+            h = data.get('h', 0) / 1000.0
+            vol_ped = bx * by * h * n_ped
+            vol = (vol_pad + vol_ped) * n_footing
             total_concrete_vol_m3 += vol
-            foundation_vol_breakdown.append((data['name'], vol, data['n_footing']))
-
-            if not proceed:
-                splicing_ok = False
-                msg_box = QMessageBox(self)
-                # Give this a specific name for more detailed styling
-                msg_box.setObjectName('warningMessageBox')
-                msg_box.setIcon(QMessageBox.Icon.Warning)
-                msg_box.setWindowTitle('Do not splice')
-                msg_box.setText('The rebars require splicing.')
-                msg_box.setInformativeText(f'Cannot proceed with the Purchase and Cutting Plan sheets.\n'
-                'Add or select longer rebar market lengths to accommodate longer cuts.\n\n'
-                'Do you want to generate Cutting List without Purchase and Cutting Plan?'
-                )
-                msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-                msg_box.setDefaultButton(QMessageBox.StandardButton.No)
-
-                if msg_box.exec() == QMessageBox.StandardButton.No:
-                    return
-
-        # --- Generate Concrete Purchase Plan Sheet ---
-        if total_concrete_vol_m3 > 0:
-            add_concrete_plan_to_workbook(wb, foundation_vol_breakdown)
-
-        if proceed_with_optimization and splicing_ok:
-            cuts_by_diameter = {}
+            foundation_vol_breakdown.append((data['name'], vol, n_footing))
+        cuts_by_diameter = {}
+        if proceed_with_optimization:
             for bar in process_rebar_input(all_results):
                 dia = get_dia_code(bar['diameter'])
                 if dia not in cuts_by_diameter:
                     cuts_by_diameter[dia] = {}
-
                 length = bar['cut_length']
                 quantity = bar['quantity']
-
                 if length in cuts_by_diameter[dia]:
                     cuts_by_diameter[dia][length] += quantity
                 else:
                     cuts_by_diameter[dia][length] = quantity
             for key, value in cuts_by_diameter.items():
                 cuts_by_diameter[key] = [(q, l / 1000) for l, q in value.items()]
-
-            # TODO: find_optimized might be slow. Need to give user GUI feedback.
-            purchase_list, cutting_plan = find_optimized_cutting_plan(cuts_by_diameter, market_lengths)
-            wb = add_sheet_purchase_plan(wb, purchase_list)
-            wb = add_sheet_cutting_plan(wb, cutting_plan)
-
-        # --- Save and Open the Excel File ---
-        wb = delete_blank_worksheets(wb)
         save_path, _ = QFileDialog.getSaveFileName(
             self, 'Save Cutting List As', 'rebar_cutting_schedule.xlsx',
             'Excel Files (*.xlsx);;All Files (*)'
         )
         if not save_path:
             return
+        self.loading_overlay.show_loading()
+        self.worker = ExcelWorker(
+            save_path, all_data, all_grouped_rebars, market_lengths,
+            proceed_with_optimization, cuts_by_diameter,
+            foundation_vol_breakdown, total_concrete_vol_m3
+        )
+        self.worker.finished.connect(self.on_generation_finished)
+        self.worker.start()
 
-        try:
-            wb.save(save_path)
-        except PermissionError:
-            err_box = QMessageBox(self)
-            err_box.setIcon(QMessageBox.Icon.Critical)
-            err_box.setWindowTitle('Save Error')
-            err_box.setText(f'Could not save the file to {os.path.basename(save_path)}.')
-            err_box.setInformativeText('Please ensure the file is not already open in another program.')
-            err_box.exec()
-            return
-
-        try:
-            if sys.platform == 'win32':
-                os.startfile(save_path)
-            elif sys.platform == 'darwin':
-                subprocess.call(['open', save_path])
+    def on_generation_finished(self, success, result):
+        self.loading_overlay.hide_loading()
+        if success:
+            try:
+                if sys.platform == 'win32':
+                    os.startfile(result)
+                elif sys.platform == 'darwin':
+                    subprocess.call(['open', result])
+                else:
+                    subprocess.call(['xdg-open', result])
+            except Exception as e:
+                print(f'Could not open file automatically: {e}')
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle('Generation Complete')
+            msg_box.setText('The cutting list has been generated and saved.')
+            msg_box.setInformativeText('What would you like to do next?')
+            msg_box.setIcon(QMessageBox.Icon.Question)
+            start_over_btn = msg_box.addButton('Start Over', QMessageBox.ButtonRole.ResetRole)
+            msg_box.addButton('Close Program', QMessageBox.ButtonRole.RejectRole)
+            msg_box.setDefaultButton(start_over_btn)
+            msg_box.exec()
+            if msg_box.clickedButton() == start_over_btn:
+                self.reset_application()
             else:
-                subprocess.call(['xdg-open', save_path])
-        except Exception as e:
-            print(f'Could not open file automatically: {e}')
-
-        # Refactor the final prompt
-        msg_box = QMessageBox(self)
-        msg_box.setWindowTitle('Generation Complete')
-        msg_box.setText('The cutting list has been generated and saved.')
-        msg_box.setInformativeText('What would you like to do next?')
-        msg_box.setIcon(QMessageBox.Icon.Question)
-
-        # Keep the existing button setup, we will style them via QSS
-        start_over_btn = msg_box.addButton('Start Over', QMessageBox.ButtonRole.ResetRole)
-        msg_box.addButton('Close Program', QMessageBox.ButtonRole.RejectRole)
-        msg_box.setDefaultButton(start_over_btn)
-
-        msg_box.exec()
-
-        if msg_box.clickedButton() == start_over_btn:
-            self.reset_application()
+                self.close()
         else:
-            self.close()
+            QMessageBox.critical(self, 'Save Error', f'Could not save file.\n{result}')
+
+    def resizeEvent(self, event):
+        if hasattr(self, 'loading_overlay') and self.loading_overlay.isVisible():
+            self.loading_overlay.resize(self.centralWidget().size())
+        super().resizeEvent(event)
 
 if __name__ == '__main__':
     sys.excepthook = global_exception_hook

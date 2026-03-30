@@ -11,13 +11,13 @@ from PyQt6.QtWidgets import (
     QLabel, QFrame, QTableWidget, QTableWidgetItem, QHeaderView,
     QMessageBox, QFileDialog, QCheckBox, QStyledItemDelegate, QDateEdit, QWidget
 )
-from PyQt6.QtGui import QIcon, QTextCharFormat, QKeySequence, QPainter, QColor, QMovie
-from PyQt6.QtCore import Qt, QDate, QThread, pyqtSignal, QSize
+from PyQt6.QtGui import QIcon, QTextCharFormat, QKeySequence, QPainter, QColor
+from PyQt6.QtCore import Qt, QDate, QThread, pyqtSignal
 
 from excel_writer import create_schedule_sheet
 from utils import (
     load_stylesheet, global_exception_hook,
-    HoverButton, resource_path, GlobalWheelEventFilter, BlankDoubleSpinBox
+    HoverButton, resource_path, GlobalWheelEventFilter, BlankDoubleSpinBox, LoadingOverlay
 )
 from constants import LOGO_MAP, DEBUG_MODE
 
@@ -91,51 +91,6 @@ class ExcelWorker(QThread):
 
         except Exception as e:
             self.finished.emit(False, str(e))
-
-
-class LoadingOverlay(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
-        self.hide()
-
-        # 1. Setup Layout (Centers the spinner)
-        layout = QVBoxLayout(self)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # 2. Setup Label and Movie
-        self.label = QLabel()
-        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # CHANGE 'images/loading.gif' to your actual '.gif' path
-        gif_path = resource_path('images/loading.gif')
-        self.movie = QMovie(gif_path)
-
-        # Optional: specific size (e.g., 64x64)
-        self.movie.setScaledSize(QSize(94, 50))
-
-        self.movie.setCacheMode(QMovie.CacheMode.CacheAll)
-        self.label.setMovie(self.movie)
-        layout.addWidget(self.label)
-
-    def paintEvent(self, event):
-        # Draw semi-transparent black background
-        painter = QPainter(self)
-        painter.fillRect(self.rect(), QColor(0, 0, 0, 128))
-
-    def show_loading(self):
-        """Resizes to cover parent, starts animation, and shows."""
-        if self.parent():
-            self.resize(self.parent().size())
-
-        self.movie.start()  # <--- Crucial: Start the GIF
-        self.show()
-        self.raise_()
-
-    def hide_loading(self):
-        """Stops animation and hides."""
-        self.movie.stop()  # <--- Stop to save CPU
-        self.hide()
 
 # ------------------------------------------------------------------------
 # --- CUSTOM TABLE WIDGET: COMPACT PASTE & SMART DATE PARSING ---
@@ -611,7 +566,7 @@ class TimelineWindow(QMainWindow):
         self.chk_rev.setProperty('class', 'check-box')
         self.chk_rev.toggled.connect(self.update_column_visibility)
 
-        self.chk_act = QCheckBox('Add Actual Sheet')
+        self.chk_act = QCheckBox('Add `Actual` Sheet')
         self.chk_act.setProperty('class', 'check-box')
         # Note: Toggling this no longer affects table columns,
         # but the state is used in generate_excel
