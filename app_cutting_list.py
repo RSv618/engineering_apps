@@ -2413,9 +2413,9 @@ class CuttingListWindow(QMainWindow):
     def edit_foundation_item(self, item: FoundationItem) -> None:
         """Opens a dialog to edit an existing foundation item."""
         existing_names = []
-        for item in self.findChildren(FoundationItem):
-            if isinstance(item, FoundationItem):
-                existing_names.append(item.data['name'])
+        for foundation_item in self.findChildren(FoundationItem):
+            if isinstance(foundation_item, FoundationItem):
+                existing_names.append(foundation_item.data['name'])
         dialog = FoundationDetailsDialog(existing_details=item.data, parent=self, existing_names=existing_names)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             new_data = dialog.get_data()
