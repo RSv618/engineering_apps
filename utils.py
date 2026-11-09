@@ -317,10 +317,17 @@ class LoadingOverlay(QWidget):
         self.movie.setCacheMode(QMovie.CacheMode.CacheAll)
         self.label.setMovie(self.movie)
         layout.addWidget(self.label)
+        self.status_label = QLabel('Preparing Excel workbook...')
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_label.setStyleSheet('color: white; font-size: 13px; font-weight: 600;')
+        layout.addWidget(self.status_label)
+    def set_status(self, status):
+        self.status_label.setText(status)
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor(0, 0, 0, 128))
     def show_loading(self):
+        self.set_status('Preparing Excel workbook...')
         if self.parent():
             self.resize(self.parent().size())
         self.movie.start()

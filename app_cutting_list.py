@@ -20,7 +20,8 @@ from constants import (FOOTING_IMAGE_WIDTH, RSB_IMAGE_WIDTH,
                        DEBUG_MODE, LOGO_MAP)
 from excel_writer import (process_rebar_input, add_sheet_cutting_list,
                           add_sheet_purchase_plan, add_sheet_cutting_plan,
-                          delete_blank_worksheets, add_concrete_plan_to_workbook)
+                          delete_blank_worksheets, add_concrete_plan_to_workbook,
+                          add_sheet_optimization_notes)
 from rebar_calculations import compile_rebar
 from rebar_optimizer import find_optimized_cutting_plan
 from utils import (HoverButton, HoverLabel, resource_path,
@@ -1713,7 +1714,9 @@ class FoundationItem(QFrame):
         return total_vol_one * n_footing
 
 class ExcelWorker(QThread):
-    finished = Signal(bool, str)
+    # Do not shadow QThread.finished (which is a no-argument Qt signal).
+    result_ready = Signal(bool, str)
+    status = Signal(str)
 
     def __init__(self, save_path, all_data, all_grouped_rebars, market_lengths,
                  proceed_with_optimization, cuts_by_diameter,
@@ -1730,6 +1733,7 @@ class ExcelWorker(QThread):
 
     def run(self):
         try:
+            self.status.emit('Writing cutting-list worksheets...')
             wb = Workbook()
             for data, grouped_rebars in zip(self.all_data, self.all_grouped_rebars):
                 wb, _ = add_sheet_cutting_list(data['name'], grouped_rebars, self.market_lengths, wb)
@@ -1737,21 +1741,25 @@ class ExcelWorker(QThread):
             if self.total_concrete_vol_m3 > 0:
                 add_concrete_plan_to_workbook(wb, self.foundation_vol_breakdown)
 
-            if self.proceed_with_optimization:
+            if self.proceed_with_optimization and self.cuts_by_diameter:
+                notes = []
                 purchase_list, cutting_plan = find_optimized_cutting_plan(
-                    self.cuts_by_diameter, self.market_lengths)
+                    self.cuts_by_diameter, self.market_lengths,
+                    notes_out=notes, progress=self.status.emit)
                 wb = add_sheet_purchase_plan(wb, purchase_list)
                 wb = add_sheet_cutting_plan(wb, cutting_plan)
+                wb = add_sheet_optimization_notes(wb, notes)
 
+            self.status.emit('Saving Excel workbook...')
             wb = delete_blank_worksheets(wb)
             wb.save(self.save_path)
-            self.finished.emit(True, self.save_path)
+            self.result_ready.emit(True, self.save_path)
         except PermissionError:
-            self.finished.emit(False,
+            self.result_ready.emit(False,
                 f'Could not save the file to {os.path.basename(self.save_path)}.\n'
                 'Please ensure the file is not already open in another program.')
         except Exception as e:
-            self.finished.emit(False, str(e))
+            self.result_ready.emit(False, str(e))
 
 class CuttingListWindow(QMainWindow):
     def __init__(self) -> None:
@@ -2715,13 +2723,16 @@ class CuttingListWindow(QMainWindow):
         )
         if not save_path:
             return
+        if not save_path.lower().endswith('.xlsx'):
+            save_path += '.xlsx'
         self.loading_overlay.show_loading()
         self.worker = ExcelWorker(
             save_path, all_data, all_grouped_rebars, market_lengths,
             proceed_with_optimization, cuts_by_diameter,
             foundation_vol_breakdown, total_concrete_vol_m3
         )
-        self.worker.finished.connect(self.on_generation_finished)
+        self.worker.result_ready.connect(self.on_generation_finished)
+        self.worker.status.connect(self.loading_overlay.set_status)
         self.worker.start()
 
     def on_generation_finished(self, success, result):
@@ -2750,7 +2761,7 @@ class CuttingListWindow(QMainWindow):
             else:
                 self.close()
         else:
-            QMessageBox.critical(self, 'Save Error', f'Could not save file.\n{result}')
+            QMessageBox.critical(self, 'Generation Error', f'Could not generate the Excel file.\n{result}')
 
     def resizeEvent(self, event):
         if hasattr(self, 'loading_overlay') and self.loading_overlay.isVisible():

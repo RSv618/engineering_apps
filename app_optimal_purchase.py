@@ -15,10 +15,13 @@ from utils import (load_stylesheet, parse_nested_dict, global_exception_hook,
                    LoadingOverlay)
 from rebar_optimizer import find_optimized_cutting_plan
 from constants import BAR_DIAMETERS, MARKET_LENGTHS, DEBUG_MODE, LOGO_MAP
-from excel_writer import add_sheet_purchase_plan, add_sheet_cutting_plan, delete_blank_worksheets
+from excel_writer import (add_sheet_purchase_plan, add_sheet_cutting_plan,
+                          delete_blank_worksheets, add_sheet_optimization_notes)
 
 class ExcelWorker(QThread):
-    finished = pyqtSignal(bool, str)
+    # Do not shadow QThread.finished (which is a no-argument Qt signal).
+    result_ready = pyqtSignal(bool, str)
+    status = pyqtSignal(str)
     def __init__(self, save_path, cuts_by_diameter, market_lengths):
         super().__init__()
         self.save_path = save_path
@@ -26,20 +29,24 @@ class ExcelWorker(QThread):
         self.market_lengths = market_lengths
     def run(self):
         try:
+            notes = []
             purchase_list, cutting_plan = find_optimized_cutting_plan(
-                self.cuts_by_diameter, self.market_lengths)
+                self.cuts_by_diameter, self.market_lengths,
+                notes_out=notes, progress=self.status.emit)
+            self.status.emit('Writing Excel workbook...')
             wb = Workbook()
             wb = add_sheet_purchase_plan(wb, purchase_list)
             wb = add_sheet_cutting_plan(wb, cutting_plan)
+            wb = add_sheet_optimization_notes(wb, notes)
             wb = delete_blank_worksheets(wb)
             wb.save(self.save_path)
-            self.finished.emit(True, self.save_path)
+            self.result_ready.emit(True, self.save_path)
         except PermissionError:
-            self.finished.emit(False,
+            self.result_ready.emit(False,
                 f'Could not save the file to {os.path.basename(self.save_path)}.\n'
                 'Please ensure the file is not already open in another program.')
         except Exception as e:
-            self.finished.emit(False, str(e))
+            self.result_ready.emit(False, str(e))
 
 class OptimalPurchaseWindow(QMainWindow):
     def __init__(self):
@@ -737,7 +744,6 @@ class OptimalPurchaseWindow(QMainWindow):
             if available_lengths:
                 market_lengths[dia_code] = available_lengths
 
-        wb = Workbook()
         cuts_by_diameter = {}
         for dia, length, quantity in zip(self.parsed_cutting_lengths['Diameter'],
                                          self.parsed_cutting_lengths['Cutting Length'],
@@ -751,21 +757,24 @@ class OptimalPurchaseWindow(QMainWindow):
         for key, value in cuts_by_diameter.items():
             cuts_by_diameter[key] = [(q, l / 1000) for l, q in value.items()]
 
-        purchase_list, cutting_plan = find_optimized_cutting_plan(cuts_by_diameter, market_lengths)
-        wb = add_sheet_purchase_plan(wb, purchase_list)
-        wb = add_sheet_cutting_plan(wb, cutting_plan)
+        if not cuts_by_diameter:
+            QMessageBox.warning(self, 'No Rebars', 'Please add at least one rebar cut.')
+            return
 
+        # The optimizer runs only once, in ExcelWorker (off the UI thread).
         # --- 4. Save and Open the Excel File ---
-        wb = delete_blank_worksheets(wb)
         save_path, _ = QFileDialog.getSaveFileName(
             self, 'Save Cutting List As', 'rebar_purchase_plan.xlsx',
             'Excel Files (*.xlsx);;All Files (*)'
         )
         if not save_path:
             return
+        if not save_path.lower().endswith('.xlsx'):
+            save_path += '.xlsx'
         self.loading_overlay.show_loading()
         self.worker = ExcelWorker(save_path, cuts_by_diameter, market_lengths)
-        self.worker.finished.connect(self.on_generation_finished)
+        self.worker.result_ready.connect(self.on_generation_finished)
+        self.worker.status.connect(self.loading_overlay.set_status)
         self.worker.start()
 
     def on_generation_finished(self, success, result):
@@ -794,7 +803,7 @@ class OptimalPurchaseWindow(QMainWindow):
             else:
                 self.close()
         else:
-            QMessageBox.critical(self, 'Save Error', f'Could not save file.\n{result}')
+            QMessageBox.critical(self, 'Generation Error', f'Could not generate the Excel file.\n{result}')
 
     def resizeEvent(self, event):
         if hasattr(self, 'loading_overlay') and self.loading_overlay.isVisible():

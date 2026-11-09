@@ -4,11 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Updated versioning and quotation">
+    <list default="true" id="2b82b052-c01a-4533-8a9f-4788a7d0ca59" name="Changes" comment="Loading feedback added">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_cutting_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_cutting_list.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_optimal_purchase.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_optimal_purchase.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app_timeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_timeline.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/excel_writer.py" beforeDir="false" afterPath="$PROJECT_DIR$/excel_writer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rebar_optimizer.py" beforeDir="false" afterPath="$PROJECT_DIR$/rebar_optimizer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -151,14 +152,6 @@
       <workItem from="1770003357349" duration="51000" />
       <workItem from="1770282962007" duration="1363000" />
       <workItem from="1770787887717" duration="61000" />
-    </task>
-    <task id="LOCAL-00012" summary="remove focus on scroll areas">
-      <option name="closed" value="true" />
-      <created>1763264783929</created>
-      <option name="number" value="00012" />
-      <option name="presentableId" value="LOCAL-00012" />
-      <option name="project" value="LOCAL" />
-      <updated>1763264783929</updated>
     </task>
     <task id="LOCAL-00013" summary="fixed outline focus styles">
       <option name="closed" value="true" />
@@ -544,7 +537,15 @@
       <option name="project" value="LOCAL" />
       <updated>1769996789095</updated>
     </task>
-    <option name="localTasksCounter" value="61" />
+    <task id="LOCAL-00061" summary="Loading feedback added">
+      <option name="closed" value="true" />
+      <created>1774838544049</created>
+      <option name="number" value="00061" />
+      <option name="presentableId" value="LOCAL-00061" />
+      <option name="project" value="LOCAL" />
+      <updated>1774838544051</updated>
+    </task>
+    <option name="localTasksCounter" value="62" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -562,7 +563,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Added warning when splicing is required." />
     <MESSAGE value="Added launcher.&#10;Improved market lengths page by showing only selected bar sizes." />
     <MESSAGE value="Added app_concrete_mix for design mix" />
     <MESSAGE value="Updated launcher" />
@@ -587,7 +587,8 @@
     <MESSAGE value="Rearrange" />
     <MESSAGE value="Fixed import and paste feature in timeline" />
     <MESSAGE value="Updated versioning and quotation" />
-    <option name="LAST_COMMIT_MESSAGE" value="Updated versioning and quotation" />
+    <MESSAGE value="Loading feedback added" />
+    <option name="LAST_COMMIT_MESSAGE" value="Loading feedback added" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/engineering_apps$app_timeline.coverage" NAME="app_timeline Coverage Results" MODIFIED="1769995412822" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />

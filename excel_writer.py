@@ -1029,6 +1029,26 @@ def add_concrete_plan_to_workbook(wb: Workbook, breakdown: list):
     ws.column_dimensions['C'].width = 20
     ws.column_dimensions['D'].width = 20
 
+def add_sheet_optimization_notes(wb: Workbook, notes: list[tuple[str, str]]) -> Workbook:
+    """Record cases where a feasible solution could not be proven optimal."""
+    if not notes:
+        return wb
+    ws = wb.create_sheet('Optimization Notes')
+    ws.append(['Diameter', 'Optimization status'])
+    for diameter, detail in notes:
+        ws.append([diameter, detail])
+    ws.column_dimensions['A'].width = 18
+    ws.column_dimensions['B'].width = 85
+    ws.freeze_panes = 'A2'
+    for cell in ws[1]:
+        cell.font = Font(name='Calibri', bold=True, color='FFFFFF')
+        cell.fill = PatternFill(start_color='404040', end_color='404040', fill_type='solid')
+    for row in ws.iter_rows(min_row=2, min_col=1, max_col=2):
+        for cell in row:
+            cell.alignment = Alignment(vertical='top', wrap_text=True)
+    return wb
+
+
 def delete_blank_worksheets(wb: Workbook) -> Workbook:
     """
     Deletes all blank worksheets from an Excel workbook.
